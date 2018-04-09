@@ -25,6 +25,7 @@ env:
   - TEST_SUITE=unit
   - TEST_SUITE=convert-amr
   - TEST_SUITE=convert-sdp
+  - TEST_SUITE=parse-ucca
 jobs:
   include:
     - os: osx

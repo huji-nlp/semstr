@@ -45,4 +45,7 @@ unit)  # unit tests
 convert-*)
     python -m semstr.scripts.convert_and_evaluate "$CONVERT_DATA" -v
     ;;
+parse-*)
+    python -m semstr.scripts.parse_ud $DEV_DATA -We
+    ;;
 esac
