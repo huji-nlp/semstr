@@ -20,7 +20,7 @@ install:
 env:
   global:
     - TWINE_USERNAME=danielh
-    - secure: "k+g1eTxBZ6oV/VRHAd9jdLL69rw5Qwp7Tw9VdkzKjkGX8qJl5XF5CLGNMFfwf44VEKSWIzFMfEAR8YAyeWJ4pezj+QNC7WlVembzM++wLoHV5N+elyLEAmQzcRjVIlnrYckDULU+g3KkjNTXt3racBPbbgLNgcXVyx5u5qPsNO4rd6RsVocPRKIrUbd//32J7ddISKCIh6IgXsT4+m5WkC5r0A6whN3bebJwYYmK4mkwL/QT/eeWqWTDVl1wlzmlh/qrG7sFzOEqIQSfBwKRPMh+Ku5vbqtADNkf7w6YB1nPwEX9TPE5RTKlMC89KRb2XEHyh57sSqPDCth3CwSag07zNS6uDtikGUdhNORymSGtQGxm1ThYYymDDwKGzELBpibz5qWL9zQEK9+3h2Br01wj7cAte2rb5niZbsmB5avFCdGRWMHCudwVTgOh3pzCurJvMnWLUs/svMs9BMsh9wsXKYENdZNHjFdoESHuJHoynxN4KmRNlU8ePEMm6xtEKpPoH2WqY5itN1pDfk1Yu0AwTGwNHovjSlDdQrgtkDT6kOwpKrXzA55jWAFVPtPPwB+kMl4w42bl0Luqjfq+jSsntf2LC/cwrVGbOgG+LRvdd8Ok95WGZ+BksGkYk1McjeBLzfBsmekPiZiSgiucyXBhlni4+UQZxiCyk/T3Bnc="
+    - secure: "d4hewBlIfWiQE+5XGchmRnFhYbqEzmgiXWiLK2OgghXFFF2JlbSaCaTB/rxV2Vioq3hyCxHxrpq3utMWKfa3LjnvKhqpmtjwvunBkYQjZJy5OYNnSdnInCnu2jpm3YyQ4rPgn/cVxYKS2Lws8wMKPKX0Wgptt7tEEQbaq6S3xBgGhad0VNJt6iNIbjiFynJes4VArSdwaBgkePNkecOqEwurrPVtGlaAcvyhfCQ6VZNpaWD+/+uO1mPz7qQKgF99YB7RtiPIqH02qZ7fGD26Ur01AXtHnhHnYg9NAMiBAGe/WR6Yyfi7/W7PhhbhSy2D+2tCN3srHuyzKhlDHKPrGK6MAkwTzZuF61koFtnqVNRR7I8r6We7FHhVTA8FwzVqKqU2mKGtkWKdqXzdKBbjwC7QpCPReLdV3BG8j+eB7Lfie4H5cqPS+zWIX2Kmu+HIaP5e6nd+8xoAlX20IaNsXANib8KJGPwx2VBdCRuqOT/rCW5iyo84y8obtDJWAZYm/AiaS01eBG4jaFeeTpSeJBxhzd/dD6JShlRl3TIPiKYvwbGfrtSu1W9/94exScktatDzJWOjEJrAE/Ba/dCDAzEdsCM4TdeKvBcGqL2mRqPnJGqglHQV6hKULX253k4D3o6tFpg/8qLrWtU12YuYIljCvDinY03rtJlmr4rF6Hw="
   matrix:
   - TEST_SUITE=unit
   - TEST_SUITE=convert-amr
@@ -44,5 +44,5 @@ deploy:
   script: ci/deploy.sh
   skip_cleanup: true
   on:
-    repo: danielhers/semstr
+    repo: huji-nlp/semstr
     tags: true
