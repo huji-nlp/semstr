@@ -2,7 +2,7 @@ numpy
 tqdm
 requests
 configargparse
-ucca==1.0.56
+ucca==1.0.57
 penman==0.6.2
 nltk==3.2.5
 parsimonious==0.8.0
