@@ -1,0 +1,48 @@
+cache: apt
+dist: trusty
+sudo: false
+language: python
+cache:
+  pip: true
+  directories:
+  - $HOME/virtualenv
+python:
+  - "3.6"
+addons:
+  apt:
+    sources:
+    - ubuntu-toolchain-r-test
+    packages:
+    - pandoc
+install:
+  - python setup.py install
+  - pip install pytest
+env:
+  global:
+    - TWINE_USERNAME=danielh
+    - secure: "k+g1eTxBZ6oV/VRHAd9jdLL69rw5Qwp7Tw9VdkzKjkGX8qJl5XF5CLGNMFfwf44VEKSWIzFMfEAR8YAyeWJ4pezj+QNC7WlVembzM++wLoHV5N+elyLEAmQzcRjVIlnrYckDULU+g3KkjNTXt3racBPbbgLNgcXVyx5u5qPsNO4rd6RsVocPRKIrUbd//32J7ddISKCIh6IgXsT4+m5WkC5r0A6whN3bebJwYYmK4mkwL/QT/eeWqWTDVl1wlzmlh/qrG7sFzOEqIQSfBwKRPMh+Ku5vbqtADNkf7w6YB1nPwEX9TPE5RTKlMC89KRb2XEHyh57sSqPDCth3CwSag07zNS6uDtikGUdhNORymSGtQGxm1ThYYymDDwKGzELBpibz5qWL9zQEK9+3h2Br01wj7cAte2rb5niZbsmB5avFCdGRWMHCudwVTgOh3pzCurJvMnWLUs/svMs9BMsh9wsXKYENdZNHjFdoESHuJHoynxN4KmRNlU8ePEMm6xtEKpPoH2WqY5itN1pDfk1Yu0AwTGwNHovjSlDdQrgtkDT6kOwpKrXzA55jWAFVPtPPwB+kMl4w42bl0Luqjfq+jSsntf2LC/cwrVGbOgG+LRvdd8Ok95WGZ+BksGkYk1McjeBLzfBsmekPiZiSgiucyXBhlni4+UQZxiCyk/T3Bnc="
+  matrix:
+  - TEST_SUITE=unit
+  - TEST_SUITE=convert-amr
+  - TEST_SUITE=convert-sdp
+jobs:
+  include:
+    - os: osx
+      language:
+      before_install:
+        - curl -LO https://repo.continuum.io/miniconda/Miniconda3-latest-MacOSX-x86_64.sh
+        - bash Miniconda3-latest-MacOSX-x86_64.sh -b -p miniconda
+        - export PATH="$PWD/miniconda/bin:$PATH"
+        - conda config --set always_yes yes --set changeps1 no
+        - conda update -q conda
+        - conda create -q -n env python=3.6 numpy cython
+        - source activate env
+script:
+  - ci/test.sh
+deploy:
+  provider: script
+  script: ci/deploy.sh
+  skip_cleanup: true
+  on:
+    repo: danielhers/semstr
+    tags: true
