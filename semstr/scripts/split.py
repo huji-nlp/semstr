@@ -12,8 +12,8 @@ desc = """Split sentences/passages to separate files (important for shuffling be
 
 def main(args):
     try:
-        os.mkdir(args.outdir)
-        print("Created " + args.outdir)
+        os.mkdir(args.out_dir)
+        print("Created " + args.out_dir)
     except FileExistsError:
         pass
     lines = []
@@ -39,22 +39,22 @@ def main(args):
                         passage_id = m_id.group(1)
                 if not clean and any(map(str.strip, lines)):
                     if not args.doc_ids or doc_id in args.doc_ids:
-                        write_file(args.outdir, doc_id, passage_id, ext, lines, quiet=args.quiet)
+                        write_file(args.out_dir, doc_id, passage_id, ext, lines, quiet=args.quiet)
                     lines.clear()
                     if isinstance(passage_id, str):
                         passage_id = None
                     else:
                         passage_id += 1
             if lines and (not args.doc_ids or doc_id in args.doc_ids):
-                write_file(args.outdir, doc_id, passage_id, ext, lines, quiet=args.quiet)
+                write_file(args.out_dir, doc_id, passage_id, ext, lines, quiet=args.quiet)
     if not args.quiet:
         print()
 
 
-def write_file(outdir, doc_id, passage_id, ext, lines, quiet=False):
+def write_file(out_dir, doc_id, passage_id, ext, lines, quiet=False):
     if passage_id is None:
         raise ValueError("Could not determine passage ID")
-    filename = os.path.join(outdir, ("" if doc_id is None else (doc_id + ".")) + str(passage_id) + ext)
+    filename = os.path.join(out_dir, ("" if doc_id is None else (doc_id + ".")) + str(passage_id) + ext)
     with open(filename, "w", encoding="utf-8") as f:
         f.writelines(lines)
     if not quiet:
@@ -64,7 +64,7 @@ def write_file(outdir, doc_id, passage_id, ext, lines, quiet=False):
 if __name__ == '__main__':
     argparser = configargparse.ArgParser(description=desc)
     argparser.add_argument("filename", help="file name to split")
-    argparser.add_argument("outdir", help="output directory")
+    argparser.add_argument("out_dir", help="output directory")
     argparser.add_argument("-q", "--quiet", action="store_true", help="less output")
     argparser.add_argument("--doc-ids", nargs="+", help="document IDs to keep from the input file (by '# doc_id')")
     main(argparser.parse_args())

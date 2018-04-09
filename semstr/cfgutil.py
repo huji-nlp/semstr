@@ -24,7 +24,7 @@ class VAction(configargparse.Action):
         setattr(args, self.dest, values)
 
 
-def add_verbose_argument(argparser, **kwargs):
+def add_verbose_arg(argparser, **kwargs):
     return argparser.add_argument("-v", "--verbose", nargs="?", action=VAction, default=0, **kwargs)
 
 

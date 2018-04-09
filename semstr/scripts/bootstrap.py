@@ -7,7 +7,7 @@ import numpy as np
 from tqdm import tqdm
 from ucca import evaluation
 
-from semstr.cfgutil import add_verbose_argument
+from semstr.cfgutil import add_verbose_arg
 from semstr.evaluate import EVALUATORS, passage_format, evaluate_all, Scores
 
 desc = """Evaluates statistical significance of F1 scores between two systems."""
@@ -41,6 +41,6 @@ if __name__ == '__main__':
     argparser.add_argument("-b", "--nboot", type=int, default=int(1e4), help="number of bootstrap samples")
     argparser.add_argument("-f", "--format", default="amr", help="default format (if cannot determine by suffix)")
     group = argparser.add_mutually_exclusive_group()
-    add_verbose_argument(group, help="detailed evaluation output")
+    add_verbose_arg(group, help="detailed evaluation output")
     group.add_argument("-q", "--quiet", action="store_true", help="do not print anything")
     main(argparser.parse_args())

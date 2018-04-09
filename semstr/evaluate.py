@@ -11,7 +11,7 @@ from tqdm import tqdm
 from ucca import evaluation, ioutil
 from ucca.evaluation import LABELED, UNLABELED
 
-from semstr.cfgutil import add_verbose_argument
+from semstr.cfgutil import add_verbose_arg
 from semstr.convert import CONVERTERS, UCCA_EXT
 from semstr.evaluation import amr, sdp, conllu
 
@@ -134,6 +134,6 @@ if __name__ == '__main__':
     argparser.add_argument("-s", "--summary-file", help="file to write aggregated results to, in CSV format")
     argparser.add_argument("-u", "--unlabeled", action="store_true", help="print unlabeled F1 for individual passages")
     group = argparser.add_mutually_exclusive_group()
-    add_verbose_argument(group, help="detailed evaluation output")
+    add_verbose_arg(group, help="detailed evaluation output")
     group.add_argument("-q", "--quiet", action="store_true", help="do not print anything")
     main(argparser.parse_args())

@@ -10,7 +10,7 @@ import configargparse
 from tqdm import tqdm
 from ucca import convert, ioutil, layer1
 
-from semstr.cfgutil import add_verbose_argument
+from semstr.cfgutil import add_verbose_arg
 from semstr.conversion.amr import from_amr, to_amr
 from semstr.conversion.conllu import from_conllu, to_conllu
 from semstr.conversion.sdp import from_sdp, to_sdp
@@ -33,7 +33,7 @@ UCCA_EXT = (".xml", ".pickle")
 
 
 def main(args):
-    os.makedirs(args.outdir, exist_ok=True)
+    os.makedirs(args.out_dir, exist_ok=True)
     for filename in tqdm(list(iter_files(args.filenames)), unit="file", desc="Converting"):
         if not os.path.isfile(filename):
             raise IOError("Not a file: %s" % filename)
@@ -77,7 +77,7 @@ def map_labels(passage, label_map_file):
 def write_passage(passage, args):
     map_labels(passage, args.label_map)
     ext = {None: UCCA_EXT[args.binary], "amr": ".txt"}.get(args.output_format) or "." + args.output_format
-    outfile = args.outdir + os.path.sep + passage.ID + ext
+    outfile = args.out_dir + os.path.sep + passage.ID + ext
     if args.verbose:
         with tqdm.external_write_mode():
             print("Writing '%s'..." % outfile, file=sys.stderr)
@@ -92,20 +92,24 @@ def write_passage(passage, args):
             print(output, file=f)
 
 
+def add_convert_args(p):
+    p.add_argument("-t", "--test", action="store_true",
+                   help="omit prediction columns (head and deprel for conll; top, pred, frame, etc. for sdp)")
+    p.add_argument("-T", "--tree", action="store_true", help="remove multiple parents to get a tree")
+    p.add_argument("-s", "--split", action="store_true", help="split each sentence to its own passage")
+    p.add_argument("-m", "--mark-aux", action="store_true", help="mark auxiliary edges introduced/omit edges")
+    p.add_argument("--label-map", help="CSV file specifying mapping of input edge labels to output edge labels")
+
+
 if __name__ == '__main__':
     argparser = configargparse.ArgParser(description=desc)
     argparser.add_argument("filenames", nargs="+", help="file names to convert")
     argparser.add_argument("-i", "--input-format", choices=CONVERTERS, help="input file format (detected by extension)")
     argparser.add_argument("-f", "--output-format", choices=CONVERTERS, help="output file format (default: UCCA)")
-    argparser.add_argument("-o", "--outdir", default=".", help="output directory")
+    argparser.add_argument("-o", "--out-dir", default=".", help="output directory")
     argparser.add_argument("-p", "--prefix", default="", help="output passage ID prefix")
     argparser.add_argument("-b", "--binary", action="store_true", help="write in binary format (.%s)" % UCCA_EXT[1])
-    argparser.add_argument("-t", "--test", action="store_true",
-                           help="omit prediction columns (head and deprel for conll; top, pred, frame, etc. for sdp)")
-    argparser.add_argument("-T", "--tree", action="store_true", help="remove multiple parents to get a tree")
-    argparser.add_argument("-s", "--split", action="store_true", help="split each sentence to its own passage")
-    argparser.add_argument("-m", "--mark-aux", action="store_true", help="mark auxiliary edges introduced/omit edges")
-    argparser.add_argument("--label-map", help="CSV file specifying mapping of input edge labels to output edge labels")
-    add_verbose_argument(argparser, help="detailed output")
+    add_convert_args(argparser)
+    add_verbose_arg(argparser, help="detailed output")
     main(argparser.parse_args())
     sys.exit(0)
