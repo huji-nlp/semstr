@@ -5,13 +5,12 @@ import operator
 
 from tqdm import tqdm
 from ucca import layer0
-from ucca.evaluation import evaluate
 from ucca.textutil import annotate_all, Attr
 
 from semstr.cfgutil import add_verbose_arg
 from semstr.conversion.conllu import ConlluConverter
 from semstr.convert import add_convert_args, CONVERTERS, write_passage, map_labels
-from semstr.evaluate import Scores
+from semstr.evaluate import Scores, EVALUATORS
 from semstr.scripts.annotate import add_specs_args, read_specs
 
 desc = """Read passages in any format, extract text, parse to Universal Dependencies using spaCy and save any format."""
@@ -29,7 +28,12 @@ def main(args):
             else:
                 map_labels(parsed, args.label_map)
             if args.evaluate:
-                scores.append(evaluate(parsed, passage, verbose=args.verbose > 1))
+                evaluator = EVALUATORS[args.output_format]
+                _, converter = CONVERTERS[args.output_format]
+                if converter is not None:
+                    parsed = converter(parsed)
+                    passage = converter(passage)
+                scores.append(evaluator.evaluate(parsed, passage, verbose=args.verbose > 1))
         if scores:
             Scores(scores).print()
 
