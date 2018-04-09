@@ -5,7 +5,7 @@ from .dep import DependencyConverter
 
 class SdpConverter(DependencyConverter, convert.SdpConverter):
     def __init__(self, *args, **kwargs):
-        DependencyConverter.__init__(self, *args, **kwargs)
+        DependencyConverter.__init__(self, *args, punct_tag="_", punct_rel="_", **kwargs)
 
     def modify_passage(self, passage):
         passage.extra["format"] = "sdp"

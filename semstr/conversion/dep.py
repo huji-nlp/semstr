@@ -9,10 +9,12 @@ class DependencyConverter(convert.DependencyConverter):
     TOP = "TOP"
     HEAD = "head"
 
-    def __init__(self, *args, constituency=False, tree=False, **kwargs):
+    def __init__(self, *args, constituency=False, tree=False, punct_tag=None, punct_rel=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.constituency = constituency
         self.tree = tree
+        self.punct_tag = punct_tag
+        self.punct_rel = punct_rel
         self.lines_read = []
 
     def read_line_and_append(self, read_line, line, previous_node):
@@ -65,7 +67,7 @@ class DependencyConverter(convert.DependencyConverter):
     def find_top_headed_edges(self, unit):
         return [e for e in self.find_headed_unit(unit).incoming if e.tag not in (self.ROOT, self.TOP)]
 
-    def break_cycles(self, dep_nodes):
+    def preprocess(self, dep_nodes):
         for dep_node in dep_nodes:
             if dep_node.incoming:
                 for edge in dep_node.incoming:
@@ -80,3 +82,6 @@ class DependencyConverter(convert.DependencyConverter):
         while unit.incoming and (not unit.outgoing or unit.incoming[0].tag == self.HEAD):
             unit = unit.parents[0]
         return unit
+
+    def is_punct(self, dep_node):
+        return dep_node.token.tag == self.punct_tag
