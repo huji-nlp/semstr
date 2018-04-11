@@ -69,13 +69,16 @@ def passage_format(filename):
     return basename, None if ext in UCCA_EXT else ext.lstrip(".")
 
 
-def read_files(files, default_format=None):
+def read_files(files, default_format=None, verbose=False):
     for filename in sorted(files, key=lambda x: tuple(map(int, re.findall("\d+", x))) or x):
         basename, converted_format = passage_format(filename)
         in_converter, out_converter = CONVERTERS.get(converted_format, CONVERTERS[default_format])
         if in_converter:
             with open(filename, encoding="utf-8") as f:
                 for converted, passage, passage_id in in_converter(f, passage_id=basename, return_original=True):
+                    if verbose:
+                        with tqdm.external_write_mode():
+                            print("Converting %s from %s" % (filename, converted_format))
                     yield converted, passage, passage_id, converted_format, in_converter, out_converter
         else:
             passage = ioutil.file2passage(filename)
@@ -85,14 +88,16 @@ def read_files(files, default_format=None):
 def evaluate_all(args, evaluate, files, name=None):
     for ((guessed_converted, guessed_passage, _, guessed_format, guessed_converter, _),
          (ref_converted, ref_passage, passage_id, ref_format, _, ref_converter)) in \
-            tqdm(zip(*[read_files(f, args.format) for f in files]), unit=" passages", desc=name, total=len(files[-1])):
+            tqdm(zip(*[read_files(f, args.format, verbose=args.verbose) for f in files]),
+                 unit=" passages", desc=name, total=len(files[-1])):
         if not args.quiet:
             with tqdm.external_write_mode():
                 print(passage_id, end=" ")
         if guessed_format != ref_format:
             guessed_passage = next(iter(guessed_converter(guessed_passage + [""], passage_id=passage_id))) if \
                 ref_converter is None else ref_converter(guessed_converted)
-        result = evaluate(guessed_passage, ref_passage, verbose=args.verbose > 1)
+        result = evaluate(guessed_passage, ref_passage, verbose=args.verbose > 1 or args.units or args.errors,
+                          units=args.units, errors=args.errors)
         if not args.quiet:
             with tqdm.external_write_mode():
                 print("F1: %.3f" % result.average_f1(UNLABELED if args.unlabeled else LABELED))
@@ -133,6 +138,8 @@ if __name__ == '__main__':
     argparser.add_argument("-o", "--out-file", help="file to write results for each evaluated passage to in CSV format")
     argparser.add_argument("-s", "--summary-file", help="file to write aggregated results to, in CSV format")
     argparser.add_argument("-u", "--unlabeled", action="store_true", help="print unlabeled F1 for individual passages")
+    argparser.add_argument("--units", action="store_true", help="print mutual and unique unites")
+    argparser.add_argument("--errors", action="store_true", help="print confusion matrix with error distribution")
     group = argparser.add_mutually_exclusive_group()
     add_verbose_arg(group, help="detailed evaluation output")
     group.add_argument("-q", "--quiet", action="store_true", help="do not print anything")
