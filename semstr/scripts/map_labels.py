@@ -27,7 +27,7 @@ def main(args):
     confusion_matrix = Scores.aggregate(results).evaluators[LABELED].results[PRIMARY].errors.most_common()
     label_map = {}
     for (g, r), _ in confusion_matrix:
-        g, _ = g.partition("|")
+        g, *_ = g.partition("|")
         if g not in label_map:
             label_map[g] = r.partition("|")[0]
     with open(args.out_file, "w", encoding="utf-8") as f:
