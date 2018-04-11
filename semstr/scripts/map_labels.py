@@ -28,8 +28,11 @@ def main(args):
     label_map = {}
     for (g, r), _ in confusion_matrix:
         g, *_ = g.partition("|")
+        prefix, *_ = g.partition(":")
+        if not any(l.startswith(prefix) for l in label_map):  # drop suffix for most common label
+            g = prefix
         if g not in label_map:
-            label_map[g] = r.partition("|")[0]
+            label_map[g], *_ = r.partition("|")
     with open(args.out_file, "w", encoding="utf-8") as f:
         csv.writer(f).writerows(tqdm(sorted(label_map.items()), desc="Writing " + args.out_file, unit=" rows"))
 
