@@ -41,8 +41,9 @@ class DependencyConverter(convert.DependencyConverter):
                 top_edge.head = dep_nodes[0]
                 incoming[:0] = [top_edge]
             primary_edge, *remote_edges = incoming
-            dep_node.node = dep_node.preterminal = None if primary_edge.rel.upper() == self.ROOT else \
-                l1.add_fnode(primary_edge.head.node, primary_edge.rel)
+            dep_node.node = dep_node.preterminal = None if primary_edge.rel.upper() == self.ROOT else (
+                primary_edge.head.preterminal if primary_edge.head.preterminal and self.is_flat(primary_edge) else
+                l1.add_fnode(primary_edge.head.node, primary_edge.rel))
             if dep_node.outgoing:
                 dep_node.preterminal = l1.add_fnode(dep_node.preterminal, self.HEAD)
             for edge in remote_edges:
@@ -85,3 +86,7 @@ class DependencyConverter(convert.DependencyConverter):
 
     def is_punct(self, dep_node):
         return dep_node.token.tag == self.punct_tag
+
+    def is_flat(self, edge):
+        return False
+

@@ -13,6 +13,10 @@ class ConlluConverter(DependencyConverter, convert.ConllConverter):
     def read_line(self, *args, **kwargs):
         return self.read_line_and_append(super().read_line, *args, **kwargs)
 
+    def is_flat(self, edge):
+        rel, *_ = edge.rel.partition(":")
+        return rel == "flat"
+
 
 def from_conllu(lines, passage_id, split=True, return_original=False, *args, **kwargs):
     """Converts from parsed text in Universal Dependencies format to a Passage object.
