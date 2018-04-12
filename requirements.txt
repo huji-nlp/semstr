@@ -1,7 +1,7 @@
 numpy
-tqdm
-requests
-configargparse
+tqdm>=4.22.0
+requests>=2.18.4
+configargparse>=0.13.0
 ucca==1.0.58
 penman==0.6.2
 nltk==3.2.5
