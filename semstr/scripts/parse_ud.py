@@ -13,7 +13,10 @@ from semstr.convert import add_convert_args, CONVERTERS, write_passage, map_labe
 from semstr.evaluate import Scores, EVALUATORS
 from semstr.scripts.annotate import add_specs_args, read_specs
 
-desc = """Read passages in any format, extract text, parse to Universal Dependencies using spaCy and save any format."""
+desc = """Read passages in any format, extract text, parse using spaCy and save any format.
+NOTE: the dependencies output by spaCy depend on the model used.
+English models output CLEAR-style dependencies, not Universal Dependencies.
+See https://spacy.io/api/annotation#section-dependency-parsing"""
 
 
 def main(args):
