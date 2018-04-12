@@ -1,4 +1,4 @@
-from ucca import convert
+from ucca import convert, layer1
 
 
 class DependencyConverter(convert.DependencyConverter):
@@ -9,12 +9,13 @@ class DependencyConverter(convert.DependencyConverter):
     TOP = "TOP"
     HEAD = "head"
 
-    def __init__(self, *args, constituency=False, tree=False, punct_tag=None, punct_rel=None, **kwargs):
+    def __init__(self, *args, constituency=False, tree=False, punct_tag=None, punct_rel=None, flat_rel=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.constituency = constituency
         self.tree = tree
         self.punct_tag = punct_tag
         self.punct_rel = punct_rel
+        self.flat_rel = flat_rel
         self.lines_read = []
 
     def read_line_and_append(self, read_line, line, previous_node):
@@ -42,7 +43,7 @@ class DependencyConverter(convert.DependencyConverter):
                 incoming[:0] = [top_edge]
             primary_edge, *remote_edges = incoming
             dep_node.node = dep_node.preterminal = None if primary_edge.rel.upper() == self.ROOT else (
-                primary_edge.head.preterminal if primary_edge.head.preterminal and self.is_flat(primary_edge) else
+                primary_edge.head.preterminal if primary_edge.head.preterminal and self.is_flat(primary_edge.rel) else
                 l1.add_fnode(primary_edge.head.node, primary_edge.rel))
             if dep_node.outgoing:
                 dep_node.preterminal = l1.add_fnode(dep_node.preterminal, self.HEAD)
@@ -73,6 +74,8 @@ class DependencyConverter(convert.DependencyConverter):
             if dep_node.incoming:
                 for edge in dep_node.incoming:
                     edge.remote = False
+                    if edge.rel == layer1.EdgeTags.Terminal and self.flat_rel:
+                        edge.rel = self.flat_rel
             elif self.tree:
                 dep_node.incoming = [(self.Edge(head_index=-1, rel=self.ROOT.lower(), remote=False))]
 
@@ -80,13 +83,14 @@ class DependencyConverter(convert.DependencyConverter):
         return any(e.tag == self.TOP for e in self.find_headed_unit(unit).incoming)
 
     def find_headed_unit(self, unit):
-        while unit.incoming and (not unit.outgoing or unit.incoming[0].tag == self.HEAD):
+        while unit.incoming and (not unit.outgoing or unit.incoming[0].tag == self.HEAD) and \
+                not (unit.incoming[0].tag == layer1.EdgeTags.Terminal and unit != unit.parents[0].children[0]):
             unit = unit.parents[0]
         return unit
 
     def is_punct(self, dep_node):
         return dep_node.token.tag == self.punct_tag
 
-    def is_flat(self, edge):
-        return False
-
+    def is_flat(self, tag):
+        rel, *_ = tag.partition(":")
+        return rel == self.flat_rel

@@ -5,17 +5,14 @@ from .dep import DependencyConverter
 
 class ConlluConverter(DependencyConverter, convert.ConllConverter):
     def __init__(self, *args, **kwargs):
-        DependencyConverter.__init__(self, *args, tree=True, punct_tag="PUNCT", punct_rel="punct", **kwargs)
+        DependencyConverter.__init__(self, *args, tree=True, punct_tag="PUNCT", punct_rel="punct", flat_rel="flat",
+                                     **kwargs)
 
     def modify_passage(self, passage):
         passage.extra["format"] = "conllu"
 
     def read_line(self, *args, **kwargs):
         return self.read_line_and_append(super().read_line, *args, **kwargs)
-
-    def is_flat(self, edge):
-        rel, *_ = edge.rel.partition(":")
-        return rel == "flat"
 
 
 def from_conllu(lines, passage_id, split=True, return_original=False, *args, **kwargs):
