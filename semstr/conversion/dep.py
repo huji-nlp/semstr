@@ -76,6 +76,8 @@ class DependencyConverter(convert.DependencyConverter):
                     edge.remote = False
                     if edge.rel == layer1.EdgeTags.Terminal and self.flat_rel:
                         edge.rel = self.flat_rel
+                    elif edge.rel == layer1.EdgeTags.Punctuation and self.punct_rel:
+                        edge.rel = self.punct_rel
             elif self.tree:
                 dep_node.incoming = [(self.Edge(head_index=-1, rel=self.ROOT.lower(), remote=False))]
 
