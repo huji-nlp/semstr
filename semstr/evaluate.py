@@ -96,8 +96,8 @@ def evaluate_all(args, evaluate, files, name=None):
         if guessed_format != ref_format:
             guessed_passage = next(iter(guessed_converter(guessed_passage + [""], passage_id=passage_id))) if \
                 ref_converter is None else ref_converter(guessed_converted)
-        result = evaluate(guessed_passage, ref_passage, verbose=args.verbose > 1 or args.units or args.errors,
-                          units=args.units, errors=args.errors)
+        result = evaluate(guessed_passage, ref_passage, verbose=args.verbose > 1 or args.units, units=args.units,
+                          errors=args.errors)
         if not args.quiet:
             with tqdm.external_write_mode():
                 print("F1: %.3f" % result.average_f1(UNLABELED if args.unlabeled else LABELED))
@@ -123,11 +123,20 @@ def main(args):
             print("Aggregated scores:")
         if not args.quiet:
             print("F1: %.3f" % summary.average_f1())
-            summary.print()
+            summarize(summary)
     elif not args.verbose:
-        summary.print()
+        summarize(summary, errors=args.errors)
     write_csv(args.out_file,     [summary.titles()] + [result.fields() for result in results])
     write_csv(args.summary_file, [summary.titles(), summary.fields()])
+
+
+def summarize(scores, errors=False):
+    scores.print()
+    if errors:
+        for element, _ in scores.elements:
+            p = getattr(element, "print_confusion_matrix")
+            if p:
+                p()
 
 
 if __name__ == '__main__':
@@ -138,7 +147,7 @@ if __name__ == '__main__':
     argparser.add_argument("-o", "--out-file", help="file to write results for each evaluated passage to in CSV format")
     argparser.add_argument("-s", "--summary-file", help="file to write aggregated results to, in CSV format")
     argparser.add_argument("-u", "--unlabeled", action="store_true", help="print unlabeled F1 for individual passages")
-    argparser.add_argument("--units", action="store_true", help="print mutual and unique unites")
+    argparser.add_argument("--units", action="store_true", help="print mutual and unique units")
     argparser.add_argument("--errors", action="store_true", help="print confusion matrix with error distribution")
     group = argparser.add_mutually_exclusive_group()
     add_verbose_arg(group, help="detailed evaluation output")
