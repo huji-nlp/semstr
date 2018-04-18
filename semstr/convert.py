@@ -51,7 +51,9 @@ def main(args):
                 raise IOError("Unknown extension '%s'. Specify format using -f" % ext)
             converter = converter[0]
             with open(filename, encoding="utf-8") as f:
-                for passage in converter(f, args.prefix + passage_id, split=args.split, mark_aux=args.mark_aux):
+                # noinspection PyCallingNonCallable
+                for passage in converter(f, args.prefix + passage_id, split=args.split, mark_aux=args.mark_aux,
+                                         annotate=args.annotate):
                     write_passage(passage, args)
 
 
@@ -109,6 +111,7 @@ if __name__ == '__main__':
     argparser.add_argument("-o", "--out-dir", default=".", help="output directory")
     argparser.add_argument("-p", "--prefix", default="", help="output passage ID prefix")
     argparser.add_argument("-b", "--binary", action="store_true", help="write in binary format (.%s)" % UCCA_EXT[1])
+    argparser.add_argument("--annotate", action="store_true", help="store dependency annotations in 'extra' dict")
     add_convert_args(argparser)
     add_verbose_arg(argparser, help="detailed output")
     main(argparser.parse_args())
