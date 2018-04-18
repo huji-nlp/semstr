@@ -1,7 +1,10 @@
 #!/usr/bin/env python
 import os
+import re
 import sys
 import urllib
+from glob import glob
+from itertools import chain
 from subprocess import run
 
 from setuptools import setup, find_packages
@@ -15,8 +18,12 @@ except NameError:
     this_file = sys.argv[0]
 os.chdir(os.path.dirname(os.path.abspath(this_file)))
 
-with open("requirements.txt") as f:
-    install_requires = f.read().splitlines()
+extras_require = {}
+install_requires = []
+for requirements_file in glob("requirements.*txt"):
+    suffix = re.match("[^.]*\.(.*)\.?txt", requirements_file).group(1).rstrip(".")
+    with open(requirements_file) as f:
+        (extras_require.setdefault(suffix, []) if suffix else install_requires).extend(f.read().splitlines())
 
 try:
     # noinspection PyPackageRequirements
@@ -39,7 +46,8 @@ class install(_install):
 
         # Install requirements
         self.announce("Installing dependencies...")
-        run(["pip", "--no-cache-dir", "install"] + install_requires, check=True)
+        run(["pip", "--no-cache-dir", "install"] + install_requires +
+            list(chain.from_iterable(extras_require.values())), check=True)
 
         # Install AMR resource
         for filename in ("have-org-role-91-roles-v1.06.txt", "have-rel-role-91-roles-v1.06.txt",
@@ -74,6 +82,7 @@ setup(name="SEMSTR",
       url="https://github.com/huji-nlp/semstr",
       setup_requires=["pypandoc"],
       install_requires=install_requires,
+      extras_require=extras_require,
       packages=find_packages() + ["src", "smatch"],
       package_dir={
           "src": os.path.join("semstr", "amr", "src"),

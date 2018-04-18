@@ -3,8 +3,3 @@ tqdm>=4.22.0
 requests>=2.18.4
 configargparse>=0.13.0
 ucca>=1.0.60
-penman==0.6.2
-nltk==3.2.5
-parsimonious==0.8.0
-word2number==1.1
-pyspotlight==0.7.2
