@@ -36,11 +36,11 @@ if ! [[ "$ACTION" =~ ^(toy|unit)$ ]]; then
         ;;
     esac
 fi
-export TOY_DATA="test_files/*.$SUFFIX"
 
 case "$TEST_SUITE" in
 unit)  # unit tests
     pytest --durations=0 -v tests || exit 1
+    python -m semstr.scripts.parse_ud test_files/*.xml -We
     ;;
 convert-*)
     python -m semstr.scripts.convert_and_evaluate "$CONVERT_DATA" -v
