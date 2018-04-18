@@ -1,6 +1,13 @@
-from ucca import convert
+from ucca import convert, layer0, textutil
 
 from .dep import DependencyConverter
+
+ATTR_GETTERS = {
+    textutil.Attr.DEP: lambda n: n.incoming[0].rel,
+    textutil.Attr.HEAD: lambda n: n.incoming[0].head_index - n.position if n.incoming[0].head_index else 0,
+    textutil.Attr.TAG: lambda n: n.token.tag,
+    textutil.Attr.ORTH: lambda n: n.token.text,
+}
 
 
 class ConlluConverter(DependencyConverter, convert.ConllConverter):
@@ -14,19 +21,33 @@ class ConlluConverter(DependencyConverter, convert.ConllConverter):
     def read_line(self, *args, **kwargs):
         return self.read_line_and_append(super().read_line, *args, **kwargs)
 
+    def from_format(self, lines, passage_id, split=False, return_original=False, annotate=False):
+        for dep_nodes, sentence_id in self.build_nodes(lines, split):
+            passage = self.build_passage(dep_nodes, sentence_id or passage_id)
+            if annotate:
+                docs = passage.layer(layer0.LAYER_ID).extra.setdefault("doc", [[]])
+                for dep_node in dep_nodes[1:]:
+                    paragraph = dep_node.token.paragraph
+                    while len(docs) < paragraph:
+                        docs.append([])
+                    docs[paragraph - 1].append([ATTR_GETTERS.get(a, bool)(dep_node) for a in textutil.Attr])
+            yield (passage, self.lines_read, passage.ID) if return_original else passage
+            self.lines_read = []
 
-def from_conllu(lines, passage_id, split=True, return_original=False, *args, **kwargs):
+
+def from_conllu(lines, passage_id=None, split=True, return_original=False, annotate=False, *args, **kwargs):
     """Converts from parsed text in Universal Dependencies format to a Passage object.
 
     :param lines: iterable of lines in Universal Dependencies format, describing a single passage.
     :param passage_id: ID to set for passage
     :param split: split each sentence to its own passage?
     :param return_original: return triple of (UCCA passage, Universal Dependencies string, sentence ID)
+    :param annotate: whether to save dependency annotations in "extra" dict of layer 0
 
     :return generator of Passage objects
     """
     del args, kwargs
-    return ConlluConverter().from_format(lines, passage_id, split, return_original=return_original)
+    return ConlluConverter().from_format(lines, passage_id, split, return_original=return_original, annotate=annotate)
 
 
 def to_conllu(passage, test=False, tree=False, constituency=False, *args, **kwargs):
