@@ -20,12 +20,11 @@ See https://spacy.io/api/annotation#section-dependency-parsing"""
 
 
 def main(args):
-    for passages, out_dir, lang in read_specs(args):
+    for ps, out_dir, lang in read_specs(args):
         scores = []
-        for passage, in annotate_all(zip(passages if args.verbose else
-                                         tqdm(passages, unit=" passages", desc="Parsing " + out_dir)),
-                                     as_array=True, as_tuples=True, lang=lang, verbose=args.verbose):
-            parsed = ConlluConverter().build_passage(get_dep_nodes(passage), passage.ID)
+        for p, in annotate_all(zip(ps if args.verbose else tqdm(ps, unit=" passages", desc="Parsing " + out_dir)),
+                               as_array=True, as_tuples=True, lang=lang, verbose=args.verbose):
+            parsed = ConlluConverter().build_passage(get_dep_nodes(p, lang=p.attrib.get("lang", lang)), p.ID)
             if args.write:
                 write_passage(parsed, args)
             else:
@@ -35,22 +34,25 @@ def main(args):
                 _, converter = CONVERTERS[args.output_format]
                 if converter is not None:
                     parsed = converter(parsed)
-                    passage = converter(passage)
-                scores.append(evaluator.evaluate(parsed, passage, verbose=args.verbose > 1))
+                    p = converter(p)
+                scores.append(evaluator.evaluate(parsed, p, verbose=args.verbose > 1))
         if scores:
             Scores(scores).print()
 
 
-def get_dep_nodes(passage):
+def get_dep_nodes(passage, lang):
+    terminals = sorted(passage.layer(layer0.LAYER_ID).all, key=operator.attrgetter("position"))
     dep_nodes = [ConlluConverter.Node()] + [ConlluConverter.Node(
-        terminal.position, terminal=terminal, token=ConlluConverter.Token(terminal.text, terminal.tag))
-        for terminal in sorted(passage.layer(layer0.LAYER_ID).all, key=operator.attrgetter("position"))]
+        t.position, terminal=t, token=ConlluConverter.Token(t.text, t.tag)) for t in terminals]
     for dep_node in dep_nodes[1:]:
         dep_node.token.paragraph = dep_node.terminal.paragraph
-        head = Attr.HEAD(dep_node.terminal.tok[Attr.HEAD.value])
+        head = Attr.HEAD(dep_node.terminal.tok[Attr.HEAD.value], lang=lang)
         if head:
             head += dep_node.position
-        edge = ConlluConverter.Edge(head, Attr.DEP(dep_node.terminal.tok[Attr.DEP.value]), remote=False)
+        rel = Attr.DEP(dep_node.terminal.tok[Attr.DEP.value], lang=lang)
+        assert head is not None and rel is not None, \
+            "head=%r, rel=%r for token %d in %s" % (head, rel, dep_node.position, terminals)
+        edge = ConlluConverter.Edge(head, rel, remote=False)
         dep_node.terminal = None
         edge.link_head(dep_nodes)
         dep_node.add_edges([edge])
