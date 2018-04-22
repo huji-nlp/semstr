@@ -44,12 +44,12 @@ class DependencyConverter(convert.DependencyConverter):
             primary_edge, *remote_edges = incoming
             dep_node.node = dep_node.preterminal = None if primary_edge.rel.upper() == self.ROOT else (
                 primary_edge.head.preterminal if primary_edge.head.preterminal and self.is_flat(primary_edge.rel) else
-                l1.add_fnode(primary_edge.head.node, primary_edge.rel))
+                l1.add_fnode(primary_edge.head.node, self.strip_suffix(primary_edge.rel)))
             if dep_node.outgoing:
                 dep_node.preterminal = l1.add_fnode(dep_node.preterminal, self.HEAD)
             for edge in remote_edges:
                 if primary_edge.head.node != edge.head.node:  # Avoid multi-edges
-                    l1.add_remote(edge.head.node or l1.heads[0], edge.rel, dep_node.node)
+                    l1.add_remote(edge.head.node or l1.heads[0], self.strip_suffix(edge.rel), dep_node.node)
 
     def from_format(self, lines, passage_id, split=False, return_original=False):
         for passage in super().from_format(lines, passage_id, split=split):
@@ -78,6 +78,7 @@ class DependencyConverter(convert.DependencyConverter):
                         edge.rel = self.flat_rel
                     elif edge.rel == layer1.EdgeTags.Punctuation and self.punct_rel:
                         edge.rel = self.punct_rel
+                    edge.rel = self.strip_suffix(edge.rel)
             elif self.tree:
                 dep_node.incoming = [(self.Edge(head_index=-1, rel=self.ROOT.lower(), remote=False))]
 
@@ -94,5 +95,7 @@ class DependencyConverter(convert.DependencyConverter):
         return dep_node.token.tag == self.punct_tag
 
     def is_flat(self, tag):
-        rel, *_ = tag.partition(":")
-        return rel == self.flat_rel
+        return self.strip_suffix(tag) == self.flat_rel
+
+    def strip_suffix(self, rel):
+        return rel
