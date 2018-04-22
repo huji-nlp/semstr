@@ -3,6 +3,7 @@
 import argparse
 import operator
 from itertools import tee
+from time import time
 
 from tqdm import tqdm
 from ucca import layer0
@@ -50,7 +51,10 @@ def parse_udpipe(passages, model_name, verbose=False):
     passages1, passages2 = tee(passages)
     text = "\n".join(l for p in passages1 for l in to_conllu(p, tree=True))
     error = ProcessingError()
+    print("Running UDPipe on %d characters... " % len(text), end="", flush=True)
+    start = time()
     processed = pipeline.process(text, error)
+    print("Done (%.3fs)" % (time() - start))
     if verbose:
         print(processed)
     if error.occurred():
