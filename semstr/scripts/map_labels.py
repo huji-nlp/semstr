@@ -7,14 +7,14 @@ from tqdm import tqdm
 from ucca import ioutil
 from ucca.evaluation import evaluate, Scores, LABELED, PRIMARY
 
-from semstr.convert import CONVERTERS
+from semstr.convert import FROM_FORMAT
 
 desc = "Create confusion matrix of labels between two datasets, " \
        "and use it to create a CSV file mapping labels by most-frequent"
 
 
 def main(args):
-    guessed, ref = [ioutil.read_files_and_dirs((x,), converters=CONVERTERS) for x in (args.guessed, args.ref)]
+    guessed, ref = [ioutil.read_files_and_dirs((x,), converters=FROM_FORMAT) for x in (args.guessed, args.ref)]
     if len(guessed) != len(ref):
         raise ValueError("Number of passages to compare does not match: %d != %d" % (len(guessed), len(ref)))
     if len(guessed) > 1:
