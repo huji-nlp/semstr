@@ -92,7 +92,7 @@ class DependencyConverter(convert.DependencyConverter):
         return unit
 
     def is_punct(self, dep_node):
-        return dep_node.token.tag == self.punct_tag
+        return super().is_punct(dep_node) or dep_node.token.tag == self.punct_tag
 
     def is_flat(self, tag):
         return self.strip_suffix(tag) == self.flat_rel
