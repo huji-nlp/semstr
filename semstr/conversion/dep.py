@@ -37,7 +37,7 @@ class DependencyConverter(convert.DependencyConverter):
                     dep_node.node = dep_node.preterminal = l1.add_fnode(None, (self.ROOT, self.TOP)[dep_node.is_top])
         for dep_node in self._topological_sort(dep_nodes):  # Create all other nodes
             incoming = list(dep_node.incoming)
-            if dep_node.is_top and incoming[0].head_index != 0:
+            if dep_node.is_top and incoming[0].head_index != 0:  # TODO add intermediate ParallelScene edge if missing
                 top_edge = self.Edge(head_index=0, rel=self.TOP, remote=False)
                 top_edge.head = dep_nodes[0]
                 incoming[:0] = [top_edge]
@@ -48,7 +48,7 @@ class DependencyConverter(convert.DependencyConverter):
             if dep_node.outgoing:
                 dep_node.preterminal = l1.add_fnode(dep_node.preterminal, self.HEAD)
             for edge in remote_edges:
-                if primary_edge.head.node != edge.head.node:  # Avoid multi-edges
+                if primary_edge.head.node != edge.head.node and dep_node.node:  # Avoid multi-edges and edges into root
                     l1.add_remote(edge.head.node or l1.heads[0], self.strip_suffix(edge.rel), dep_node.node)
 
     def from_format(self, lines, passage_id, split=False, return_original=False):

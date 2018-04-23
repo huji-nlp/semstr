@@ -27,7 +27,10 @@ class ConlluConverter(DependencyConverter, convert.ConllConverter):
 
     def from_format(self, lines, passage_id, split=False, return_original=False, annotate=False):
         for dep_nodes, sentence_id in self.build_nodes(lines, split):
-            passage = self.build_passage(dep_nodes, sentence_id or passage_id)
+            try:
+                passage = self.build_passage(dep_nodes, sentence_id or passage_id)
+            except (AttributeError, IndexError) as e:
+                raise RuntimeError("Failed converting '%s'" % sentence_id) from e
             if annotate:
                 docs = passage.layer(layer0.LAYER_ID).extra.setdefault("doc", [[]])
                 for dep_node in dep_nodes[1:]:
