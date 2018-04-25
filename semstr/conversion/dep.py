@@ -9,13 +9,15 @@ class DependencyConverter(convert.DependencyConverter):
     TOP = "TOP"
     HEAD = "head"
 
-    def __init__(self, *args, constituency=False, tree=False, punct_tag=None, punct_rel=None, flat_rel=None, **kwargs):
+    def __init__(self, *args, constituency=False, tree=False, punct_tag=None, punct_rel=None, flat_rel=None,
+                 scene_rel=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.constituency = constituency
         self.tree = tree
         self.punct_tag = punct_tag
         self.punct_rel = punct_rel
         self.flat_rel = flat_rel
+        self.scene_rel = scene_rel
         self.lines_read = []
 
     def read_line_and_append(self, read_line, line, previous_node):
@@ -37,16 +39,20 @@ class DependencyConverter(convert.DependencyConverter):
                     dep_node.node = dep_node.preterminal = l1.add_fnode(None, (self.ROOT, self.TOP)[dep_node.is_top])
         for dep_node in self._topological_sort(dep_nodes):  # Create all other nodes
             incoming = list(dep_node.incoming)
-            if dep_node.is_top and incoming[0].head_index != 0:  # TODO add intermediate ParallelScene edge if missing
+            if dep_node.is_top and incoming[0].head_index != 0:
                 top_edge = self.Edge(head_index=0, rel=self.TOP, remote=False)
                 top_edge.head = dep_nodes[0]
                 incoming[:0] = [top_edge]
             primary_edge, *remote_edges = incoming
-            dep_node.node = dep_node.preterminal = None if primary_edge.rel.upper() == self.ROOT else (
-                primary_edge.head.preterminal if primary_edge.head.preterminal and self.is_flat(primary_edge.rel) else
-                l1.add_fnode(primary_edge.head.node, self.strip_suffix(primary_edge.rel)))
-            if dep_node.outgoing:
-                dep_node.preterminal = l1.add_fnode(dep_node.preterminal, self.HEAD)
+            if primary_edge.rel.upper() == self.ROOT:
+                dep_node.node = dep_node.preterminal = l1.add_fnode(dep_node.preterminal, layer1.EdgeTags.ParallelScene)
+            else:
+                dep_node.node = dep_node.preterminal = \
+                    self.is_flat(primary_edge.rel) and primary_edge.head.preterminal or \
+                    l1.add_fnode(None if self.is_scene(primary_edge.rel) else primary_edge.head.node,
+                                 self.strip_suffix(primary_edge.rel))
+                if dep_node.outgoing:
+                    dep_node.preterminal = l1.add_fnode(dep_node.preterminal, self.HEAD)
             for edge in remote_edges:
                 if primary_edge.head.node != edge.head.node and dep_node.node:  # Avoid multi-edges and edges into root
                     l1.add_remote(edge.head.node or l1.heads[0], self.strip_suffix(edge.rel), dep_node.node)
@@ -96,6 +102,9 @@ class DependencyConverter(convert.DependencyConverter):
 
     def is_flat(self, tag):
         return self.strip_suffix(tag) == self.flat_rel
+
+    def is_scene(self, tag):
+        return tag in (layer1.EdgeTags.ParallelScene, self.scene_rel)
 
     def strip_suffix(self, rel):
         return rel
