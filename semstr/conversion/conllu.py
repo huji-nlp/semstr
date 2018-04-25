@@ -13,7 +13,7 @@ ATTR_GETTERS = {
 class ConlluConverter(DependencyConverter, convert.ConllConverter):
     def __init__(self, *args, **kwargs):
         DependencyConverter.__init__(self, *args, tree=True, punct_tag="PUNCT", punct_rel="punct", flat_rel="flat",
-                                     scene_rel="parataxis", **kwargs)
+                                     scene_rel="parataxis", connector_rel="cc", conj_rel="conj", **kwargs)
 
     def modify_passage(self, passage):
         passage.extra["format"] = "conllu"
