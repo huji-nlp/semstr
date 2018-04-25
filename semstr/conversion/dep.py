@@ -45,12 +45,12 @@ class DependencyConverter(convert.DependencyConverter):
                 incoming[:0] = [top_edge]
             primary_edge, *remote_edges = incoming
             if primary_edge.rel.upper() == self.ROOT:
-                dep_node.node = dep_node.preterminal = l1.add_fnode(dep_node.preterminal, layer1.EdgeTags.ParallelScene)
+                dep_node.node = dep_node.preterminal = l1.add_fnode(dep_node.preterminal, self.scene_rel)
             else:
                 dep_node.node = dep_node.preterminal = \
-                    self.is_flat(primary_edge.rel) and primary_edge.head.preterminal or \
-                    l1.add_fnode(None if self.is_scene(primary_edge.rel) else primary_edge.head.node,
-                                 self.strip_suffix(primary_edge.rel))
+                    self.is_flat(primary_edge.rel) and primary_edge.head.preterminal or (
+                        l1.add_fnode(None, self.scene_rel) if self.is_scene(primary_edge.rel) else
+                        l1.add_fnode(primary_edge.head.node, self.strip_suffix(primary_edge.rel)))
                 if dep_node.outgoing:
                     dep_node.preterminal = l1.add_fnode(dep_node.preterminal, self.HEAD)
             for edge in remote_edges:
