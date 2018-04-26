@@ -1,3 +1,5 @@
+from itertools import groupby
+
 from ucca import convert, layer1
 
 
@@ -55,9 +57,12 @@ class DependencyConverter(convert.DependencyConverter):
                                      primary_edge.head.node, self.strip_suffix(primary_edge.rel))))
             if dep_node.outgoing:
                 dep_node.preterminal = l1.add_fnode(dep_node.preterminal, self.HEAD)
-            for edge in remote_edges:
-                if primary_edge.head.node != edge.head.node and dep_node.node:  # Avoid multi-edges and edges into root
-                    l1.add_remote(edge.head.node or l1.heads[0], self.strip_suffix(edge.rel), dep_node.node)
+            if dep_node.node is None:
+                continue  # Avoid remote edges to root
+            for parent, edges in groupby(remote_edges, key=lambda e: e.head.node or l1.heads[0]):
+                edge = next(iter(edges))  # Get just one edge per parent to avoid multiple remote edges from same parent
+                if dep_node not in (e.head for e in edge.head.incoming) and primary_edge.head.node != parent:
+                    l1.add_remote(parent, self.strip_suffix(edge.rel), dep_node.node)  # Avoid cycles
 
     def from_format(self, lines, passage_id, split=False, return_original=False):
         for passage in super().from_format(lines, passage_id, split=split):
