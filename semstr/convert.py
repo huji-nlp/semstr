@@ -9,6 +9,7 @@ from glob import glob
 import configargparse
 from tqdm import tqdm
 from ucca import convert, ioutil, layer1
+from ucca.convert import from_text
 
 from semstr.cfgutil import add_verbose_arg
 from semstr.conversion.amr import from_amr, to_amr
@@ -32,37 +33,30 @@ TO_FORMAT = {f: c[1] for f, c in CONVERTERS.items() if c[1] is not None}
 UCCA_EXT = (".xml", ".pickle")
 
 
-def main(args):
-    os.makedirs(args.out_dir, exist_ok=True)
-    for filename in tqdm(list(iter_files(args.filenames)), unit="file", desc="Converting"):
-        if not os.path.isfile(filename):
-            raise IOError("Not a file: %s" % filename)
-        no_ext, ext = os.path.splitext(filename)
-        if ext in UCCA_EXT:  # UCCA input
-            write_passage(ioutil.file2passage(filename), args)
-        else:
-            basename = os.path.basename(no_ext)
-            try:
-                passage_id = re.search(r"\d+(\.\d+)*", basename).group(0)
-            except AttributeError:
-                passage_id = basename
-            converter = CONVERTERS.get(args.input_format or ext.lstrip("."))
-            if converter is None:
-                raise IOError("Unknown extension '%s'. Specify format using -f" % ext)
-            converter = converter[0]
-            with open(filename, encoding="utf-8") as f:
-                # noinspection PyCallingNonCallable
-                for passage in converter(f, args.prefix + passage_id, split=args.split, mark_aux=args.mark_aux,
-                                         annotate=args.annotate):
-                    write_passage(passage, args)
-
-
 def iter_files(patterns):
     for pattern in patterns:
         filenames = glob(pattern)
         if not filenames:
             raise IOError("Not found: " + pattern)
         yield from filenames
+
+
+def iter_passages(patterns, desc=None, input_format=None, prefix="", split=False, mark_aux=False, annotate=False):
+    for filename in tqdm(list(iter_files(patterns)), unit="file", desc=desc):
+        if not os.path.isfile(filename):
+            raise IOError("Not a file: %s" % filename)
+        no_ext, ext = os.path.splitext(filename)
+        if ext in UCCA_EXT:  # UCCA input
+            yield ioutil.file2passage(filename)
+        else:
+            basename = os.path.basename(no_ext)
+            try:
+                passage_id = re.search(r"\d+(\.\d+)*", basename).group(0)
+            except AttributeError:
+                passage_id = basename
+            converter, _ = CONVERTERS.get(input_format or ext.lstrip("."), (from_text,))
+            with open(filename, encoding="utf-8") as f:
+                yield from converter(f, prefix + passage_id, split=split, mark_aux=mark_aux, annotate=annotate)
 
 
 def map_labels(passage, label_map_file):
@@ -92,6 +86,13 @@ def write_passage(passage, args):
                       converter(p, test=args.test, tree=args.tree, mark_aux=args.mark_aux))
         with open(outfile, "w", encoding="utf-8") as f:
             print(output, file=f)
+
+
+def main(args):
+    os.makedirs(args.out_dir, exist_ok=True)
+    for passage in iter_passages(args.filenames, desc="Converting", input_format=args.input_format, prefix=args.prefix,
+                                 split=args.split, mark_aux=args.mark_aux, annotate=args.annotate):
+        write_passage(passage, args)
 
 
 def add_convert_args(p):
