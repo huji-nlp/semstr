@@ -37,7 +37,7 @@ class ConlluConverter(DependencyConverter, convert.ConllConverter):
                     paragraph = dep_node.token.paragraph
                     while len(docs) < paragraph:
                         docs.append([])
-                    docs[paragraph - 1].append([ATTR_GETTERS.get(a, bool)(dep_node) for a in textutil.Attr])
+                    docs[paragraph - 1].append([ATTR_GETTERS.get(a, {}.get)(dep_node) for a in textutil.Attr])
             yield (passage, self.lines_read, passage.ID) if return_original else passage
             self.lines_read = []
 
