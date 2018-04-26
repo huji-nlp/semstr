@@ -60,9 +60,9 @@ class DependencyConverter(convert.DependencyConverter):
             if dep_node.node is None:
                 continue  # Avoid remote edges to root
             for parent, edges in groupby(remote_edges, key=lambda e: e.head.node or l1.heads[0]):
-                edge = next(iter(edges))  # Get just one edge per parent to avoid multiple remote edges from same parent
-                if dep_node not in (e.head for e in edge.head.incoming) and primary_edge.head.node != parent:
-                    l1.add_remote(parent, self.strip_suffix(edge.rel), dep_node.node)  # Avoid cycles
+                if primary_edge.head.node != parent:    # Avoid primary + remote edges from the same parent
+                    edge = next(iter(edges))  # Get just one to avoid multiple remote edges from the same parent
+                    l1.add_remote(parent, self.strip_suffix(edge.rel), dep_node.node)
 
     def from_format(self, lines, passage_id, split=False, return_original=False):
         for passage in super().from_format(lines, passage_id, split=split):
