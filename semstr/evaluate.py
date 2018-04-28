@@ -64,6 +64,17 @@ class Scores:
         print(",".join(self.fields()))
 
 
+class ConvertedPassage:
+    def __init__(self, converted, original=None, passage_id=None,
+                 converted_format=None, in_converter=None, out_converter=None):
+        self.converted = converted
+        self.passage = converted if original is None else original
+        self.ID = converted.ID if passage_id is None else passage_id
+        self.format = converted_format
+        self.in_converter = in_converter
+        self.out_converter = out_converter
+
+
 def passage_format(filename):
     basename, ext = os.path.splitext(os.path.basename(filename))
     return basename, None if ext in UCCA_EXT else ext.lstrip(".")
@@ -73,30 +84,28 @@ def read_files(files, default_format=None, verbose=False):
     for filename in sorted(files, key=lambda x: tuple(map(int, re.findall("\d+", x))) or x):
         basename, converted_format = passage_format(filename)
         in_converter, out_converter = CONVERTERS.get(converted_format, CONVERTERS[default_format])
+        kwargs = dict(converted_format=converted_format, in_converter=in_converter, out_converter=out_converter)
         if in_converter:
             with open(filename, encoding="utf-8") as f:
                 for converted, passage, passage_id in in_converter(f, passage_id=basename, return_original=True):
                     if verbose:
                         with tqdm.external_write_mode():
                             print("Converting %s from %s" % (filename, converted_format))
-                    yield converted, passage, passage_id, converted_format, in_converter, out_converter
+                    yield ConvertedPassage(converted, passage, passage_id, **kwargs)
         else:
-            passage = ioutil.file2passage(filename)
-            yield passage, passage, passage.ID, converted_format, in_converter, out_converter
+            yield ConvertedPassage(ioutil.file2passage(filename), **kwargs)
 
 
 def evaluate_all(args, evaluate, files, name=None):
-    for ((guessed_converted, guessed_passage, _, guessed_format, guessed_converter, _),
-         (ref_converted, ref_passage, passage_id, ref_format, _, ref_converter)) in \
-            tqdm(zip(*[read_files(f, args.format, verbose=args.verbose) for f in files]),
-                 unit=" passages", desc=name, total=len(files[-1])):
+    guessed, ref = [iter(read_files(f, args.format, verbose=args.verbose)) for f in files]
+    for (g, r) in tqdm(zip(guessed, ref), unit=" passages", desc=name, total=len(files[-1])):
         if not args.quiet:
             with tqdm.external_write_mode():
-                print(passage_id, end=" ")
-        if guessed_format != ref_format:
-            guessed_passage = next(iter(guessed_converter(guessed_passage + [""], passage_id=passage_id))) if \
-                ref_converter is None else ref_converter(guessed_converted)
-        result = evaluate(guessed_passage, ref_passage, verbose=args.verbose > 1 or args.units, units=args.units,
+                print(r.ID, end=" ")
+        if g.format != r.format:
+            g.passage = next(iter(g.in_converter(g.passage + [""], passage_id=r.ID))) if \
+                r.out_converter is None else r.out_converter(g.converted)
+        result = evaluate(g.passage, r.passage, verbose=args.verbose > 1 or args.units, units=args.units,
                           errors=args.errors)
         if not args.quiet:
             with tqdm.external_write_mode():
