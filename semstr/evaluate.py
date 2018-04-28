@@ -80,7 +80,7 @@ def passage_format(filename):
     return basename, None if ext in UCCA_EXT else ext.lstrip(".")
 
 
-def read_files(files, default_format=None, verbose=False):
+def read_files(files, default_format=None, verbose=False, force_basename=False):
     for filename in sorted(files, key=lambda x: tuple(map(int, re.findall("\d+", x))) or x):
         basename, converted_format = passage_format(filename)
         in_converter, out_converter = CONVERTERS.get(converted_format, CONVERTERS[default_format])
@@ -91,18 +91,25 @@ def read_files(files, default_format=None, verbose=False):
                     if verbose:
                         with tqdm.external_write_mode():
                             print("Converting %s from %s" % (filename, converted_format))
-                    yield ConvertedPassage(converted, passage, passage_id, **kwargs)
+                    yield ConvertedPassage(converted, passage, basename if force_basename else passage_id, **kwargs)
         else:
-            yield ConvertedPassage(ioutil.file2passage(filename), **kwargs)
+            passage_id = basename if force_basename else None
+            yield ConvertedPassage(ioutil.file2passage(filename), passage_id=passage_id, **kwargs)
 
 
 def evaluate_all(args, evaluate, files, name=None):
-    guessed, ref = [iter(read_files(f, args.format, verbose=args.verbose)) for f in files]
+    guessed, ref = [iter(read_files(f, args.format, verbose=args.verbose, force_basename=args.basename)) for f in files]
     for (g, r) in tqdm(zip(guessed, ref), unit=" passages", desc=name, total=len(files[-1])):
+        if args.matching_ids:
+            while g.ID < r.ID:
+                g = next(guessed)
+            while g.ID > r.ID:
+                r = next(ref)
         if not args.quiet:
             with tqdm.external_write_mode():
                 print(r.ID, end=" ")
         if g.format != r.format:
+            # noinspection PyCallingNonCallable
             g.passage = next(iter(g.in_converter(g.passage + [""], passage_id=r.ID))) if \
                 r.out_converter is None else r.out_converter(g.converted)
         result = evaluate(g.passage, r.passage, verbose=args.verbose > 1 or args.units, units=args.units,
@@ -156,6 +163,8 @@ if __name__ == '__main__':
     argparser.add_argument("-o", "--out-file", help="file to write results for each evaluated passage to in CSV format")
     argparser.add_argument("-s", "--summary-file", help="file to write aggregated results to, in CSV format")
     argparser.add_argument("-u", "--unlabeled", action="store_true", help="print unlabeled F1 for individual passages")
+    argparser.add_argument("-i", "--matching-ids", action="store_true", help="skip passages without a match (by ID)")
+    argparser.add_argument("-b", "--basename", action="store_true", help="force passage ID to be file basename")
     argparser.add_argument("--units", action="store_true", help="print mutual and unique units")
     argparser.add_argument("--errors", action="store_true", help="print confusion matrix with error distribution")
     group = argparser.add_mutually_exclusive_group()
