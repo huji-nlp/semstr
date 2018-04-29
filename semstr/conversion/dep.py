@@ -47,13 +47,15 @@ class DependencyConverter(convert.DependencyConverter):
                 top_edge.head = dep_nodes[0]
                 incoming[:0] = [top_edge]
             edge, *remotes = incoming
-            dep_node.node = dep_node.preterminal = \
-                l1.add_fnode(dep_node.preterminal, self.scene_rel) if edge.rel.upper() == self.ROOT else (
-                    self.is_flat(edge.rel) and edge.head.preterminal or (
+            if self.is_flat(edge.rel):  # Unanalyzable unit
+                dep_node.preterminal = edge.head.preterminal
+                dep_node.node = edge.head.node
+            else:
+                dep_node.node = dep_node.preterminal = \
+                    l1.add_fnode(dep_node.preterminal, self.scene_rel) if edge.rel.upper() == self.ROOT else (
                         l1.add_fnode(None, self.scene_rel) if self.is_scene(edge.rel) else
-                        l1.add_fnode(edge.head.node.fparent if self.is_connector(edge.rel)
-                                     and edge.head.node is not None else
-                                     edge.head.node, self.strip_suffix(edge.rel))))
+                        l1.add_fnode(edge.head.node.fparent if self.is_connector(edge.rel) and edge.head.node else
+                                     edge.head.node, self.strip_suffix(edge.rel)))
             if dep_node.outgoing:
                 dep_node.preterminal = l1.add_fnode(dep_node.preterminal, self.HEAD)
             remote_edges += remotes
