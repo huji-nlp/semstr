@@ -12,8 +12,16 @@ def contains(s, tag):
     return s is not None and (s.match(tag) if hasattr(s, "match") else tag == s if isinstance(s, str) else tag in s)
 
 
-def tags(node, direction):
-    return node.incoming_tags if direction == Direction.incoming else node.outgoing_tags
+def incoming_tags(node, except_edge):
+    return getattr(node, "incoming_tags", set(e.tag for e in node.incoming if e != except_edge))
+
+
+def outgoing_tags(node, except_edge):
+    return getattr(node, "outgoing_tags", set(e.tag for e in node if e != except_edge))
+
+
+def tags(node, except_edge, direction):
+    return incoming_tags(node, except_edge) if direction == Direction.incoming else outgoing_tags(node, except_edge)
 
 
 # Generic class to define rules on allowed incoming/outgoing edge tags based on triggers
@@ -24,9 +32,10 @@ class TagRule:
         self.disallowed = disallowed
 
     def violation(self, node, tag, direction, message=False):
+        edge, tag = (tag, tag.tag) if hasattr(tag, "tag") else (None, tag)
         for d in Direction:
             trigger = self.trigger.get(d)
-            if any(contains(trigger, t) for t in tags(node, d)):  # Trigger on edges that node already has
+            if any(contains(trigger, t) for t in tags(node, edge, d)):  # Trigger on edges that node already has
                 allowed = None if self.allowed is None else self.allowed.get(direction)
                 if allowed is not None and not contains(allowed, tag):
                     return message and "Units with %s '%s' edges must get only %s '%s' edges, but got '%s' for '%s'" % (
@@ -36,16 +45,16 @@ class TagRule:
                     return message and "Units with %s '%s' edges must not get %s '%s' edges, but got '%s' for '%s'" % (
                         d.name, trigger, direction.name, disallowed, tag, node)
         trigger = self.trigger.get(direction)
-        if contains(trigger, tag):  # Trigger on edges that node is getting now
+        if edge is None and contains(trigger, tag):  # Trigger on edges that node is getting now (it does not exist yet)
             for d in Direction:
                 allowed = None if self.allowed is None else self.allowed.get(d)
-                if allowed is not None and not all(contains(allowed, t) for t in tags(node, d)):
+                if allowed is not None and not all(contains(allowed, t) for t in tags(node, edge, d)):
                     return message and "Units getting %s '%s' edges must have only %s '%s' edges, but '%s' has '%s'" % (
-                        direction.name, tag, d.name, allowed, node, tags(node, d))
+                        direction.name, tag, d.name, allowed, node, tags(node, edge, d))
                 disallowed = None if self.disallowed is None else self.disallowed.get(d)
-                if disallowed is not None and any(contains(disallowed, t) for t in tags(node, d)):
+                if disallowed is not None and any(contains(disallowed, t) for t in tags(node, edge, d)):
                     return message and "Units getting %s '%s' edges must not have %s '%s' edges, but '%s' has '%s'" % (
-                        direction.name, tag, d.name, disallowed, node, tags(node, d))
+                        direction.name, tag, d.name, disallowed, node, tags(node, edge, d))
         return None
 
 

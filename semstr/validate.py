@@ -8,7 +8,7 @@ from convert import iter_passages
 from semstr.constraint.amr import AmrConstraints
 from semstr.constraint.conllu import ConlluConstraints
 from semstr.constraint.sdp import SdpConstraints
-from semstr.constraints import UccaConstraints
+from semstr.constraints import UccaConstraints, Direction
 
 CONSTRAINTS = {
     None:     UccaConstraints,
@@ -80,6 +80,20 @@ def validate(passage, args):
         if constraints.required_outgoing and all(n.tag == layer1.NodeTags.Foundational for n in node.children) and \
                 not any(e.tag in constraints.required_outgoing for e in node):
             yield "Non-terminal without outgoing %s (%s)" % (constraints.required_outgoing, node.ID)
+        for rule in constraints.tag_rules:
+            for edge in node:
+                for violation in (rule.violation(node, edge, Direction.outgoing, message=True),
+                                  rule.violation(edge.child, edge, Direction.incoming, message=True)):
+                    if violation:
+                        yield "%s (%s)" % (violation, join([edge]))
+                if not constraints.allow_edge(edge):
+                    "Illegal edge: %s" % join([edge])
+                if not constraints.allow_parent(edge.child, edge.tag):
+                    yield "%s may not be a '%s' parent (currently %s, %s)" % (
+                        node.ID, edge.tag, join(node.incoming), join(node))
+                if not constraints.allow_child(edge.child, edge.tag):
+                    yield "%s may not be a '%s' child (currently %s, %s)" % (
+                        edge.child.ID, edge.tag, join(edge.child.incoming), join(edge.child))
 
 
 def main(args):
