@@ -40,7 +40,8 @@ def detect_cycles(passage):
 
 
 def join(edges):
-    return ", ".join("%s-[%s]->%s" % (e.parent.ID, e.tag, e.child.ID) for e in edges)
+    return ", ".join("%s-[%s%s]->%s" % (e.parent.ID, e.tag, "*" if e.attrib.get("remote") else "", e.child.ID)
+                     for e in edges)
 
 
 def validate(passage, args):
