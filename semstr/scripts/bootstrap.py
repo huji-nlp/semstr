@@ -17,7 +17,7 @@ def main(args):
     files = [[os.path.join(d, f) for f in os.listdir(d)] for d in args.guessed + [args.ref]]
     n = len(files[-1])
     evaluate = EVALUATORS.get(passage_format(files[-1][0])[1], EVALUATORS[args.format]).evaluate
-    results = [list(evaluate_all(args, evaluate, f, n)) for f, n in zip((files[0::2], files[1:]), args.guessed)]
+    results = [list(evaluate_all(evaluate, f, n, **vars(args))) for f, n in zip((files[0::2], files[1:]), args.guessed)]
     d = diff(results, verbose=True)
     sample = np.random.choice(n, (args.nboot, n))
     s = np.sum(np.sign(d) * diff(results, indices) > 2 * np.abs(d) for indices in tqdm(sample, unit=" samples"))
