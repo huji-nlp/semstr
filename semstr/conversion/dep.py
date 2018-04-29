@@ -40,7 +40,8 @@ class DependencyConverter(convert.DependencyConverter):
                 if dep_node.position != 0 and not dep_node.incoming and dep_node.outgoing:
                     dep_node.node = dep_node.preterminal = l1.add_fnode(None, (self.ROOT, self.TOP)[dep_node.is_top])
         remote_edges = []
-        for dep_node in self._topological_sort(dep_nodes):  # Create all other nodes
+        sorted_dep_nodes = self._topological_sort(dep_nodes)
+        for dep_node in sorted_dep_nodes:  # Create all other nodes
             incoming = list(dep_node.incoming)
             if dep_node.is_top and incoming[0].head_index != 0:
                 top_edge = self.Edge(head_index=0, rel=self.TOP, remote=False)
@@ -50,19 +51,19 @@ class DependencyConverter(convert.DependencyConverter):
             if self.is_flat(edge.rel):  # Unanalyzable unit
                 dep_node.preterminal = edge.head.preterminal
                 dep_node.node = edge.head.node
-            else:
+            else:  # Add top-level edge (like UCCA H) if top-level, otherwise add child to head's node
                 dep_node.node = dep_node.preterminal = \
                     l1.add_fnode(dep_node.preterminal, self.scene_rel) if edge.rel.upper() == self.ROOT else (
                         l1.add_fnode(None, self.scene_rel) if self.is_scene(edge.rel) else
                         l1.add_fnode(edge.head.node.fparent if self.is_connector(edge.rel) and edge.head.node else
                                      edge.head.node, self.strip_suffix(edge.rel)))
-            if dep_node.outgoing:
+            if dep_node.outgoing:  # Add intermediate head non-terminal for hierarchical structure
                 dep_node.preterminal = l1.add_fnode(dep_node.preterminal, self.HEAD)
             remote_edges += remotes
         for edge in remote_edges:
             parent = edge.head.node or l1.heads[0]
             child = edge.dependent.node
-            if child not in parent.children and parent not in child.iter():
+            if child not in parent.children and parent not in child.iter():  # Avoid cycles and multi-edges
                 l1.add_remote(parent, self.strip_suffix(edge.rel), child)
 
     def from_format(self, lines, passage_id, split=False, return_original=False):
