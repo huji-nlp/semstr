@@ -81,14 +81,15 @@ class Valid:
 
 # Generic class to define constraints on parser actions
 class Constraints:
-    def __init__(self, args, multigraph=False, require_implicit_childless=True, allow_root_terminal_children=False,
-                 top_level_allowed=None, top_level_only=None, possible_multiple_incoming=(),
-                 childless_incoming_trigger=(), childless_outgoing_allowed=(), unique_incoming=(), unique_outgoing=(),
-                 mutually_exclusive_incoming=(), mutually_exclusive_outgoing=(), exclusive_outgoing=(),
-                 required_outgoing=()):
+    def __init__(self, args, multigraph=False, require_implicit_childless=True, allow_orphan_terminals=False,
+                 allow_root_terminal_children=False, top_level_allowed=None, top_level_only=None,
+                 possible_multiple_incoming=(), childless_incoming_trigger=(), childless_outgoing_allowed=(),
+                 unique_incoming=(), unique_outgoing=(), mutually_exclusive_incoming=(), mutually_exclusive_outgoing=(),
+                 exclusive_outgoing=(), required_outgoing=()):
         self.args = args
         self.multigraph = multigraph
         self.require_implicit_childless = require_implicit_childless
+        self.allow_orphan_terminals = allow_orphan_terminals
         self.allow_root_terminal_children = allow_root_terminal_children
         self.top_level_allowed = top_level_allowed
         self.top_level_only = top_level_only
@@ -127,10 +128,11 @@ LINKAGE_TAGS = {EdgeTags.LinkArgument, EdgeTags.LinkRelation}
 
 class UccaConstraints(Constraints):
     def __init__(self, args):
-        super().__init__(args, require_implicit_childless=True, allow_root_terminal_children=False,
+        super().__init__(args, require_implicit_childless=True, allow_orphan_terminals=False,
+                         allow_root_terminal_children=False,
                          top_level_allowed={EdgeTags.ParallelScene, EdgeTags.Linker,
                                             EdgeTags.Function, EdgeTags.Ground,
-                                            EdgeTags.Punctuation},
+                                            EdgeTags.Punctuation, EdgeTags.LinkRelation, EdgeTags.LinkArgument},
                          possible_multiple_incoming=LINKAGE_TAGS,
                          childless_incoming_trigger=EdgeTags.Function,
                          childless_outgoing_allowed={EdgeTags.Terminal, EdgeTags.Punctuation},

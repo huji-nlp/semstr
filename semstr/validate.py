@@ -50,7 +50,8 @@ def validate(passage, args):
     l0 = passage.layer(layer0.LAYER_ID)
     l1 = passage.layer(layer1.LAYER_ID)
     for terminal in l0.all:
-        yield from check_orphan_terminals(constraints, l1, terminal)
+        yield from check_orphan_terminals(constraints, terminal)
+        yield from check_root_terminal_children(constraints, l1, terminal)
         yield from check_multiple_incoming(constraints, terminal)
     yield from check_top_level_allowed(constraints, l1)
     for node in l1.all:
@@ -62,10 +63,14 @@ def validate(passage, args):
         yield from check_tag_rules(constraints, node)
 
 
-def check_orphan_terminals(constraints, l1, terminal):
-    if not constraints.allow_root_terminal_children:
+def check_orphan_terminals(constraints, terminal):
+    if not constraints.allow_orphan_terminals:
         if not terminal.incoming:
             yield "Orphan %s terminal (%s) '%s'" % (terminal.tag, terminal.ID, terminal)
+
+
+def check_root_terminal_children(constraints, l1, terminal):
+    if not constraints.allow_root_terminal_children:
         if set(l1.heads).intersection(terminal.parents):
             yield "Terminal child of root (%s) '%s'" % (terminal.ID, terminal)
 

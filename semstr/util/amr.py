@@ -191,6 +191,13 @@ def is_valid_arg(node, label, *tags, is_parent=True):
                                    "valid args: " + ", ".join(valid_args))
 
 
+def get_node_attr(node, attr):
+    try:
+        return getattr(node, attr)
+    except AttributeError:
+        return node.attrib.get(attr)
+
+
 def resolve_label(node, label=None, reverse=False, conservative=False):
     """
     Replace any placeholder in the node's label with the corresponding terminals' text, and remove label category suffix
@@ -208,10 +215,7 @@ def resolve_label(node, label=None, reverse=False, conservative=False):
         return re.sub(re.escape(old) + "(?![^<]*>|[^(]*\(|\d+$)", new, label, 1) if replaceable else label
 
     if label is None:
-        try:
-            label = node.label
-        except AttributeError:
-            label = node.attrib.get(LABEL_ATTRIB)
+        label = get_node_attr(node, LABEL_ATTRIB)
     if label is not None:
         category = None
         if reverse:
