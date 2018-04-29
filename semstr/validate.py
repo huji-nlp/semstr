@@ -4,11 +4,11 @@ from itertools import groupby, islice
 
 from ucca import layer0, layer1
 
-from convert import iter_passages
 from semstr.constraint.amr import AmrConstraints
 from semstr.constraint.conllu import ConlluConstraints
 from semstr.constraint.sdp import SdpConstraints
 from semstr.constraints import UccaConstraints, Direction
+from semstr.convert import iter_passages
 
 CONSTRAINTS = {
     None:     UccaConstraints,
