@@ -43,7 +43,7 @@ def join(edges):
     return ", ".join("%s-[%s]->%s" % (e.parent.ID, e.tag, e.child.ID) for e in edges)
 
 
-def validate(passage, args=None):
+def validate(passage, args):
     constraints = CONSTRAINTS[passage.extra.get("format", args.format)](args)
     yield from detect_cycles(passage)
     l0 = passage.layer(layer0.LAYER_ID)
@@ -77,6 +77,9 @@ def validate(passage, args=None):
             for edge in node:
                 if edge.tag in constraints.top_level_only:
                     yield "Non-top level %s edge (%s)" % (edge.tag, edge)
+        if constraints.required_outgoing and all(n.tag == layer1.NodeTags.Foundational for n in node.children) and \
+                not any(e.tag in constraints.required_outgoing for e in node):
+            yield "Non-terminal without outgoing %s (%s)" % (constraints.required_outgoing, node.ID)
 
 
 def main(args):
