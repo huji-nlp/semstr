@@ -1,5 +1,3 @@
-from itertools import groupby
-
 from ucca import convert, layer1
 
 
@@ -41,28 +39,29 @@ class DependencyConverter(convert.DependencyConverter):
             for dep_node in dep_nodes:  # Create top nodes
                 if dep_node.position != 0 and not dep_node.incoming and dep_node.outgoing:
                     dep_node.node = dep_node.preterminal = l1.add_fnode(None, (self.ROOT, self.TOP)[dep_node.is_top])
+        remote_edges = []
         for dep_node in self._topological_sort(dep_nodes):  # Create all other nodes
             incoming = list(dep_node.incoming)
             if dep_node.is_top and incoming[0].head_index != 0:
                 top_edge = self.Edge(head_index=0, rel=self.TOP, remote=False)
                 top_edge.head = dep_nodes[0]
                 incoming[:0] = [top_edge]
-            primary_edge, *remote_edges = incoming
+            edge, *remotes = incoming
             dep_node.node = dep_node.preterminal = \
-                l1.add_fnode(dep_node.preterminal, self.scene_rel) if primary_edge.rel.upper() == self.ROOT else (
-                    self.is_flat(primary_edge.rel) and primary_edge.head.preterminal or (
-                        l1.add_fnode(None, self.scene_rel) if self.is_scene(primary_edge.rel) else
-                        l1.add_fnode(primary_edge.head.node.fparent if self.is_connector(primary_edge.rel)
-                                     and primary_edge.head.node is not None else
-                                     primary_edge.head.node, self.strip_suffix(primary_edge.rel))))
+                l1.add_fnode(dep_node.preterminal, self.scene_rel) if edge.rel.upper() == self.ROOT else (
+                    self.is_flat(edge.rel) and edge.head.preterminal or (
+                        l1.add_fnode(None, self.scene_rel) if self.is_scene(edge.rel) else
+                        l1.add_fnode(edge.head.node.fparent if self.is_connector(edge.rel)
+                                     and edge.head.node is not None else
+                                     edge.head.node, self.strip_suffix(edge.rel))))
             if dep_node.outgoing:
                 dep_node.preterminal = l1.add_fnode(dep_node.preterminal, self.HEAD)
-            if dep_node.node is None:
-                continue  # Avoid remote edges to root
-            for parent, edges in groupby(remote_edges, key=lambda e: e.head.node or l1.heads[0]):
-                if primary_edge.head.node != parent:    # Avoid primary + remote edges from the same parent
-                    edge = next(iter(edges))  # Get just one to avoid multiple remote edges from the same parent
-                    l1.add_remote(parent, self.strip_suffix(edge.rel), dep_node.node)
+            remote_edges += remotes
+        for edge in remote_edges:
+            parent = edge.head.node or l1.heads[0]
+            child = edge.dependent.node
+            if child not in parent.children and parent not in child.iter():
+                l1.add_remote(parent, self.strip_suffix(edge.rel), child)
 
     def from_format(self, lines, passage_id, split=False, return_original=False):
         for passage in super().from_format(lines, passage_id, split=split):
