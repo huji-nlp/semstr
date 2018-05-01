@@ -57,8 +57,8 @@ class DependencyConverter(convert.DependencyConverter):
                         l1.add_fnode(None, self.scene_rel) if self.is_scene(edge.rel) else
                         l1.add_fnode(edge.head.node.fparent if self.is_connector(edge.rel) and edge.head.node else
                                      edge.head.node, self.strip_suffix(edge.rel)))
-            if dep_node.outgoing:  # Add intermediate head non-terminal for hierarchical structure
-                dep_node.preterminal = l1.add_fnode(dep_node.preterminal, self.HEAD)
+            if dep_node.outgoing and not any(self.is_flat(e.rel) for e in dep_node.incoming):  # Add intermediate head
+                dep_node.preterminal = l1.add_fnode(dep_node.preterminal, self.HEAD)  # node for hierarchical structure
             remote_edges += remotes
         for edge in remote_edges:
             parent = edge.head.node or l1.heads[0]
