@@ -50,11 +50,12 @@ class Scores:
                 print(element.name + ((" (" + lang + ")") if lang else "") + ":", *args, **kwargs)
             element.print(*args, **kwargs)
 
-    def fields(self):
-        return [f for e, _ in self.elements for f in e.fields()]
+    def fields(self, *args, **kwargs):
+        return [f for e, _ in self.elements for f in e.fields(*args, **kwargs)]
 
-    def titles(self):
-        return [(e.name + (("_" + l) if l else "") + "_" + f) for e, l in self.elements for f in e.titles()]
+    def titles(self, *args, **kwargs):
+        return [(e.name + (("_" + l) if l else "") + "_" + f) for e, l in self.elements
+                for f in e.titles(*args, **kwargs)]
 
     def details(self, average_f1):
         return "" if len(self.elements) < 2 else \
