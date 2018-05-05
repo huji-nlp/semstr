@@ -135,16 +135,17 @@ def main(args):
     evaluate = EVALUATORS.get(passage_format(files[1][0])[1], EVALUATORS[args.format]).evaluate
     results = list(evaluate_all(evaluate, files, **vars(args)))
     summary = Scores(results)
+    eval_type = UNLABELED if args.unlabeled else LABELED
     if len(results) > 1:
         if args.verbose:
             print("Aggregated scores:")
         if not args.quiet:
-            print("F1: %.3f" % summary.average_f1(UNLABELED if args.unlabeled else LABELED))
+            print("F1: %.3f" % summary.average_f1(eval_type))
             summarize(summary)
     elif not args.verbose:
         summarize(summary, errors=args.errors)
-    write_csv(args.out_file,     [summary.titles()] + [result.fields() for result in results])
-    write_csv(args.summary_file, [summary.titles(), summary.fields()])
+    write_csv(args.out_file,     [summary.titles(eval_type)] + [result.fields(eval_type) for result in results])
+    write_csv(args.summary_file, [summary.titles(eval_type), summary.fields(eval_type)])
 
 
 def summarize(scores, errors=False):
