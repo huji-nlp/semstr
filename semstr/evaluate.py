@@ -139,7 +139,7 @@ def main(args):
         if args.verbose:
             print("Aggregated scores:")
         if not args.quiet:
-            print("F1: %.3f" % summary.average_f1())
+            print("F1: %.3f" % summary.average_f1(UNLABELED if args.unlabeled else LABELED))
             summarize(summary)
     elif not args.verbose:
         summarize(summary, errors=args.errors)

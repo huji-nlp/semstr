@@ -2,4 +2,4 @@ numpy
 tqdm>=4.23.1
 requests>=2.18.4
 configargparse>=0.13.0
-ucca>=1.0.66
+ucca>=1.0.67
