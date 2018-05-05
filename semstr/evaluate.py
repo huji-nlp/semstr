@@ -114,7 +114,7 @@ def evaluate_all(evaluate, files, name=None, verbose=0, quiet=False, basename=Fa
             g.passage = next(iter(g.in_converter(g.passage + [""], passage_id=r.ID))) if \
                 r.out_converter is None else r.out_converter(g.converted)
         result = evaluate(g.passage, r.passage, verbose=verbose > 1 or units, units=units, errors=errors,
-                          unlabeled=unlabeled)
+                          eval_type=UNLABELED if unlabeled else None)
         if not quiet:
             with tqdm.external_write_mode():
                 print("F1: %.3f" % result.average_f1(UNLABELED if unlabeled else LABELED))
