@@ -17,11 +17,12 @@ class ConlluConverter(DependencyConverter, convert.ConllConverter):
     PARATAXIS = "parataxis"
     CC = "cc"
     CONJ = "conj"
+    AUX = "aux"
 
     def __init__(self, *args, **kwargs):
         DependencyConverter.__init__(self, *args, tree=True, punct_tag=self.PUNCT_TAG, punct_rel=self.PUNCT,
                                      flat_rel=self.FLAT, scene_rel=self.PARATAXIS, connector_rel=self.CC,
-                                     conj_rel=self.CONJ, **kwargs)
+                                     conj_rel=self.CONJ, aux_rel=self.AUX, **kwargs)
 
     def modify_passage(self, passage):
         passage.extra["format"] = "conllu"

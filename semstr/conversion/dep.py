@@ -10,7 +10,7 @@ class DependencyConverter(convert.DependencyConverter):
     HEAD = "head"
 
     def __init__(self, *args, constituency=False, tree=False, punct_tag=None, punct_rel=None, flat_rel=None,
-                 scene_rel=None, connector_rel=None, conj_rel=None, **kwargs):
+                 scene_rel=None, connector_rel=None, conj_rel=None, aux_rel=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.constituency = constituency
         self.tree = tree
@@ -18,8 +18,9 @@ class DependencyConverter(convert.DependencyConverter):
         self.punct_rel = punct_rel
         self.flat_rel = flat_rel
         self.scene_rel = scene_rel
-        self.conj_rel = conj_rel
         self.connector_rel = connector_rel
+        self.conj_rel = conj_rel
+        self.aux_rel = aux_rel
         self.lines_read = []
 
     def read_line_and_append(self, read_line, line, *args, **kwargs):
@@ -48,15 +49,19 @@ class DependencyConverter(convert.DependencyConverter):
                 top_edge.head = dep_nodes[0]
                 incoming[:0] = [top_edge]
             edge, *remotes = incoming
+            rel = self.strip_suffix(edge.rel)
             if self.is_flat(edge.rel):  # Unanalyzable unit
                 dep_node.preterminal = edge.head.preterminal
                 dep_node.node = edge.head.node
+            elif self.is_aux(edge.rel):  # Auxiliary is attached as sibling of main predicate
+                dep_node.node = dep_node.preterminal = l1.add_fnode(edge.head.preterminal, rel)
+                edge.head.preterminal = l1.add_fnode(edge.head.preterminal, self.HEAD)
             else:  # Add top-level edge (like UCCA H) if top-level, otherwise add child to head's node
                 dep_node.node = dep_node.preterminal = \
                     l1.add_fnode(dep_node.preterminal, self.scene_rel) if edge.rel.upper() == self.ROOT else (
-                        l1.add_fnode(None, self.scene_rel) if self.is_scene(edge.rel) else
+                        l1.add_fnode(None, rel) if self.is_scene(edge.rel) else
                         l1.add_fnode(edge.head.node.fparent if self.is_connector(edge.rel) and edge.head.node else
-                                     edge.head.node, self.strip_suffix(edge.rel)))
+                                     edge.head.node, rel))
             if dep_node.outgoing and not any(self.is_flat(e.rel) for e in dep_node.incoming):  # Add intermediate head
                 dep_node.preterminal = l1.add_fnode(dep_node.preterminal, self.HEAD)  # node for hierarchical structure
             remote_edges += remotes
@@ -127,6 +132,9 @@ class DependencyConverter(convert.DependencyConverter):
 
     def is_conj(self, tag):
         return self.strip_suffix(tag) == self.conj_rel
+
+    def is_aux(self, tag):
+        return self.strip_suffix(tag) == self.aux_rel
 
     def strip_suffix(self, rel):
         return rel
