@@ -53,7 +53,7 @@ class DependencyConverter(convert.DependencyConverter):
             if self.is_flat(edge.rel):  # Unanalyzable unit
                 dep_node.preterminal = edge.head.preterminal
                 dep_node.node = edge.head.node
-            elif self.is_aux(edge.rel):  # Auxiliary is attached as sibling of main predicate
+            elif self.is_aux(edge.rel):  # Auxiliary is attached as sibling of main predicate TODO revert-new guidelines
                 dep_node.node = dep_node.preterminal = l1.add_fnode(edge.head.preterminal, rel)
                 edge.head.preterminal = l1.add_fnode(edge.head.preterminal, self.HEAD)
             elif self.is_connector(edge.rel) and edge.head.node:
