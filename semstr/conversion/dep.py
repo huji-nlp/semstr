@@ -56,12 +56,13 @@ class DependencyConverter(convert.DependencyConverter):
             elif self.is_aux(edge.rel):  # Auxiliary is attached as sibling of main predicate
                 dep_node.node = dep_node.preterminal = l1.add_fnode(edge.head.preterminal, rel)
                 edge.head.preterminal = l1.add_fnode(edge.head.preterminal, self.HEAD)
+            elif self.is_connector(edge.rel) and edge.head.node:
+                parent = ([e.parent for e in edge.head.node.incoming if self.is_conj(e.tag)] or [edge.head.node])[0]
+                dep_node.node = dep_node.preterminal = l1.add_fnode(parent, rel)
             else:  # Add top-level edge (like UCCA H) if top-level, otherwise add child to head's node
                 dep_node.node = dep_node.preterminal = \
                     l1.add_fnode(dep_node.preterminal, self.scene_rel) if edge.rel.upper() == self.ROOT else (
-                        l1.add_fnode(None, rel) if self.is_scene(edge.rel) else
-                        l1.add_fnode(edge.head.node.fparent if self.is_connector(edge.rel) and edge.head.node else
-                                     edge.head.node, rel))
+                        l1.add_fnode(None if self.is_scene(edge.rel) else edge.head.node, rel))
             if dep_node.outgoing and not any(self.is_flat(e.rel) for e in dep_node.incoming):  # Add intermediate head
                 dep_node.preterminal = l1.add_fnode(dep_node.preterminal, self.HEAD)  # node for hierarchical structure
             remote_edges += remotes
@@ -76,12 +77,26 @@ class DependencyConverter(convert.DependencyConverter):
             yield (passage, self.lines_read, passage.ID) if return_original else passage
             self.lines_read = []
 
+    def to_format(self, *args, **kwargs):
+        self.TAG_PRIORITY = [
+            self.TOP,
+            self.HEAD,
+            self.scene_rel,
+            self.conj_rel,
+            self.connector_rel,
+            self.aux_rel,
+            self.punct_rel,
+            self.flat_rel,
+        ]
+        return super().to_format(*args, **kwargs)
+
     def find_head_terminal(self, unit):
         while unit.outgoing:  # still non-terminal
             heads = [e.child for e in unit.outgoing if e.tag == self.HEAD]
             try:
-                unit = heads[0] if heads else next(iter(e.child for e in unit.outgoing if not e.attrib.get("remote") and
-                                                        not e.child.attrib.get("implicit")))
+                unit = heads[0] if heads else next(e.child for tag in self.TAG_PRIORITY  # head selection by priority
+                                                   for e in unit.outgoing if e.tag == tag and not e.attrib.get("remote")
+                                                   and not e.child.attrib.get("implicit"))
             except StopIteration:
                 unit = unit.children[0]
         return unit
@@ -98,13 +113,12 @@ class DependencyConverter(convert.DependencyConverter):
                         edge.rel = self.flat_rel
                     elif edge.rel == layer1.EdgeTags.Punctuation and self.punct_rel:
                         edge.rel = self.punct_rel
-                    elif self.is_connector(edge.rel):
-                        for edge1 in edge.head.outgoing:
-                            if edge1.rel == self.conj_rel and \
-                                    not any(self.is_connector(e.rel) for e in edge1.dependent.outgoing):
-                                edge.head_index = edge1.dependent.position - 1
-                                edge.head = edge1.dependent
-                                break
+                    elif self.is_connector(edge.rel):  # Prefer attaching cc forward to conjunct
+                        for conj_edge in sorted(filter(lambda e: self.is_conj(e.rel), edge.head.outgoing),
+                                                key=lambda e: e.dependent.position + (len(dep_nodes) if
+                                                e.dependent.position < dep_node.position else 0))[:1]:
+                            edge.head_index = conj_edge.dependent.position - 1
+                            edge.head = conj_edge.dependent
                     edge.rel = self.strip_suffix(edge.rel)
             elif self.tree:
                 dep_node.incoming = [(self.Edge(head_index=-1, rel=self.ROOT.lower(), remote=False))]
