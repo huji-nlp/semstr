@@ -10,7 +10,8 @@ class DependencyConverter(convert.DependencyConverter):
     HEAD = "head"
 
     def __init__(self, *args, constituency=False, tree=False, punct_tag=None, punct_rel=None, flat_rel=None,
-                 scene_rel=None, connector_rel=None, conj_rel=None, aux_rel=None, **kwargs):
+                 scene_rel=None, connector_rel=None, conj_rel=None, aux_rel=None, mark_rel=None, advcl_rel=None,
+                 **kwargs):
         super().__init__(*args, **kwargs)
         self.constituency = constituency
         self.tree = tree
@@ -21,6 +22,8 @@ class DependencyConverter(convert.DependencyConverter):
         self.connector_rel = connector_rel
         self.conj_rel = conj_rel
         self.aux_rel = aux_rel
+        self.mark_rel = mark_rel
+        self.advcl_rel = advcl_rel
         self.lines_read = []
 
     def read_line_and_append(self, read_line, line, *args, **kwargs):
@@ -59,6 +62,8 @@ class DependencyConverter(convert.DependencyConverter):
             elif self.is_connector(edge.rel) and edge.head.node:
                 parent = ([e.parent for e in edge.head.node.incoming if self.is_conj(e.tag)] or [edge.head.node])[0]
                 dep_node.node = dep_node.preterminal = l1.add_fnode(parent, rel)
+            elif self.is_mark(edge.rel) and any(self.is_advcl(e.rel) for e in edge.head.incoming):  # Mark attaches high
+                dep_node.node = dep_node.preterminal = l1.add_fnode(edge.head.node.fparent, rel)
             else:  # Add top-level edge (like UCCA H) if top-level, otherwise add child to head's node
                 dep_node.node = dep_node.preterminal = \
                     l1.add_fnode(dep_node.preterminal, self.scene_rel) if edge.rel.upper() == self.ROOT else (
@@ -149,6 +154,12 @@ class DependencyConverter(convert.DependencyConverter):
 
     def is_aux(self, tag):
         return self.strip_suffix(tag) == self.aux_rel
+
+    def is_mark(self, tag):
+        return self.strip_suffix(tag) == self.mark_rel
+
+    def is_advcl(self, tag):
+        return self.strip_suffix(tag) == self.advcl_rel
 
     def strip_suffix(self, rel):
         return rel

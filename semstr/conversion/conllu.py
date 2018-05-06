@@ -18,11 +18,14 @@ class ConlluConverter(DependencyConverter, convert.ConllConverter):
     CC = "cc"
     CONJ = "conj"
     AUX = "aux"
+    MARK = "mark"
+    ADVCL = "advcl"
 
     def __init__(self, *args, **kwargs):
         DependencyConverter.__init__(self, *args, tree=True, punct_tag=self.PUNCT_TAG, punct_rel=self.PUNCT,
                                      flat_rel=self.FLAT, scene_rel=self.PARATAXIS, connector_rel=self.CC,
-                                     conj_rel=self.CONJ, aux_rel=self.AUX, **kwargs)
+                                     conj_rel=self.CONJ, aux_rel=self.AUX, mark_rel=self.MARK, advcl_rel=self.ADVCL,
+                                     **kwargs)
 
     def modify_passage(self, passage):
         passage.extra["format"] = "conllu"
@@ -31,8 +34,7 @@ class ConlluConverter(DependencyConverter, convert.ConllConverter):
         return self.read_line_and_append(super().read_line, *args, **kwargs)
 
     def strip_suffix(self, rel):
-        rel, *_ = rel.partition(":")
-        return rel
+        return rel.partition(":")[0]
 
     def from_format(self, lines, passage_id, split=False, return_original=False, annotate=False):
         for dep_nodes, sentence_id in self.build_nodes(lines, split):
