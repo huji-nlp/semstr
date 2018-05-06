@@ -8,4 +8,4 @@ class ConlluConstraints(Constraints):
                          required_outgoing={ConlluConverter.HEAD, ConlluConverter.PARATAXIS},
                          childless_incoming_trigger={ConlluConverter.HEAD},
                          childless_outgoing_allowed={EdgeTags.Terminal, EdgeTags.Punctuation, ConlluConverter.PUNCT,
-                                                     ConlluConverter.HEAD})
+                                                     ConlluConverter.HEAD, ConlluConverter.AUX})
