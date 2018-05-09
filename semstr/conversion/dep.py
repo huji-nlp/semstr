@@ -9,13 +9,12 @@ class DependencyConverter(convert.DependencyConverter):
     TOP = "TOP"
     HEAD = "head"
 
-    def __init__(self, *args, constituency=False, tree=False, punct_tag=None, punct_rel=None, scene_rel=None, **kwargs):
+    def __init__(self, *args, constituency=False, tree=False, punct_tag=None, punct_rel=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.constituency = constituency
         self.tree = tree
         self.punct_tag = punct_tag
         self.punct_rel = punct_rel
-        self.scene_rel = scene_rel
         self.lines_read = []
 
     def read_line_and_append(self, read_line, line, *args, **kwargs):
@@ -45,10 +44,9 @@ class DependencyConverter(convert.DependencyConverter):
                 top_edge.head = dep_nodes[0]
                 incoming[:0] = [top_edge]
             edge, *remotes = incoming
-            nodes = self.add_node(dep_node, edge, l1)
-            dep_node.preterminal, dep_node.node = nodes if isinstance(nodes, tuple) else 2 * (nodes,)
-            if dep_node.outgoing and not any(self.is_flat(e) for e in dep_node.incoming):  # Add intermediate head
-                dep_node.preterminal = l1.add_fnode(dep_node.preterminal, self.HEAD)  # node for hierarchical structure
+            self.add_node(dep_node, edge, l1)
+            if dep_node.outgoing and not any(self.is_flat(e) for e in dep_node.incoming):     # Intermediate head for
+                dep_node.preterminal = l1.add_fnode(dep_node.preterminal, self.HEAD)  # hierarchical structure
             remote_edges += remotes
         for edge in remote_edges:
             parent = edge.head.node or l1.heads[0]
@@ -58,7 +56,8 @@ class DependencyConverter(convert.DependencyConverter):
 
     def add_node(self, dep_node, edge, l1):
         # Add top-level edge (like UCCA H) if top-level, otherwise add child to head's node
-        return l1.add_fnode(dep_node.preterminal, self.scene_rel) if edge.rel.upper() == self.ROOT else (
+        dep_node.preterminal = dep_node.node = \
+            l1.add_fnode(dep_node.preterminal, self.HEAD) if edge.rel.upper() == self.ROOT else (
                 l1.add_fnode(None if self.is_scene(edge) else edge.head.node, edge.rel))
 
     def from_format(self, lines, passage_id, split=False, return_original=False):
@@ -107,4 +106,4 @@ class DependencyConverter(convert.DependencyConverter):
         return False
 
     def is_scene(self, edge):
-        return edge.rel in (layer1.EdgeTags.ParallelScene, self.scene_rel)
+        return False
