@@ -22,10 +22,8 @@ XCOMP = "xcomp"
 
 
 HIGH_ATTACHING = (  # trigger, attach_to
-    (lambda e: e.rel in (layer1.EdgeTags.Connector, CC),
-     lambda e: e.rel == CONJ and not any(e1.rel == CC for e1 in e.dependent.outgoing)),
-    (lambda e: e.rel == MARK,
-     lambda e: e.rel in (ADVCL, XCOMP)),
+    ((layer1.EdgeTags.Connector, CC), (CONJ,)),
+    ((MARK,), (ADVCL, XCOMP)),
 )
 REL_REPLACEMENTS = (
     (FLAT, layer1.EdgeTags.Terminal),
@@ -94,8 +92,10 @@ class ConlluConverter(DependencyConverter, convert.ConllConverter):
                 if edge.rel == (source, target)[reverse]:
                     edge.rel = (target, source)[reverse]
             for trigger, attach_to in HIGH_ATTACHING:
-                if trigger(edge):
-                    for attach_to_edge in sorted(filter(attach_to, (edge.head.incoming, edge.head.outgoing)[reverse]),
+                if edge.rel in trigger:
+                    for attach_to_edge in sorted([e for e in (edge.head.incoming, edge.head.outgoing)[reverse] if e.rel
+                                                 in attach_to and (not reverse or not
+                                                 any(e1.rel in trigger for e1 in e.dependent.outgoing))],
                                                  key=_attach_forward_sort_key)[:1]:
                         edge.head = (attach_to_edge.head, attach_to_edge.dependent)[reverse]
                         edge.head_index = edge.head.position - 1
