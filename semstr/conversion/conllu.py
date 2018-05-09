@@ -22,8 +22,10 @@ XCOMP = "xcomp"
 
 
 HIGH_ATTACHING = (  # trigger, attach_to
-    (lambda e: e.rel in (layer1.EdgeTags.Connector, CC), lambda e: e.rel == CONJ),
-    (lambda e: e.rel == MARK, lambda e: e.rel in (ADVCL, XCOMP)),
+    (lambda e: e.rel in (layer1.EdgeTags.Connector, CC),
+     lambda e: e.rel == CONJ and not any(e1.rel == CC for e1 in e.dependent.outgoing)),
+    (lambda e: e.rel == MARK,
+     lambda e: e.rel in (ADVCL, XCOMP)),
 )
 REL_REPLACEMENTS = (
     (FLAT, layer1.EdgeTags.Terminal),
