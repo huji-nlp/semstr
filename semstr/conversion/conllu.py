@@ -1,4 +1,4 @@
-from ucca import convert, layer0, textutil
+from ucca import convert, layer0, layer1, textutil
 
 from .dep import DependencyConverter
 
@@ -9,22 +9,32 @@ ATTR_GETTERS = {
     textutil.Attr.ORTH: lambda n: n.token.text,
 }
 
+PUNCT_TAG = "PUNCT"
+PUNCT = "punct"
+FLAT = "flat"
+PARATAXIS = "parataxis"
+CC = "cc"
+CONJ = "conj"
+AUX = "aux"
+MARK = "mark"
+ADVCL = "advcl"
+XCOMP = "xcomp"
+
+
+HIGH_ATTACHING = (
+    (lambda e: e.rel in (layer1.EdgeTags.Connector, CC), lambda e: e.rel == CONJ),
+    (lambda e: e.rel == MARK, lambda e: e.rel in (ADVCL, XCOMP)),
+)
+REL_REPLACEMENTS = (
+    (FLAT, layer1.EdgeTags.Terminal),
+    (PUNCT, layer1.EdgeTags.Punctuation),
+)
+
 
 class ConlluConverter(DependencyConverter, convert.ConllConverter):
-    PUNCT_TAG = "PUNCT"
-    PUNCT = "punct"
-    FLAT = "flat"
-    PARATAXIS = "parataxis"
-    CC = "cc"
-    CONJ = "conj"
-    AUX = "aux"
-    MARK = "mark"
-    ADVCL = "advcl"
 
     def __init__(self, *args, **kwargs):
-        DependencyConverter.__init__(self, *args, tree=True, punct_tag=self.PUNCT_TAG, punct_rel=self.PUNCT,
-                                     flat_rel=self.FLAT, scene_rel=self.PARATAXIS, connector_rel=self.CC,
-                                     conj_rel=self.CONJ, aux_rel=self.AUX, mark_rel=self.MARK, advcl_rel=self.ADVCL,
+        DependencyConverter.__init__(self, *args, tree=True, punct_tag=PUNCT_TAG, punct_rel=PUNCT, scene_rel=PARATAXIS,
                                      **kwargs)
 
     def modify_passage(self, passage):
@@ -32,9 +42,6 @@ class ConlluConverter(DependencyConverter, convert.ConllConverter):
 
     def read_line(self, *args, **kwargs):
         return self.read_line_and_append(super().read_line, *args, **kwargs)
-
-    def strip_suffix(self, rel):
-        return rel.partition(":")[0]
 
     def from_format(self, lines, passage_id, split=False, return_original=False, annotate=False):
         for dep_nodes, sentence_id in self.build_nodes(lines, split):
@@ -51,6 +58,54 @@ class ConlluConverter(DependencyConverter, convert.ConllConverter):
                     docs[paragraph - 1].append([ATTR_GETTERS.get(a, {}.get)(dep_node) for a in textutil.Attr])
             yield (passage, self.lines_read, passage.ID) if return_original else passage
             self.lines_read = []
+
+    def to_format(self, *args, **kwargs):
+        self.TAG_PRIORITY = [
+            self.TOP,
+            self.HEAD,
+            self.scene_rel,
+            self.punct_rel,
+            CONJ,
+            CC,
+            AUX,
+            FLAT,
+        ]
+        return super().to_format(*args, **kwargs)
+
+    def add_node(self, dep_node, edge, l1):
+        if self.is_flat(edge):  # Unanalyzable unit
+            return edge.head.preterminal, edge.head.node
+        if edge.rel == AUX:  # Auxiliary is attached as sibling of main predicate TODO revert due to new guidelines
+            preterminal = edge.head.preterminal
+            edge.head.preterminal = l1.add_fnode(preterminal, self.HEAD)
+            return l1.add_fnode(preterminal, edge.rel)
+        return super().add_node(dep_node, edge, l1)
+
+    def preprocess_edges(self, edges, reverse=False):
+        super().preprocess_edges(edges)
+
+        def _forward_key(e):
+            return e.dependent.position + ((max(e1.dependent.position for e1 in edges) + 1)
+                                           if e.dependent.position < edge.dependent.position else 0)
+        for edge in edges:
+            edge.rel = edge.rel.partition(":")[0]  # Strip suffix
+            for source, target in REL_REPLACEMENTS:
+                if reverse:
+                    source, target = target, source
+                if edge.rel == source:
+                    edge.rel = target
+            for trigger, attach_to in HIGH_ATTACHING:
+                if trigger(edge):
+                    if reverse:
+                        for attach_to_edge in sorted(filter(attach_to, edge.head.outgoing), key=_forward_key)[:1]:
+                            edge.head = attach_to_edge.dependent
+                    else:
+                        for attach_to_edge in sorted(filter(attach_to, edge.head.incoming), key=_forward_key)[:1]:
+                            edge.head = attach_to_edge.head
+                    edge.head_index = edge.head.position - 1
+
+    def is_flat(self, edge):
+        return edge.rel == FLAT
 
 
 def from_conllu(lines, passage_id=None, split=True, return_original=False, annotate=False, *args, **kwargs):
