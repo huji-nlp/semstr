@@ -83,26 +83,21 @@ class ConlluConverter(DependencyConverter, convert.ConllConverter):
 
     def preprocess_edges(self, edges, reverse=False):
         super().preprocess_edges(edges)
+        max_position = max(e1.dependent.position for e1 in edges)
 
-        def _forward_key(e):
-            return e.dependent.position + ((max(e1.dependent.position for e1 in edges) + 1)
-                                           if e.dependent.position < edge.dependent.position else 0)
+        def _attach_forward_sort_key(e):
+            return e.dependent.position + ((max_position + 1) if e.dependent.position < edge.dependent.position else 0)
         for edge in edges:
             edge.rel = edge.rel.partition(":")[0]  # Strip suffix
             for source, target in REL_REPLACEMENTS:
-                if reverse:
-                    source, target = target, source
-                if edge.rel == source:
-                    edge.rel = target
+                if edge.rel == (source, target)[reverse]:
+                    edge.rel = (target, source)[reverse]
             for trigger, attach_to in HIGH_ATTACHING:
                 if trigger(edge):
-                    if reverse:
-                        for attach_to_edge in sorted(filter(attach_to, edge.head.outgoing), key=_forward_key)[:1]:
-                            edge.head = attach_to_edge.dependent
-                    else:
-                        for attach_to_edge in sorted(filter(attach_to, edge.head.incoming), key=_forward_key)[:1]:
-                            edge.head = attach_to_edge.head
-                    edge.head_index = edge.head.position - 1
+                    for attach_to_edge in sorted(filter(attach_to, (edge.head.incoming, edge.head.outgoing)[reverse]),
+                                                 key=_attach_forward_sort_key)[:1]:
+                        edge.head = (attach_to_edge.head, attach_to_edge.dependent)[reverse]
+                        edge.head_index = edge.head.position - 1
 
     def is_flat(self, edge):
         return edge.rel == FLAT
