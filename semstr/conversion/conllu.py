@@ -21,7 +21,7 @@ ADVCL = "advcl"
 XCOMP = "xcomp"
 
 
-HIGH_ATTACHING = (  # trigger, attach_to
+HIGH_ATTACHING = (  # trigger, attach_to, allow_multiple
     ((layer1.EdgeTags.Connector, CC), (CONJ,)),
     ((MARK,), (ADVCL, XCOMP)),
 )
@@ -93,12 +93,12 @@ class ConlluConverter(DependencyConverter, convert.ConllConverter):
                     edge.rel = (target, source)[reverse]
             for trigger, attach_to in HIGH_ATTACHING:
                 if edge.rel in trigger:
-                    for attach_to_edge in sorted([e for e in (edge.head.incoming, edge.head.outgoing)[reverse] if e.rel
-                                                 in attach_to and (not reverse or not
-                                                 any(e1.rel in trigger for e1 in e.dependent.outgoing))],
-                                                 key=_attach_forward_sort_key)[:1]:
-                        edge.head = (attach_to_edge.head, attach_to_edge.dependent)[reverse]
-                        edge.head_index = edge.head.position - 1
+                    for attach_to_edge in sorted([e for e in (edge.head.incoming, edge.head.outgoing)[reverse] if
+                                                  e.rel in attach_to], key=_attach_forward_sort_key)[:1]:
+                        head = (attach_to_edge.head, attach_to_edge.dependent)[reverse]
+                        if not any(e.rel in trigger for e in head.outgoing):
+                            edge.head = head
+                            edge.head_index = edge.head.position - 1
 
     def is_flat(self, edge):
         return edge.rel in (layer1.EdgeTags.Terminal, FLAT)
