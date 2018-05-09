@@ -105,32 +105,3 @@ class ConlluConverter(DependencyConverter, convert.ConllConverter):
 
     def is_scene(self, edge):
         return edge.rel in (layer1.EdgeTags.ParallelScene, PARATAXIS)
-
-
-def from_conllu(lines, passage_id=None, split=True, return_original=False, annotate=False, *args, **kwargs):
-    """Converts from parsed text in Universal Dependencies format to a Passage object.
-
-    :param lines: iterable of lines in Universal Dependencies format, describing a single passage.
-    :param passage_id: ID to set for passage
-    :param split: split each sentence to its own passage?
-    :param return_original: return triple of (UCCA passage, Universal Dependencies string, sentence ID)
-    :param annotate: whether to save dependency annotations in "extra" dict of layer 0
-
-    :return generator of Passage objects
-    """
-    del args, kwargs
-    return ConlluConverter().from_format(lines, passage_id, split, return_original=return_original, annotate=annotate)
-
-
-def to_conllu(passage, test=False, tree=False, constituency=False, *args, **kwargs):
-    """ Convert from a Passage object to a string in Universal Dependencies format (conllu)
-
-    :param passage: the Passage object to convert
-    :param test: whether to omit the head and deprel columns. Defaults to False
-    :param tree: whether to omit columns for non-primary parents. Defaults to True
-    :param constituency: use UCCA conversion that introduces intermediate non-terminals
-
-    :return list of lines representing the semantic dependencies in the passage
-    """
-    del args, kwargs
-    return ConlluConverter(constituency=constituency).to_format(passage, test, tree)

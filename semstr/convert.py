@@ -12,12 +12,103 @@ from ucca import convert, ioutil, layer1
 from ucca.convert import from_text
 
 from semstr.cfgutil import add_verbose_arg
-from semstr.conversion.amr import from_amr, to_amr
-from semstr.conversion.conllu import from_conllu, to_conllu
-from semstr.conversion.sdp import from_sdp, to_sdp
 
 desc = """Parses files in the specified format, and writes as the specified format.
 Each passage is written to the file: <outdir>/<prefix><passage_id>.<extension> """
+
+
+def from_amr(lines, passage_id=None, return_original=False, save_original=True, *args, **kwargs):
+    """Converts from parsed text in AMR PENMAN format to a Passage object.
+
+    :param lines: iterable of lines in AMR PENMAN format, describing a single passage.
+    :param passage_id: ID to set for passage, overriding the ID from the file
+    :param save_original: whether to save original AMR text in passage.extra
+    :param return_original: return triple of (UCCA passage, AMR string, AMR ID)
+
+    :return generator of Passage objects
+    """
+    del args, kwargs
+    from semstr.conversion.amr import AmrConverter
+    return AmrConverter().from_format(lines, passage_id, return_original=return_original, save_original=save_original)
+
+
+def to_amr(passage, metadata=True, wikification=True, use_original=True, verbose=False, *args, **kwargs):
+    """ Convert from a Passage object to a string in AMR PENMAN format (export)
+
+    :param passage: the Passage object to convert
+    :param metadata: whether to print ::id and ::tok lines
+    :param wikification: whether to wikify named concepts, adding a :wiki triple
+    :param use_original: whether to use original AMR text from passage.extra
+    :param verbose: whether to print extra information
+
+    :return list of lines representing an AMR in PENMAN format, constructed from the passage
+    """
+    del args, kwargs
+    from semstr.conversion.amr import AmrConverter
+    return AmrConverter().to_format(passage, metadata, wikification, verbose, use_original=use_original)
+
+
+def from_conllu(lines, passage_id=None, split=True, return_original=False, annotate=False, *args, **kwargs):
+    """Converts from parsed text in Universal Dependencies format to a Passage object.
+
+    :param lines: iterable of lines in Universal Dependencies format, describing a single passage.
+    :param passage_id: ID to set for passage
+    :param split: split each sentence to its own passage?
+    :param return_original: return triple of (UCCA passage, Universal Dependencies string, sentence ID)
+    :param annotate: whether to save dependency annotations in "extra" dict of layer 0
+
+    :return generator of Passage objects
+    """
+    del args, kwargs
+    from semstr.conversion.conllu import ConlluConverter
+    return ConlluConverter().from_format(lines, passage_id, split, return_original=return_original, annotate=annotate)
+
+
+def to_conllu(passage, test=False, tree=False, constituency=False, *args, **kwargs):
+    """ Convert from a Passage object to a string in Universal Dependencies format (conllu)
+
+    :param passage: the Passage object to convert
+    :param test: whether to omit the head and deprel columns. Defaults to False
+    :param tree: whether to omit columns for non-primary parents. Defaults to True
+    :param constituency: use UCCA conversion that introduces intermediate non-terminals
+
+    :return list of lines representing the semantic dependencies in the passage
+    """
+    del args, kwargs
+    from semstr.conversion.conllu import ConlluConverter
+    return ConlluConverter(constituency=constituency).to_format(passage, test, tree)
+
+
+def from_sdp(lines, passage_id, split=True, mark_aux=False, return_original=False, *args, **kwargs):
+    """Converts from parsed text in SemEval 2015 SDP format to a Passage object.
+
+    :param lines: iterable of lines in SDP format, describing a single passage.
+    :param passage_id: ID to set for passage
+    :param split: split each sentence to its own passage?
+    :param mark_aux: add a preceding # for labels of auxiliary edges added
+    :param return_original: return triple of (UCCA passage, SDP string, sentence ID)
+
+    :return generator of Passage objects
+    """
+    del args, kwargs
+    from semstr.conversion.sdp import SdpConverter
+    return SdpConverter(mark_aux=mark_aux).from_format(lines, passage_id, split, return_original=return_original)
+
+
+def to_sdp(passage, test=False, tree=False, mark_aux=False, constituency=False, *args, **kwargs):
+    """ Convert from a Passage object to a string in SemEval 2015 SDP format (sdp)
+
+    :param passage: the Passage object to convert
+    :param test: whether to omit the top, head, frame, etc. columns. Defaults to False
+    :param tree: whether to omit columns for non-primary parents. Defaults to False
+    :param mark_aux: omit edges with labels with a preceding #
+    :param constituency: use UCCA conversion that introduces intermediate non-terminals
+
+    :return list of lines representing the semantic dependencies in the passage
+    """
+    del args, kwargs
+    from semstr.conversion.sdp import SdpConverter
+    return SdpConverter(mark_aux=mark_aux, constituency=constituency).to_format(passage, test, tree)
 
 
 CONVERTERS = dict(convert.CONVERTERS)

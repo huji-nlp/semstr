@@ -316,32 +316,3 @@ class AmrConverter(convert.FormatConverter):
     def header(passage):
         return ["# ::id " + passage.ID,
                 "# ::tok " + " ".join(t.text for t in passage.layer(layer0.LAYER_ID).all)]
-
-
-def from_amr(lines, passage_id=None, return_original=False, save_original=True, *args, **kwargs):
-    """Converts from parsed text in AMR PENMAN format to a Passage object.
-
-    :param lines: iterable of lines in AMR PENMAN format, describing a single passage.
-    :param passage_id: ID to set for passage, overriding the ID from the file
-    :param save_original: whether to save original AMR text in passage.extra
-    :param return_original: return triple of (UCCA passage, AMR string, AMR ID)
-
-    :return generator of Passage objects
-    """
-    del args, kwargs
-    return AmrConverter().from_format(lines, passage_id, return_original=return_original, save_original=save_original)
-
-
-def to_amr(passage, metadata=True, wikification=True, use_original=True, verbose=False, *args, **kwargs):
-    """ Convert from a Passage object to a string in AMR PENMAN format (export)
-
-    :param passage: the Passage object to convert
-    :param metadata: whether to print ::id and ::tok lines
-    :param wikification: whether to wikify named concepts, adding a :wiki triple
-    :param use_original: whether to use original AMR text from passage.extra
-    :param verbose: whether to print extra information
-
-    :return list of lines representing an AMR in PENMAN format, constructed from the passage
-    """
-    del args, kwargs
-    return AmrConverter().to_format(passage, metadata, wikification, verbose, use_original=use_original)
