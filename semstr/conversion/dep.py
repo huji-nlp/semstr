@@ -46,7 +46,7 @@ class DependencyConverter(convert.DependencyConverter):
             edge, *remotes = incoming
             self.add_node(dep_node, edge, l1)
             if dep_node.outgoing and not any(self.is_flat(e) for e in dep_node.incoming):     # Intermediate head for
-                dep_node.preterminal = l1.add_fnode(dep_node.preterminal, self.HEAD)  # hierarchical structure
+                dep_node.preterminal = l1.add_fnode(dep_node.preterminal, self.HEAD)          # hierarchical structure
             remote_edges += remotes
         for edge in remote_edges:
             parent = edge.head.node or l1.heads[0]
