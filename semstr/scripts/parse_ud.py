@@ -10,8 +10,8 @@ from ucca import layer0
 from ucca.textutil import annotate_all, Attr
 
 from semstr.cfgutil import add_verbose_arg
-from semstr.conversion.conllu import ConlluConverter, from_conllu, to_conllu
-from semstr.convert import add_convert_args, CONVERTERS, write_passage, map_labels
+from semstr.conversion.conllu import ConlluConverter
+from semstr.convert import from_conllu, to_conllu, add_convert_args, CONVERTERS, write_passage, map_labels
 from semstr.evaluate import Scores, EVALUATORS
 from semstr.scripts.annotate import add_specs_args, read_specs
 

@@ -4,7 +4,7 @@ import unittest
 
 from ucca.convert import split2sentences
 
-from semstr.conversion.amr import from_amr, to_amr
+from semstr.convert import from_amr, to_amr
 from semstr.evaluation.amr import evaluate
 
 

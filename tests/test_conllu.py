@@ -4,7 +4,7 @@ import unittest
 
 from ucca.convert import split2sentences
 
-from semstr.conversion.conllu import from_conllu, to_conllu
+from semstr.convert import from_conllu, to_conllu
 from semstr.evaluation.conllu import evaluate
 
 
