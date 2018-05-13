@@ -37,16 +37,19 @@ if ! [[ "$ACTION" =~ ^(toy|unit)$ ]]; then
     esac
 fi
 
-case "$TEST_SUITE" in
+case "ACTION" in
 unit)  # unit tests
     pytest --durations=0 -v tests || exit 1
     python -m semstr.scripts.parse_ud test_files/*.xml -We
     python -m semstr.validate test_files/* --strict -s
     ;;
-convert-*)
+convert)
     python -m semstr.scripts.convert_and_evaluate "$CONVERT_DATA" -v
     ;;
-parse-*)
-    python -m semstr.scripts.parse_ud $DEV_DATA -We
+parse)
+    python -m semstr.scripts.parse_ud "$DEV_DATA" -We
+    ;;
+parse_udpipe)
+    python -m semstr.scripts.parse_ud "$DEV_DATA" -We --parser udpipe
     ;;
 esac
