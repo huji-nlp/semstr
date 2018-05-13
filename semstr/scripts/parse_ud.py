@@ -72,10 +72,9 @@ def main(args):
         if not args.verbose:
             passages = tqdm(passages, unit=" passages", desc="Parsing " + out_dir)
         for passage, parsed in ANNOTATORS[args.parser](passages, lang, args.verbose):
+            map_labels(parsed, args.label_map)
             if args.write:
                 write_passage(parsed, args)
-            else:
-                map_labels(parsed, args.label_map)
             if args.evaluate:
                 evaluator = EVALUATORS[args.output_format]
                 _, converter = CONVERTERS[args.output_format]

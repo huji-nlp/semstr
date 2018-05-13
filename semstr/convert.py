@@ -164,7 +164,6 @@ def map_labels(passage, label_map_file):
 
 
 def write_passage(passage, args):
-    map_labels(passage, args.label_map)
     ext = {None: UCCA_EXT[args.binary], "amr": ".txt"}.get(args.output_format) or "." + args.output_format
     outfile = args.out_dir + os.path.sep + passage.ID + ext
     if args.verbose:
@@ -185,6 +184,7 @@ def main(args):
     os.makedirs(args.out_dir, exist_ok=True)
     for passage in iter_passages(args.filenames, desc="Converting", input_format=args.input_format, prefix=args.prefix,
                                  split=args.split, mark_aux=args.mark_aux, annotate=args.annotate):
+        map_labels(passage, args.label_map)
         write_passage(passage, args)
 
 
