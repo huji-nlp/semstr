@@ -50,6 +50,10 @@ parse)
     python -m semstr.scripts.parse_ud "$DEV_DATA" -We
     ;;
 parse_udpipe)
-    python -m semstr.scripts.parse_ud "$DEV_DATA" -We --parser udpipe
+    curl -O https://lindat.mff.cuni.cz/repository/xmlui/bitstream/handle/11234/1-2364/udpipe-ud-2.0-170801.zip
+    unzip udpipe-ud-2.0-170801.zip
+    python -m semstr.scripts.parse_ud "$DEV_DATA" -We --parser udpipe \
+        -l udpipe/udpipe-ud-2.0-170801/english-ud-2.0-170801.udpipe \
+        --label-map=semstr/util/resources/ud_ucca_label_map.csv
     ;;
 esac
