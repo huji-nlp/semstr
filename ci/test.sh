@@ -37,7 +37,7 @@ if ! [[ "$ACTION" =~ ^(toy|unit)$ ]]; then
     esac
 fi
 
-case "ACTION" in
+case "$ACTION" in
 unit)  # unit tests
     pytest --durations=0 -v tests || exit 1
     python -m semstr.scripts.parse_ud test_files/*.xml -We
