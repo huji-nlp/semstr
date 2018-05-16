@@ -77,7 +77,7 @@ def main(args):
             passages = tqdm(passages, unit=" passages", desc="Parsing " + (out_dir if out_dir != "." else lang))
         for passage, parsed in ANNOTATORS[args.parser](passages, lang, args.verbose):
             map_labels(parsed, args.label_map)
-            normalize(parsed)
+            normalize(parsed, extra=True)
             if args.write:
                 write_passage(parsed, args)
             if args.evaluate:

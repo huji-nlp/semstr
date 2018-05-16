@@ -186,7 +186,7 @@ def main(args):
     for passage in iter_passages(args.filenames, desc="Converting", input_format=args.input_format, prefix=args.prefix,
                                  split=args.split, mark_aux=args.mark_aux, annotate=args.annotate):
         map_labels(passage, args.label_map)
-        normalize(passage)
+        normalize(passage, extra=True)
         write_passage(passage, args)
 
 
