@@ -53,10 +53,12 @@ def parse_udpipe(passages, model_name, verbose=False):
     lines1, lines2 = tee(l and (l + "\t_\t_") for p in passages1 for l in to_conllu(p, tree=True, test=True))
     text = "\n".join(lines1)
     error = ProcessingError()
-    print("Running UDPipe on %d tokens... " % sum(1 for l in lines2 if l), end="", flush=True)
+    num_tokens = sum(1 for l in lines2 if l)
+    print("Running UDPipe on %d tokens... " % num_tokens, end="", flush=True)
     start = time()
     processed = pipeline.process(text, error)
-    print("Done (%.3fs)" % (time() - start))
+    duration = time() - start
+    print("Done (%.3fs, %.0f tokens/s)" % (duration, num_tokens / duration if duration else 0))
     if verbose:
         print(processed)
     if error.occurred():
@@ -72,7 +74,7 @@ def main(args):
     for passages, out_dir, lang in read_specs(args):
         scores = []
         if not args.verbose:
-            passages = tqdm(passages, unit=" passages", desc="Parsing " + out_dir)
+            passages = tqdm(passages, unit=" passages", desc="Parsing " + (out_dir if out_dir != "." else lang))
         for passage, parsed in ANNOTATORS[args.parser](passages, lang, args.verbose):
             map_labels(parsed, args.label_map)
             normalize(parsed)
