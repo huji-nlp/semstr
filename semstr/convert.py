@@ -10,6 +10,7 @@ import configargparse
 from tqdm import tqdm
 from ucca import convert, ioutil, layer1
 from ucca.convert import from_text
+from ucca.normalization import normalize
 
 from semstr.cfgutil import add_verbose_arg
 
@@ -185,6 +186,7 @@ def main(args):
     for passage in iter_passages(args.filenames, desc="Converting", input_format=args.input_format, prefix=args.prefix,
                                  split=args.split, mark_aux=args.mark_aux, annotate=args.annotate):
         map_labels(passage, args.label_map)
+        normalize(passage)
         write_passage(passage, args)
 
 

@@ -7,6 +7,7 @@ from time import time
 
 from tqdm import tqdm
 from ucca import layer0
+from ucca.normalization import normalize
 from ucca.textutil import annotate_all, Attr
 
 from semstr.cfgutil import add_verbose_arg
@@ -73,6 +74,7 @@ def main(args):
             passages = tqdm(passages, unit=" passages", desc="Parsing " + out_dir)
         for passage, parsed in ANNOTATORS[args.parser](passages, lang, args.verbose):
             map_labels(parsed, args.label_map)
+            normalize(parsed)
             if args.write:
                 write_passage(parsed, args)
             if args.evaluate:

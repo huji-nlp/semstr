@@ -6,6 +6,7 @@ from glob import glob
 
 import configargparse
 from ucca import ioutil
+from ucca.normalization import normalize
 
 from semstr.cfgutil import add_verbose_arg, add_boolean_option
 from semstr.convert import CONVERTERS
@@ -38,6 +39,7 @@ def main():
             evaluator = EVALUATORS.get(passage_format, EVALUATORS["amr"]).evaluate
             with open(filename, encoding="utf-8") as f:
                 for passage, ref, passage_id in converters[0](f, passage_id=basename, return_original=True):
+                    normalize(passage)
                     if args.out_dir:
                         os.makedirs(args.out_dir, exist_ok=True)
                         outfile = "%s/%s.xml" % (args.out_dir, passage.ID)
