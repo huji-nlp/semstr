@@ -5,7 +5,7 @@ import pytest
 from ucca import layer0, layer1
 from ucca.ioutil import read_files_and_dirs
 
-from convert import FROM_FORMAT
+from semstr.convert import FROM_FORMAT
 
 
 @pytest.mark.parametrize("suffix", ("xml", "amr", "sdp", "conllu"))
