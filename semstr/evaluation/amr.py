@@ -1,9 +1,10 @@
+import importlib
+import os
+import re
 import sys
 
 from ucca import evaluation
 from ucca.constructions import PRIMARY
-
-from ..util.amr import *
 
 sys.path.insert(0, os.path.dirname(importlib.util.find_spec("smatch.smatch").origin))  # to find amr.py from smatch
 from smatch import smatch

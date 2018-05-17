@@ -96,6 +96,8 @@ CATEGORIES = {}
 
 
 def read_resources():
+    if read_resources.done:
+        return
     try:
         os.chdir(os.path.join(os.path.dirname(os.path.realpath(__file__)), "resources"))
         with open("negations.txt", encoding="utf-8") as f:
@@ -122,6 +124,10 @@ def read_resources():
             CATEGORIES.update(re.findall(r"(\S+) (\S+(?: [^:#]\S)*)", l)[0][::-1] for l in f if l and l[0] not in "#")
     finally:
         os.chdir(prev_dir)
+    read_resources.done = True
+
+
+read_resources.done = False
 
 
 def parse(*args, **kwargs):
@@ -141,6 +147,7 @@ def is_int_in_range(label, s=None, e=None):
 
 
 def is_valid_arg(node, label, *tags, is_parent=True):
+    read_resources()
     if label is None or (tags and TERMINAL_TAGS.issuperset(filter(None, tags))):  # Not labeled yet or unlabeled parsing
         return True
     label = resolve_label(node, label, conservative=True)
@@ -213,6 +220,8 @@ def resolve_label(node, label=None, reverse=False, conservative=False):
             old, new = new, old
         replaceable = old and (len(old) > 2 or len(label) < 5)
         return re.sub(re.escape(old) + "(?![^<]*>|[^(]*\(|\d+$)", new, label, 1) if replaceable else label
+
+    read_resources()
 
     if label is None:
         label = get_node_attr(node, LABEL_ATTRIB)
@@ -373,5 +382,4 @@ class Wikifier:
                         self.passage_texts[passage], node, name.child)
 
 
-read_resources()
 WIKIFIER = Wikifier()

@@ -1,9 +1,14 @@
+import re
+from collections import defaultdict
 from collections import namedtuple, OrderedDict
 
 import penman
-from ucca import layer0, convert, textutil
+from ucca import layer0, layer1, convert, textutil
 
-from ..util.amr import *
+from ..util.amr import parse, amr_lib, resolve_label, EXTENSIONS, COMMENT_PREFIX, ID_PATTERN, TOK_PATTERN, DEP_PREFIX, \
+    TOP_DEP, PREFIXED_RELATION_PATTERN, PREFIXED_RELATION_SUBSTITUTION, LABEL_ATTRIB, NAME, OP, PUNCTUATION_DEP, \
+    PUNCTUATION_LABEL, TERMINAL_DEP, ALIGNMENT_PREFIX, ALIGNMENT_SEP, SKIP_TOKEN_PATTERN, CONCEPT, NUM, WIKI, CONST, \
+    NUM_PATTERN, MINUS, WIKIFIER, TERMINAL_TAGS, is_concept, INSTANCE, PREFIXED_RELATION_ENUM, PREFIXED_RELATION_PREP
 
 DELETE_PATTERN = re.compile("\\\\|(?<=(?<!<)<)[^<>]+(?=>(?!>))")  # Delete text inside single angle brackets
 

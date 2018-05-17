@@ -1,5 +1,6 @@
 from ..constraints import Constraints
-from ..util.amr import *
+from ..util.amr import TERMINAL_DEP, WIKI, POLARITY, CENTURY, DECADE, TERMINAL_TAGS, PREFIXED_RELATION_ENUM, \
+    get_node_attr, LABEL_ATTRIB, is_concept, is_valid_arg
 
 
 class AmrConstraints(Constraints):
