@@ -9,13 +9,16 @@ class DependencyConverter(convert.DependencyConverter):
     TOP = "TOP"
     HEAD = "head"
 
-    def __init__(self, *args, constituency=False, tree=False, punct_tag=None, punct_rel=None, **kwargs):
+    def __init__(self, *args, constituency=False, tree=False, punct_tag=None, punct_rel=None, tag_priority=(),
+                 **kwargs):
         super().__init__(*args, **kwargs)
         self.constituency = constituency
         self.tree = tree
         self.punct_tag = punct_tag
         self.punct_rel = punct_rel
         self.lines_read = []
+        # noinspection PyTypeChecker
+        self.tag_priority = [self.HEAD] + list(tag_priority) + self.TAG_PRIORITY + [None]
 
     def read_line_and_append(self, read_line, line, *args, **kwargs):
         self.lines_read.append(line)
@@ -65,15 +68,21 @@ class DependencyConverter(convert.DependencyConverter):
             yield (passage, self.lines_read, passage.ID) if return_original else passage
             self.lines_read = []
 
+    @staticmethod
+    def primary_edges(unit, tag=None):
+        return (e for e in unit if not e.attrib.get("remote") and not e.child.attrib.get("implicit")
+                and (tag is None or e.tag == tag))
+
+    def find_head_child(self, unit):
+        try:
+            # noinspection PyTypeChecker
+            return next(e.child for tag in self.tag_priority for edges in self.primary_edges(unit, tag) for e in edges)
+        except StopIteration:
+            raise RuntimeError("Could not find head child for unit (%s): %s" % (unit.ID, unit))
+
     def find_head_terminal(self, unit):
         while unit.outgoing:  # still non-terminal
-            heads = [e.child for e in unit.outgoing if e.tag == self.HEAD]
-            try:
-                unit = heads[0] if heads else next(e.child for tag in self.TAG_PRIORITY  # head selection by priority
-                                                   for e in unit.outgoing if e.tag == tag and not e.attrib.get("remote")
-                                                   and not e.child.attrib.get("implicit"))
-            except StopIteration:
-                unit = unit.children[0]
+            unit = self.find_head_child(unit)
         if unit.layer.ID != layer0.LAYER_ID:
             raise ValueError("Implicit unit (%s): %s" % (unit.ID, unit))
         return unit

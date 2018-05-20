@@ -34,7 +34,8 @@ REL_REPLACEMENTS = (
 class ConlluConverter(DependencyConverter, convert.ConllConverter):
 
     def __init__(self, *args, **kwargs):
-        DependencyConverter.__init__(self, *args, tree=True, punct_tag=PUNCT_TAG, punct_rel=PUNCT, **kwargs)
+        DependencyConverter.__init__(self, *args, tree=True, punct_tag=PUNCT_TAG, punct_rel=PUNCT,
+                                     tag_priority=[self.TOP, PARATAXIS, CONJ, ADVCL, XCOMP], **kwargs)
 
     def modify_passage(self, passage):
         passage.extra["format"] = "conllu"
@@ -59,16 +60,6 @@ class ConlluConverter(DependencyConverter, convert.ConllConverter):
             self.lines_read = []
 
     def to_format(self, *args, **kwargs):
-        self.TAG_PRIORITY = [
-            self.TOP,
-            self.HEAD,
-            PARATAXIS,
-            CONJ,
-            CC,
-            AUX,
-            FLAT,
-            self.punct_rel,
-        ]
         return super().to_format(*args, **kwargs)
 
     def add_node(self, dep_node, edge, l1):
