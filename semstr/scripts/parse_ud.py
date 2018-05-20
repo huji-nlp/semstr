@@ -50,7 +50,7 @@ def parse_udpipe(passages, model_name, verbose=False):
         raise ValueError("Invalid model: '%s'" % model_name)
     pipeline = Pipeline(model, "conllu", Pipeline.DEFAULT, Pipeline.DEFAULT, "conllu")
     passages1, passages2 = tee(passages)
-    lines1, lines2 = tee(l and (l + "\t_\t_") for p in passages1 for l in to_conllu(p, tree=True, test=True))
+    lines1, lines2 = tee(l for p in passages1 for l in to_conllu(p, tree=True, test=True))
     text = "\n".join(lines1)
     error = ProcessingError()
     num_tokens = sum(1 for l in lines2 if l)
