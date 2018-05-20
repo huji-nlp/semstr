@@ -1,4 +1,4 @@
-from ucca import convert, layer1
+from ucca import convert, layer0, layer1
 
 
 class DependencyConverter(convert.DependencyConverter):
@@ -74,6 +74,8 @@ class DependencyConverter(convert.DependencyConverter):
                                                    and not e.child.attrib.get("implicit"))
             except StopIteration:
                 unit = unit.children[0]
+        if unit.layer.ID != layer0.LAYER_ID:
+            raise ValueError("Implicit unit (%s): %s" % (unit.ID, unit))
         return unit
 
     def find_top_headed_edges(self, unit):
