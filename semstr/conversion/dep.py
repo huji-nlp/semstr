@@ -76,7 +76,7 @@ class DependencyConverter(convert.DependencyConverter):
     def find_head_child(self, unit):
         try:
             # noinspection PyTypeChecker
-            return next(e.child for tag in self.tag_priority for edges in self.primary_edges(unit, tag) for e in edges)
+            return next(e.child for tag in self.tag_priority for e in self.primary_edges(unit, tag))
         except StopIteration:
             raise RuntimeError("Could not find head child for unit (%s): %s" % (unit.ID, unit))
 
