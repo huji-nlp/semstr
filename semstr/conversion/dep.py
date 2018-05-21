@@ -53,7 +53,9 @@ class DependencyConverter(convert.DependencyConverter):
             remote_edges += remotes
         for edge in remote_edges:
             parent = edge.head.node or l1.heads[0]
-            child = edge.dependent.node
+            child = edge.dependent.node or l1.heads[0]
+            if child is None:
+                raise ValueError("Remote child without primary parent: %s" % edge)
             if child not in parent.children and parent not in child.iter():  # Avoid cycles and multi-edges
                 l1.add_remote(parent, edge.rel, child)
 
