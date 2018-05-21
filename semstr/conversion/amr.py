@@ -2,6 +2,7 @@ import re
 from collections import defaultdict
 from collections import namedtuple, OrderedDict
 
+# noinspection PyPackageRequirements
 import penman
 from ucca import layer0, layer1, convert, textutil
 
@@ -112,6 +113,7 @@ class AmrConverter(convert.FormatConverter):
             rel = PREFIXED_RELATION_PATTERN.sub(PREFIXED_RELATION_SUBSTITUTION, rel)  # remove numeric/prep suffix
             if rel == NAME:
                 names.add(dep)
+            # noinspection PyUnresolvedReferences
             parent = variables.get(head)
             assert parent is not None, "Outgoing edge from a non-variable: " + str(triple)
             node = variables.get(dep)
@@ -301,6 +303,7 @@ class AmrConverter(convert.FormatConverter):
                         prefixed_relation_counter[key] += 1
                         rel += str(prefixed_relation_counter[key])
                     elif rel == PREFIXED_RELATION_PREP:
+                        # noinspection PyTypeChecker
                         rel = "-".join([rel] + list(OrderedDict.fromkeys(t.text for t in edge.child.get_terminals())))
                     yield head_dep[0], rel, head_dep[1]
 
