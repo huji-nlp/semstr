@@ -7,7 +7,7 @@ from ucca import visualization
 from ucca.ioutil import get_passages_with_progress_bar
 from ucca.normalization import normalize
 
-from semstr.convert import FROM_FORMAT
+from semstr.convert import FROM_FORMAT, map_labels
 
 if __name__ == "__main__":
     argparser = ArgumentParser(description="Visualize the given passages as graphs.")
@@ -15,11 +15,13 @@ if __name__ == "__main__":
     argparser.add_argument("--tikz", action="store_true", help="print tikz code rather than showing plots")
     argparser.add_argument("--out-dir", help="directory to save figures in (otherwise displayed immediately)")
     argparser.add_argument("--no-normalize", action="store_false", dest="normalize", help="normalize passage")
+    argparser.add_argument("--label-map", help="CSV file specifying mapping of input edge labels to output edge labels")
     args = argparser.parse_args()
 
     if args.out_dir:
         os.makedirs(args.out_dir, exist_ok=True)
     for passage in get_passages_with_progress_bar(args.passages, desc="Visualizing", converters=FROM_FORMAT):
+        map_labels(passage, args.label_map)
         if args.normalize:
             normalize(passage)
         if args.tikz:
