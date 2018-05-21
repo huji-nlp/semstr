@@ -62,6 +62,8 @@ class DependencyConverter(convert.DependencyConverter):
         dep_node.preterminal = dep_node.node = \
             l1.add_fnode(dep_node.preterminal, self.HEAD) if edge.rel.upper() == self.ROOT else (
                 l1.add_fnode(None if self.is_scene(edge) else edge.head.node, edge.rel))
+        if self.is_punct(dep_node):
+            dep_node.node = edge.head.node
 
     def from_format(self, lines, passage_id, split=False, return_original=False):
         for passage in super().from_format(lines, passage_id, split=split):
