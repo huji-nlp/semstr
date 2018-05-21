@@ -280,7 +280,7 @@ class AmrConverter(convert.FormatConverter):
             if edge not in visited:  # skip cycles
                 visited.add(edge)
                 nodes = [edge.parent]  # nodes taking part in the relation being created
-                if edge.child is not None and edge.tag not in TERMINAL_TAGS:  # skip terminals
+                if edge.child is not None and edge.tag not in TERMINAL_TAGS | {layer1.EdgeTags.Function}:  # skip
                     nodes.append(edge.child)
                     pending += edge.child  # all the child's outgoing edges
                 head_dep = []  # will be pair of (parent label, child label)
