@@ -285,7 +285,7 @@ class AmrConverter(convert.FormatConverter):
                 for node in nodes:
                     label = resolve_label(node)
                     if label is None:
-                        raise ValueError("Missing node label for node %s in passage %s" % (node.ID, passage.ID))
+                        raise ValueError("Missing label for node '%s' (%s) in '%s'" % (node, node.ID, passage.ID))
                     elif is_concept(label):  # collapsed variable + concept: create both AMR nodes and the instance-of
                         concept = None if node.ID in labels else AmrConverter.strip(label)
                         label = labels[node.ID]  # generate variable label
