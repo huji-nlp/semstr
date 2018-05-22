@@ -22,6 +22,7 @@ def main():
     add_verbose_arg(argparser, help="detailed evaluation output")
     add_boolean_option(argparser, "wikification", "Spotlight to wikify any named node (for AMR)")
     argparser.add_argument("-o", "--out-dir", help="output directory (if unspecified, files are not written)")
+    argparser.add_argument("-e", "--extra-normalization", action="store_true", help="more normalization rules")
     args = argparser.parse_args()
 
     scores = []
@@ -39,7 +40,7 @@ def main():
             evaluator = EVALUATORS.get(passage_format, EVALUATORS["amr"]).evaluate
             with open(filename, encoding="utf-8") as f:
                 for passage, ref, passage_id in converters[0](f, passage_id=basename, return_original=True):
-                    normalize(passage, extra=True)
+                    normalize(passage, extra=args.extra_normalization)
                     if args.out_dir:
                         os.makedirs(args.out_dir, exist_ok=True)
                         outfile = "%s/%s.xml" % (args.out_dir, passage.ID)

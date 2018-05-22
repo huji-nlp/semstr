@@ -186,7 +186,7 @@ def main(args):
     for passage in iter_passages(args.filenames, desc="Converting", input_format=args.input_format, prefix=args.prefix,
                                  split=args.split, mark_aux=args.mark_aux, annotate=args.annotate):
         map_labels(passage, args.label_map)
-        normalize(passage, extra=True)
+        normalize(passage, extra=args.extra_normalization)
         write_passage(passage, args)
 
 
@@ -207,7 +207,8 @@ if __name__ == '__main__':
     argparser.add_argument("-o", "--out-dir", default=".", help="output directory")
     argparser.add_argument("-p", "--prefix", default="", help="output passage ID prefix")
     argparser.add_argument("-b", "--binary", action="store_true", help="write in binary format (.%s)" % UCCA_EXT[1])
-    argparser.add_argument("--annotate", action="store_true", help="store dependency annotations in 'extra' dict")
+    argparser.add_argument("-a", "--annotate", action="store_true", help="store dependency annotations in 'extra' dict")
+    argparser.add_argument("-e", "--extra-normalization", action="store_true", help="more normalization rules")
     add_convert_args(argparser)
     add_verbose_arg(argparser, help="detailed output")
     main(argparser.parse_args())
