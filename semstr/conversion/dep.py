@@ -30,6 +30,11 @@ class DependencyConverter(convert.DependencyConverter):
     def split_line(self, line):
         return line.split("\t")
 
+    def generate_header_lines(self, passage_id, dep_nodes):
+        yield from super().generate_header_lines(passage_id, dep_nodes)
+        yield "# text = " + " ".join(dep_node.token.text for dep_node in dep_nodes)
+        yield "# doc_id = " + passage_id.rpartition(".")[0]
+
     def create_non_terminals(self, dep_nodes, l1):
         if self.constituency:
             super().create_non_terminals(dep_nodes, l1)
