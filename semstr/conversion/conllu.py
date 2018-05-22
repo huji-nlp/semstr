@@ -87,7 +87,7 @@ class ConlluConverter(DependencyConverter, convert.ConllConverter):
                         head_edge = min(candidates, key=_attach_forward_sort_key)
                         head = (head_edge.head, head_edge.dependent)[to_dep]
                         if not any(e.rel == edge.rel for e in head.outgoing):
-                            self.change_head(edge, head)
+                            edge.head = head
         for dep_node in dep_nodes:
             for edge in dep_node.incoming:
                 if edge.rel in PUNCT_RELS:
@@ -97,18 +97,12 @@ class ConlluConverter(DependencyConverter, convert.ConllConverter):
                                              for e in d.outgoing)] or \
                                 [d for d in dep_nodes if self.between(dep_node, d.outgoing, APPOS)]
                         if heads:
-                            self.change_head(edge, heads[0])
+                            edge.head = heads[0]
         super().preprocess(dep_nodes, to_dep=to_dep)
 
     @staticmethod
     def between(dep_node, edges, *rels):
         return any(e.rel in rels and e.head.position < dep_node.position < e.dependent.position for e in edges)
-
-    @staticmethod
-    def change_head(edge, head):
-        edge.head = head
-        edge.head_index = edge.head.position - 1
-        head.outgoing.append(edge)
 
     def is_flat(self, edge):
         return edge.rel in FLAT_RELS
