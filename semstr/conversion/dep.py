@@ -48,8 +48,8 @@ class DependencyConverter(convert.DependencyConverter):
                 incoming[:0] = [top_edge]
             edge, *remotes = incoming
             self.add_node(dep_node, edge, l1)
-            if dep_node.outgoing and not any(self.is_flat(e) for e in dep_node.incoming):     # Intermediate head for
-                dep_node.preterminal = l1.add_fnode(dep_node.preterminal, self.HEAD)          # hierarchical structure
+            if dep_node.outgoing and not self.is_punct(dep_node) and not any(map( self.is_flat, dep_node.incoming)):
+                dep_node.preterminal = l1.add_fnode(dep_node.preterminal, self.HEAD)  # Intermediate head for hierarchy
             remote_edges += remotes
         for edge in remote_edges:
             parent = edge.head.node or l1.heads[0]
@@ -62,7 +62,7 @@ class DependencyConverter(convert.DependencyConverter):
         dep_node.preterminal = dep_node.node = \
             l1.add_fnode(dep_node.preterminal, self.HEAD) if edge.rel.upper() == self.ROOT else (
                 l1.add_fnode(None if self.is_scene(edge) else edge.head.node, edge.rel))
-        if self.is_punct(dep_node):
+        if self.is_punct(dep_node):  # prevent children of punctuation nodes
             dep_node.node = edge.head.node
 
     def from_format(self, lines, passage_id, split=False, return_original=False):
