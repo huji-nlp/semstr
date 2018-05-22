@@ -44,9 +44,9 @@ class DependencyConverter(convert.DependencyConverter):
                     dep_node.node = dep_node.preterminal = l1.add_fnode(None, (self.ROOT, self.TOP)[dep_node.is_top])
         remote_edges = []
         sorted_dep_nodes = self._topological_sort(dep_nodes)
+        self.preprocess(sorted_dep_nodes, to_dep=False)
         for dep_node in sorted_dep_nodes:  # Create all other nodes
             incoming = list(dep_node.incoming)
-            self.preprocess_edges(incoming)
             if dep_node.is_top and incoming[0].head_index != 0:
                 top_edge = self.Edge(head_index=0, rel=self.TOP, remote=False)
                 top_edge.head = dep_nodes[0]
@@ -97,16 +97,13 @@ class DependencyConverter(convert.DependencyConverter):
     def find_top_headed_edges(self, unit):
         return [e for e in self.find_headed_unit(unit).incoming if e.tag not in (self.ROOT, self.TOP)]
 
-    def preprocess(self, dep_nodes):
+    def preprocess(self, dep_nodes, to_dep=True):
         for dep_node in dep_nodes:
             if dep_node.incoming:
-                self.preprocess_edges(dep_node.incoming, reverse=True)
+                for edge in dep_node.incoming:
+                    edge.remote = False
             elif self.tree:
                 dep_node.incoming = [(self.Edge(head_index=-1, rel=self.ROOT.lower(), remote=False))]
-
-    def preprocess_edges(self, edges, reverse=False):
-        for edge in edges:
-            edge.remote = False
 
     def find_headed_unit(self, unit):
         while unit.incoming and (not unit.outgoing or unit.incoming[0].tag == self.HEAD) and \

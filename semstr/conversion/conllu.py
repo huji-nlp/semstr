@@ -19,16 +19,14 @@ AUX = "aux"
 MARK = "mark"
 ADVCL = "advcl"
 XCOMP = "xcomp"
+APPOS = "appos"
 
 
-HIGH_ATTACHING = (  # trigger, attach_to, allow_multiple
-    ((layer1.EdgeTags.Connector, CC), (CONJ,)),
-    ((MARK,), (ADVCL, XCOMP)),
-)
-REL_REPLACEMENTS = (
-    (FLAT, layer1.EdgeTags.Terminal),
-    (PUNCT, layer1.EdgeTags.Punctuation),
-)
+HIGH_ATTACHING = {layer1.EdgeTags.Connector: (CONJ,), CC: (CONJ,), MARK: (ADVCL, XCOMP)}  # trigger: attach to rel
+TOP_RELS = (layer1.EdgeTags.ParallelScene, PARATAXIS)
+PUNCT_RELS = (PUNCT, layer1.EdgeTags.Punctuation)
+FLAT_RELS = (FLAT, layer1.EdgeTags.Terminal)
+REL_REPLACEMENTS = (FLAT_RELS, PUNCT_RELS)
 
 
 class ConlluConverter(DependencyConverter, convert.ConllConverter):
@@ -72,27 +70,48 @@ class ConlluConverter(DependencyConverter, convert.ConllConverter):
         else:
             super().add_node(dep_node, edge, l1)
 
-    def preprocess_edges(self, edges, reverse=False):
-        super().preprocess_edges(edges)
-        max_pos = max(e.dependent.position for e in edges)
-        for edge in edges:
+    def preprocess(self, dep_nodes, to_dep=True):
+        max_pos = max(d.position for d in dep_nodes) + 1
+        for dep_node in dep_nodes:
             def _attach_forward_sort_key(e):
-                return e.dependent.position + ((max_pos + 1) if e.dependent.position < edge.dependent.position else 0)
-            edge.rel = edge.rel.partition(":")[0]  # Strip suffix
-            for source, target in REL_REPLACEMENTS:
-                if edge.rel == (source, target)[reverse]:
-                    edge.rel = (target, source)[reverse]
-            for trigger, attach_to in HIGH_ATTACHING:
-                if edge.rel in trigger:
-                    for attach_to_edge in sorted([e for e in (edge.head.incoming, edge.head.outgoing)[reverse] if
-                                                  e.rel in attach_to], key=_attach_forward_sort_key)[:1]:
-                        head = (attach_to_edge.head, attach_to_edge.dependent)[reverse]
-                        if not any(e.rel in trigger for e in head.outgoing):
-                            edge.head = head
-                            edge.head_index = edge.head.position - 1
+                return e.dependent.position + (max_pos if e.dependent.position < dep_node.position else 0)
+            for edge in dep_node.incoming:
+                edge.rel = edge.rel.partition(":")[0]  # Strip suffix
+                for source, target in REL_REPLACEMENTS:
+                    if edge.rel == (source, target)[to_dep]:
+                        edge.rel = (target, source)[to_dep]
+                rels = HIGH_ATTACHING.get(edge.rel)
+                if rels:
+                    candidates = [e for e in (edge.head.incoming, edge.head.outgoing)[to_dep] if e.rel in rels]
+                    if candidates:
+                        head_edge = min(candidates, key=_attach_forward_sort_key)
+                        head = (head_edge.head, head_edge.dependent)[to_dep]
+                        if not any(e.rel == edge.rel for e in head.outgoing):
+                            self.change_head(edge, head)
+        for dep_node in dep_nodes:
+            for edge in dep_node.incoming:
+                if edge.rel in PUNCT_RELS:
+                        heads = [d for d in dep_nodes if self.between(dep_node, d.incoming, CONJ)
+                                 and not any(e.rel in (PUNCT_RELS + (CC,)) and
+                                             dep_node.position < e.dependent.position < d.position
+                                             for e in d.outgoing)] or \
+                                [d for d in dep_nodes if self.between(dep_node, d.outgoing, APPOS)]
+                        if heads:
+                            self.change_head(edge, heads[0])
+        super().preprocess(dep_nodes, to_dep=to_dep)
+
+    @staticmethod
+    def between(dep_node, edges, *rels):
+        return any(e.rel in rels and e.head.position < dep_node.position < e.dependent.position for e in edges)
+
+    @staticmethod
+    def change_head(edge, head):
+        edge.head = head
+        edge.head_index = edge.head.position - 1
+        head.outgoing.append(edge)
 
     def is_flat(self, edge):
-        return edge.rel in (layer1.EdgeTags.Terminal, FLAT)
+        return edge.rel in FLAT_RELS
 
     def is_scene(self, edge):
-        return edge.rel in (layer1.EdgeTags.ParallelScene, PARATAXIS)
+        return edge.rel in TOP_RELS
