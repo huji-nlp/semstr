@@ -2,7 +2,8 @@ import argparse
 import sys
 from itertools import groupby, islice
 
-from ucca import layer0, layer1
+from ucca import layer0, layer1, validation
+from ucca.normalization import normalize
 
 from semstr.constraint.amr import AmrConstraints
 from semstr.constraint.conllu import ConlluConstraints
@@ -45,22 +46,27 @@ def join(edges):
 
 
 def validate(passage, args):
-    constraints = CONSTRAINTS[passage.extra.get("format", args.format)](args)
-    yield from detect_cycles(passage)
-    l0 = passage.layer(layer0.LAYER_ID)
-    l1 = passage.layer(layer1.LAYER_ID)
-    for terminal in l0.all:
-        yield from check_orphan_terminals(constraints, terminal)
-        yield from check_root_terminal_children(constraints, l1, terminal)
-        yield from check_multiple_incoming(constraints, terminal)
-    yield from check_top_level_allowed(constraints, l1)
-    for node in l1.all:
-        yield from check_multigraph(constraints, node)
-        yield from check_implicit_children(constraints, node)
-        yield from check_multiple_incoming(constraints, node)
-        yield from check_top_level_only(constraints, l1, node)
-        yield from check_required_outgoing(constraints, node)
-        yield from check_tag_rules(constraints, node)
+    if args.normalize:
+        normalize(passage, extra=args.extra_normalization)
+    if args.ucca_validation:
+        validation.validate(passage)
+    else:  # Generic validations depending on format-specific constraints
+        constraints = CONSTRAINTS[passage.extra.get("format", args.format)](args)
+        yield from detect_cycles(passage)
+        l0 = passage.layer(layer0.LAYER_ID)
+        l1 = passage.layer(layer1.LAYER_ID)
+        for terminal in l0.all:
+            yield from check_orphan_terminals(constraints, terminal)
+            yield from check_root_terminal_children(constraints, l1, terminal)
+            yield from check_multiple_incoming(constraints, terminal)
+        yield from check_top_level_allowed(constraints, l1)
+        for node in l1.all:
+            yield from check_multigraph(constraints, node)
+            yield from check_implicit_children(constraints, node)
+            yield from check_multiple_incoming(constraints, node)
+            yield from check_top_level_only(constraints, l1, node)
+            yield from check_required_outgoing(constraints, node)
+            yield from check_tag_rules(constraints, node)
 
 
 def check_orphan_terminals(constraints, terminal):
@@ -152,6 +158,9 @@ if __name__ == "__main__":
     argparser.add_argument("filenames", nargs="+", help="files or directories to validate")
     argparser.add_argument("-f", "--format", help="default format (if cannot determine by suffix)")
     argparser.add_argument("-s", "--split", action="store_true", help="split each sentence to its own passage")
-    argparser.add_argument("--implicit", action="store_true", help="allow implicit nodes")
-    argparser.add_argument("--strict", action="store_true", help="fail as soon as a violation is found")
+    argparser.add_argument("-i", "--implicit", action="store_true", help="allow implicit nodes")
+    argparser.add_argument("-S", "--strict", action="store_true", help="fail as soon as a violation is found")
+    argparser.add_argument("-u", "--ucca-validation", action="store_true", help="apply UCCA-specific validations")
+    argparser.add_argument("-n", "--normalize", action="store_true", help="more normalization rules")
+    argparser.add_argument("-e", "--extra-normalization", action="store_true", help="more normalization rules")
     main(argparser.parse_args())
