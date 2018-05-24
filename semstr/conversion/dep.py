@@ -38,10 +38,17 @@ class DependencyConverter(convert.DependencyConverter):
     def create_non_terminals(self, dep_nodes, l1):
         if self.constituency:
             super().create_non_terminals(dep_nodes, l1)
-        if not self.tree:
-            for dep_node in dep_nodes:  # Create top nodes
-                if dep_node.position != 0 and not dep_node.incoming and dep_node.outgoing:
+        for dep_node in dep_nodes:
+            if dep_node.outgoing:
+                if not self.tree and dep_node.position and not dep_node.incoming:  # Create top node
                     dep_node.node = dep_node.preterminal = l1.add_fnode(None, (self.ROOT, self.TOP)[dep_node.is_top])
+                if self.is_punct(dep_node):  # Avoid outgoing edges from punctuation by flipping edges
+                    head = dep_node.incoming[0].head if dep_node.incoming else dep_nodes[0]
+                    outgoing = list(dep_node.outgoing)
+                    for edge in outgoing:
+                        edge.head = head
+                    for edge in dep_node.incoming:
+                        edge.head = outgoing[0].head
         remote_edges = []
         sorted_dep_nodes = self._topological_sort(dep_nodes)
         self.preprocess(sorted_dep_nodes, to_dep=False)
@@ -53,7 +60,7 @@ class DependencyConverter(convert.DependencyConverter):
                 incoming[:0] = [top_edge]
             edge, *remotes = incoming
             self.add_node(dep_node, edge, l1)
-            if dep_node.outgoing and not self.is_punct(dep_node) and not any(map( self.is_flat, dep_node.incoming)):
+            if dep_node.outgoing and not any(map( self.is_flat, dep_node.incoming)):
                 dep_node.preterminal = l1.add_fnode(dep_node.preterminal, self.HEAD)  # Intermediate head for hierarchy
             remote_edges += remotes
         for edge in remote_edges:
@@ -67,8 +74,6 @@ class DependencyConverter(convert.DependencyConverter):
         dep_node.preterminal = dep_node.node = \
             l1.add_fnode(dep_node.preterminal, self.HEAD) if edge.rel.upper() == self.ROOT else (
                 l1.add_fnode(None if self.is_scene(edge) else edge.head.node, edge.rel))
-        if self.is_punct(dep_node):  # prevent children of punctuation nodes
-            dep_node.node = edge.head.node
 
     def from_format(self, lines, passage_id, split=False, return_original=False):
         for passage in super().from_format(lines, passage_id, split=split):
@@ -115,7 +120,7 @@ class DependencyConverter(convert.DependencyConverter):
         return any(e.tag == self.TOP for e in self.find_headed_unit(unit).incoming)
 
     def is_punct(self, dep_node):
-        return super().is_punct(dep_node) or dep_node.token.tag == self.punct_tag
+        return dep_node.token and (super().is_punct(dep_node) or dep_node.token.tag == self.punct_tag)
 
     def is_flat(self, edge):
         return False
