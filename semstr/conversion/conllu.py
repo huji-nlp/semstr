@@ -1,12 +1,16 @@
+from operator import attrgetter
+
 from ucca import convert, layer0, layer1, textutil
 
 from .dep import DependencyConverter
 
 ATTR_GETTERS = {
-    textutil.Attr.DEP: lambda n: n.incoming[0].rel,
-    textutil.Attr.HEAD: lambda n: n.incoming[0].head_index - n.position if n.incoming[0].head_index else 0,
-    textutil.Attr.TAG: lambda n: n.token.tag,
-    textutil.Attr.ORTH: lambda n: n.token.text,
+    textutil.Attr.DEP: lambda n: n.incoming[0].rel if n.incoming else None,
+    textutil.Attr.HEAD: lambda n: n.incoming[0].head_index-n.position if n.incoming and n.incoming[0].head_index else 0,
+    textutil.Attr.TAG: attrgetter("token.tag"),
+    textutil.Attr.POS: attrgetter("token.pos"),
+    textutil.Attr.LEMMA: attrgetter("token.lemma"),
+    textutil.Attr.ORTH: attrgetter("token.text"),
 }
 
 PUNCT_TAG = "PUNCT"
