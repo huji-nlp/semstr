@@ -13,6 +13,12 @@ from semstr import convert
           "2	2	_	Word	Word	_	1	nsubj	_	_",
           ""]
          ),
+        (convert.from_conllu,
+         ["# sent_id = 120",
+          "1	1	_	Word	Word	_	0	root	_	_",
+          "2	2	_	Word	Word	_	_	_	_	_",
+          ""]
+         ),
         (convert.from_sdp,
          ["#120",
           "1	1	_	Word	-	+	_	_",
@@ -30,7 +36,7 @@ from semstr import convert
 def test_from(converter, lines, num_passages, trailing_newlines):
     lines = num_passages * lines
     lines[-1:] = trailing_newlines * [""]
-    passages = list(converter(lines, "test"))
+    passages = list(converter(lines, "test", annotate=True, mark_aux=True, metadata=True, wikification=True))
     assert len(passages) == num_passages, "Number of passages"
     for passage in passages:
         assert 2 == len(passage.layer(layer0.LAYER_ID).all), "Number of terminals"
