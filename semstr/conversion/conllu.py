@@ -92,16 +92,17 @@ class ConlluConverter(DependencyConverter, convert.ConllConverter):
                         head = (head_edge.head, head_edge.dependent)[to_dep]
                         if not any(e.rel == edge.rel for e in head.outgoing):
                             edge.head = head
-        for dep_node in dep_nodes:
-            for edge in dep_node.incoming:
-                if edge.rel in PUNCT_RELS:
-                        heads = [d for d in dep_nodes if self.between(dep_node, d.incoming, CONJ)
-                                 and not any(e.rel in (PUNCT_RELS + (CC,)) and
-                                             dep_node.position < e.dependent.position < d.position
-                                             for e in d.outgoing)] or \
-                                [d for d in dep_nodes if self.between(dep_node, d.outgoing, APPOS)]
-                        if heads:
-                            edge.head = heads[0]
+        if to_dep:
+            for dep_node in dep_nodes:
+                for edge in dep_node.incoming:
+                    if edge.rel in PUNCT_RELS:
+                            heads = [d for d in dep_nodes if self.between(dep_node, d.incoming, CONJ)
+                                     and not any(e.rel in (PUNCT_RELS + (CC,)) and
+                                                 dep_node.position < e.dependent.position < d.position
+                                                 for e in d.outgoing)] or \
+                                    [d for d in dep_nodes if self.between(dep_node, d.outgoing, APPOS)]
+                            if heads:
+                                edge.head = heads[0]
         super().preprocess(dep_nodes, to_dep=to_dep)
 
     @staticmethod
