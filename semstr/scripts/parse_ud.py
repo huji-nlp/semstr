@@ -34,7 +34,7 @@ def parse_spacy(passages, lang, verbose=False):
                 head += dep_node.position
             rel = Attr.DEP(dep_node.terminal.tok[Attr.DEP.value], lang=passage.attrib.get("lang", lang))
             assert head is not None and rel is not None, \
-                "head=%r, rel=%r for token %d in %s" % (head, rel, dep_node.position, terminals)
+                "head=%r, rel=%r for token %d in:\n%s" % (head, rel, dep_node.position, " ".join(map(str, terminals)))
             edge = ConlluConverter.Edge(head, rel, remote=False)
             dep_node.terminal = None
             edge.link_head(dep_nodes)
