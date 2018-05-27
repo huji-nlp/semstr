@@ -4,9 +4,18 @@ from ucca import convert, layer0, layer1, textutil
 
 from .dep import DependencyConverter
 
+
+def head_rel(n):
+    return n.incoming[0].rel if n.incoming else None
+
+
+def head_position(n):
+    return n.incoming[0].head.position if n.incoming else 0
+
+
 ATTR_GETTERS = {
-    textutil.Attr.DEP: lambda n: n.incoming[0].rel if n.incoming else None,
-    textutil.Attr.HEAD: lambda n: n.incoming[0].head_index-n.position if n.incoming and n.incoming[0].head_index else 0,
+    textutil.Attr.DEP: head_rel,
+    textutil.Attr.HEAD: lambda n: head_position(n) - n.position if head_position(n) else 0,
     textutil.Attr.TAG: attrgetter("token.tag"),
     textutil.Attr.POS: attrgetter("token.pos"),
     textutil.Attr.LEMMA: attrgetter("token.lemma"),
