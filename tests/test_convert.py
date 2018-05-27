@@ -5,31 +5,30 @@ from semstr import convert
 
 """Tests convert module correctness and API."""
 
+UD2_SIMPLE = ["# sent_id = 120",
+              "1	1	_	Word	Word	_	0	root	_	_",
+              "2	2	_	Word	Word	_	1	nsubj	_	_",
+              ""]
+SDP_SIMPLE = ["#120",
+              "1	1	_	Word	-	+	_	_",
+              "2	2	_	Word	-	-	_	arg0",
+              ""]
+SDP_ORPHAN = ["# sent_id = 120",
+              "1	1	_	Word	Word	_	0	root	_	_",
+              "2	2	_	Word	Word	_	_	_	_	_",
+              ""]
+AMR_SIMPLE = ["# ::id 120",
+              "# ::snt a b",
+              "(a / a-01~e.0",
+              "      :ARG0 (p / person :name (n / name :op1 \"b\"~e.1)))",
+              ""]
+
 
 @pytest.mark.parametrize("converter, lines", (
-        (convert.from_conllu,
-         ["# sent_id = 120",
-          "1	1	_	Word	Word	_	0	root	_	_",
-          "2	2	_	Word	Word	_	1	nsubj	_	_",
-          ""]
-         ),
-        (convert.from_conllu,
-         ["# sent_id = 120",
-          "1	1	_	Word	Word	_	0	root	_	_",
-          "2	2	_	Word	Word	_	_	_	_	_",
-          ""]
-         ),
-        (convert.from_sdp,
-         ["#120",
-          "1	1	_	Word	-	+	_	_",
-          "2	2	_	Word	-	-	_	arg0",
-          ""]),
-        (convert.from_amr,
-         ["# ::id 120",
-          "# ::snt a b",
-          "(a / a-01~e.0",
-          "      :ARG0 (p / person :name (n / name :op1 \"b\"~e.1)))",
-          ""]),
+        (convert.from_conllu, UD2_SIMPLE),
+        (convert.from_conllu, SDP_ORPHAN),
+        (convert.from_sdp,    SDP_SIMPLE),
+        (convert.from_amr,    AMR_SIMPLE),
 ))
 @pytest.mark.parametrize("num_passages", range(3))
 @pytest.mark.parametrize("trailing_newlines", range(3))
