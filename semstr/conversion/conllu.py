@@ -76,7 +76,7 @@ class ConlluConverter(DependencyConverter, convert.ConllConverter):
 
     def preprocess(self, dep_nodes, to_dep=True):
         max_pos = (max(d.position for d in dep_nodes) if dep_nodes else 0) + 1
-        for dep_node in dep_nodes:
+        for dep_node in reversed(dep_nodes):
             def _attach_forward_sort_key(e):
                 return e.dependent.position + (max_pos if e.dependent.position < dep_node.position else 0)
             for edge in dep_node.incoming:
