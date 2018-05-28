@@ -28,8 +28,11 @@ def main(args):
         order = dict(map(reversed, enumerate(find_ids(f), start=1)))
 
     def _index(key_filename):
-        basename = os.path.basename(key_filename)
-        return order.get(basename) or order.get(basename.rpartition("_0")[0])
+        basename = os.path.splitext(os.path.basename(key_filename))[0]
+        index = order.get(basename) or order.get(basename.rpartition("_0")[0])
+        if index is None:
+            raise ValueError("Not found: " + basename)
+        return index
 
     files = [f for pattern in args.filenames for f in gen_files(glob(pattern) or [pattern])]
     if len(files) > len(order):
