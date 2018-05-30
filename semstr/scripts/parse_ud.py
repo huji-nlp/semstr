@@ -3,7 +3,6 @@
 import argparse
 import operator
 from itertools import tee
-from time import time
 
 from tqdm import tqdm
 from ucca import layer0
@@ -12,7 +11,7 @@ from ucca.textutil import annotate_all, Attr
 
 from semstr.cfgutil import add_verbose_arg
 from semstr.conversion.conllu import ConlluConverter
-from semstr.convert import from_conllu, to_conllu, add_convert_args, CONVERTERS, write_passage, map_labels
+from semstr.convert import TO_FORMAT, from_conllu, to_conllu, add_convert_args, write_passage, map_labels
 from semstr.evaluate import Scores, EVALUATORS
 from semstr.scripts.annotate import add_specs_args, read_specs
 
@@ -44,26 +43,10 @@ def parse_spacy(passages, lang, verbose=False):
 
 
 def parse_udpipe(passages, model_name, verbose=False):
-    from ufal.udpipe import Model, Pipeline, ProcessingError
-    model = Model.load(model_name)
-    if not model:
-        raise ValueError("Invalid model: '%s'" % model_name)
-    pipeline = Pipeline(model, "conllu", Pipeline.DEFAULT, Pipeline.DEFAULT, "conllu")
+    from semstr.scripts.udpipe import udpipe
     passages1, passages2 = tee(passages)
-    lines1, lines2 = tee(l for p in passages1 for l in to_conllu(p, tree=True, test=True))
-    text = "\n".join(lines1)
-    error = ProcessingError()
-    num_tokens = sum(1 for l in lines2 if l)
-    print("Running UDPipe on %d tokens... " % num_tokens, end="", flush=True)
-    start = time()
-    processed = pipeline.process(text, error)
-    duration = time() - start
-    print("Done (%.3fs, %.0f tokens/s)" % (duration, num_tokens / duration if duration else 0))
-    if verbose:
-        print(processed)
-    if error.occurred():
-        raise RuntimeError(error.message)
-    return zip(passages2, from_conllu(processed.splitlines(), passage_id=None))
+    processed = udpipe((to_conllu(p, tree=True, test=True) for p in passages1), model_name, verbose)
+    return zip(passages2, from_conllu(processed, passage_id=None))
 
 
 PARSERS = (SPACY, UDPIPE) = ("spacy", "udpipe")
@@ -81,11 +64,12 @@ def main(args):
             if args.write:
                 write_passage(parsed, args)
             if args.evaluate:
-                evaluator = EVALUATORS[args.output_format]
-                _, converter = CONVERTERS[args.output_format]
+                evaluator = EVALUATORS.get(args.output_format)
+                converter = TO_FORMAT.get(args.output_format)
                 if converter is not None:
                     passage, parsed = map(converter, (passage, parsed))
-                scores.append(evaluator.evaluate(parsed, passage, verbose=args.verbose > 1))
+                if evaluator is not None:
+                    scores.append(evaluator.evaluate(parsed, passage, verbose=args.verbose > 1))
         if scores:
             Scores(scores).print()
 
@@ -94,9 +78,9 @@ if __name__ == '__main__':
     argparser = argparse.ArgumentParser(description=desc)
     add_specs_args(argparser)
     argparser.add_argument("--parser", choices=PARSERS, default=SPACY, help="dependency parser to use (default: spacy)")
-    argparser.add_argument("--output-format", choices=CONVERTERS, help="output file format (default: UCCA)")
+    argparser.add_argument("--output-format", choices=TO_FORMAT, help="output file format (default: UCCA)")
     add_convert_args(argparser)
     argparser.add_argument("-e", "--evaluate", action="store_true", help="evaluate against original passages")
-    argparser.add_argument("-W", "--no-write", action="store_false", dest="write", help="write parsed passages")
+    argparser.add_argument("-W", "--no-write", action="store_false", dest="write", help="do not write parsed passages")
     add_verbose_arg(argparser, help="detailed output")
     main(argparser.parse_args())

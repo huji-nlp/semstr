@@ -21,7 +21,7 @@ def main(args):
             write_passage(passage, outdir=out_dir, verbose=args.verbose, binary=args.binary)
 
 
-def read_specs(args):
+def read_specs(args, converters=None):
     specs = [(pattern, args.out_dir, args.lang) for pattern in args.filenames]
     if args.list_file:
         with open(args.list_file, encoding="utf-8") as f:
@@ -31,7 +31,7 @@ def read_specs(args):
         filenames = glob(pattern)
         if not filenames:
             raise IOError("Not found: " + pattern)
-        yield read_files_and_dirs(filenames, converters=FROM_FORMAT), out_dir, lang
+        yield read_files_and_dirs(filenames, converters=converters or FROM_FORMAT), out_dir, lang
 
 
 def add_specs_args(p):
