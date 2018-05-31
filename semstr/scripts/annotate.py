@@ -19,7 +19,7 @@ def main(args):
             passages = annotate_udpipe(passages, udpipe, args.verbose)
         for passage in annotate_all(passages if args.verbose else
                                     tqdm(passages, unit=" passages", desc="Annotating " + out_dir),
-                                    as_array=args.as_array, replace=True, lang=lang, verbose=args.verbose):
+                                    as_array=args.as_array, replace=not udpipe, lang=lang, verbose=args.verbose):
             write_passage(passage, outdir=out_dir, verbose=args.verbose, binary=args.binary)
 
 
