@@ -2,7 +2,6 @@
 
 import argparse
 import operator
-from itertools import tee
 
 from tqdm import tqdm
 from ucca import layer0
@@ -11,9 +10,10 @@ from ucca.textutil import annotate_all, Attr
 
 from semstr.cfgutil import add_verbose_arg
 from semstr.conversion.conllu import ConlluConverter
-from semstr.convert import TO_FORMAT, from_conllu, to_conllu, add_convert_args, write_passage, map_labels
+from semstr.convert import TO_FORMAT, add_convert_args, write_passage, map_labels
 from semstr.evaluate import Scores, EVALUATORS
 from semstr.scripts.annotate import add_specs_args, read_specs
+from semstr.scripts.udpipe import parse_udpipe
 
 desc = """Read passages in any format, extract text, parse using spaCy/UDPipe and save any format.
 NOTE: the dependencies output by spaCy depend on the model used.
@@ -42,23 +42,16 @@ def parse_spacy(passages, lang, verbose=False):
         yield passage, parsed
 
 
-def parse_udpipe(passages, model_name, verbose=False):
-    from semstr.scripts.udpipe import udpipe
-    passages1, passages2 = tee(passages)
-    processed = udpipe((to_conllu(p, tree=True, test=True) for p in passages1), model_name, verbose)
-    return zip(passages2, from_conllu(processed, passage_id=None))
-
-
-PARSERS = (SPACY, UDPIPE) = ("spacy", "udpipe")
-ANNOTATORS = {SPACY: parse_spacy, UDPIPE: parse_udpipe}
+def parse(passages, lang, udpipe, verbose):
+    return parse_udpipe(passages, udpipe, verbose) if udpipe else parse_spacy(passages, lang, verbose)
 
 
 def main(args):
-    for passages, out_dir, lang in read_specs(args):
+    for passages, out_dir, lang, udpipe in read_specs(args):
         scores = []
         if not args.verbose:
             passages = tqdm(passages, unit=" passages", desc="Parsing " + (out_dir if out_dir != "." else lang))
-        for passage, parsed in ANNOTATORS[args.parser](passages, lang, args.verbose):
+        for passage, parsed in parse(passages, lang, udpipe, args.verbose):
             map_labels(parsed, args.label_map)
             normalize(parsed, extra=True)
             if args.write:
@@ -77,7 +70,6 @@ def main(args):
 if __name__ == '__main__':
     argparser = argparse.ArgumentParser(description=desc)
     add_specs_args(argparser)
-    argparser.add_argument("--parser", choices=PARSERS, default=SPACY, help="dependency parser to use (default: spacy)")
     argparser.add_argument("--output-format", choices=TO_FORMAT, help="output file format (default: UCCA)")
     add_convert_args(argparser)
     argparser.add_argument("-e", "--evaluate", action="store_true", help="evaluate against original passages")

@@ -11,7 +11,7 @@ desc = """Read passages in any format, and write back with attrib['lang'] set.""
 
 
 def main(args):
-    for passages, out_dir, lang in read_specs(args):
+    for passages, out_dir, lang, *_ in read_specs(args):
         for passage in tqdm(passages, unit=" passages", desc="Setting language in " + out_dir, postfix={"lang": lang}):
             passage.attrib["lang"] = lang
             write_passage(passage, outdir=out_dir, verbose=False, binary=args.binary)

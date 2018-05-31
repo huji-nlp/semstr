@@ -6,10 +6,11 @@ from itertools import tee, groupby
 from time import time
 
 from tqdm import tqdm
-from ufal.udpipe import Model, Pipeline, ProcessingError
+from ucca import layer0
 
 from semstr.cfgutil import add_verbose_arg
 from semstr.convert import FROM_FORMAT, to_conllu
+from semstr.convert import from_conllu
 from semstr.evaluate import Scores
 from semstr.evaluation.conllu import evaluate
 from semstr.scripts.annotate import add_specs_args, read_specs
@@ -26,6 +27,7 @@ def udpipe(sentences, model_name, verbose=False):
     :param verbose: print extra information
     :return: iterable of lines containing parsed output
     """
+    from ufal.udpipe import Model, Pipeline, ProcessingError
     model = Model.load(model_name)
     if not model:
         raise ValueError("Invalid model: '%s'" % model_name)
@@ -46,6 +48,22 @@ def udpipe(sentences, model_name, verbose=False):
     return processed.splitlines()
 
 
+def parse_udpipe(passages, model_name, verbose=False, annotate=False):
+    passages1, passages2 = tee(passages)
+    processed = udpipe((to_conllu(p, tree=True, test=True) for p in passages1), model_name, verbose)
+    return zip(passages2, from_conllu(processed, passage_id=None, annotate=annotate))
+
+
+def annotate_udpipe(passages, model_name, verbose=False):
+    if model_name:
+        for passage, annotated in parse_udpipe(passages, model_name, verbose, annotate=True):
+            # noinspection PyUnresolvedReferences
+            passage.layer(layer0.LAYER_ID).extra["doc"] = annotated.layer(layer0.LAYER_ID).extra["doc"]
+            yield passage
+    else:
+        yield from passages
+
+
 def split_by_empty_lines(lines, *args, **kwargs):
     del args, kwargs
     yield from (list(g) + [""] for k, g in groupby(map(str.strip, lines), bool) if k)
@@ -56,7 +74,7 @@ CONVERTERS["conllu"] = split_by_empty_lines
 
 
 def main(args):
-    for sentences, out_dir, model_name in read_specs(args, converters=CONVERTERS):
+    for sentences, out_dir, lang, model_name in read_specs(args, converters=CONVERTERS):
         scores = []
         sentences1, sentences2 = tee(sentences)
         t = tqdm(zip(sentences1, split_by_empty_lines(udpipe(sentences2, model_name, args.verbose))), unit=" sentences")
