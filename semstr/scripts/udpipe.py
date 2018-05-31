@@ -8,12 +8,10 @@ from time import time
 from tqdm import tqdm
 from ucca import layer0
 
-from semstr.cfgutil import add_verbose_arg
-from semstr.convert import FROM_FORMAT, to_conllu
-from semstr.convert import from_conllu
+from semstr.cfgutil import add_verbose_arg, read_specs, add_specs_args
+from semstr.convert import FROM_FORMAT, to_conllu, from_conllu
 from semstr.evaluate import Scores
 from semstr.evaluation.conllu import evaluate
-from semstr.scripts.annotate import add_specs_args, read_specs
 from semstr.scripts.join import find_ids
 
 desc = """Parse text to Universal Dependencies using UDPipe."""

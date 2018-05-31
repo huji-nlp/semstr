@@ -8,11 +8,10 @@ from ucca import layer0
 from ucca.normalization import normalize
 from ucca.textutil import annotate_all, Attr
 
-from semstr.cfgutil import add_verbose_arg
+from semstr.cfgutil import add_verbose_arg, read_specs, add_specs_args
 from semstr.conversion.conllu import ConlluConverter
-from semstr.convert import TO_FORMAT, add_convert_args, write_passage, map_labels
+from semstr.convert import TO_FORMAT, add_convert_args, write_passage, map_labels, FROM_FORMAT
 from semstr.evaluate import Scores, EVALUATORS
-from semstr.scripts.annotate import add_specs_args, read_specs
 from semstr.scripts.udpipe import parse_udpipe
 
 desc = """Read passages in any format, extract text, parse using spaCy/UDPipe and save any format.
@@ -47,7 +46,7 @@ def parse(passages, lang, udpipe, verbose):
 
 
 def main(args):
-    for passages, out_dir, lang, udpipe in read_specs(args):
+    for passages, out_dir, lang, udpipe in read_specs(args, converters=FROM_FORMAT):
         scores = []
         if not args.verbose:
             passages = tqdm(passages, unit=" passages", desc="Parsing " + (out_dir if out_dir != "." else lang))
