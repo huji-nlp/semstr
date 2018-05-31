@@ -8,8 +8,8 @@ from tqdm import tqdm
 from ucca.ioutil import read_files_and_dirs, write_passage
 from ucca.textutil import annotate_all
 
-from scripts.udpipe import annotate_udpipe
 from semstr.convert import FROM_FORMAT, UCCA_EXT
+from semstr.scripts.udpipe import annotate_udpipe
 
 desc = """Read passages in any format, and write back with spaCy/UDPipe annotations."""
 
