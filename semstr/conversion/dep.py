@@ -3,16 +3,15 @@ from ucca import convert, layer0, layer1
 
 class DependencyConverter(convert.DependencyConverter):
     """
-    Alternative converter to the one in UCCA - instead of introducing centers etc. to get a proper constituency
-    structure, just copy the exact structure from the dependency graph, with all edges being between terminals (+root)
+    Alternative converter to the one in UCCA - instead of introducing UCCA centers etc., create a simple
+    hierarchy with "head" edges introduced for each edge head.
     """
     TOP = "TOP"
     HEAD = "head"
 
-    def __init__(self, *args, constituency=False, tree=False, punct_tag=None, punct_rel=None, tag_priority=(),
+    def __init__(self, *args, tree=False, punct_tag=None, punct_rel=None, tag_priority=(),
                  **kwargs):
         super().__init__(*args, **kwargs)
-        self.constituency = constituency
         self.tree = tree
         self.punct_tag = punct_tag
         self.punct_rel = punct_rel
@@ -31,8 +30,6 @@ class DependencyConverter(convert.DependencyConverter):
         return line.split("\t")
 
     def create_non_terminals(self, dep_nodes, l1):
-        if self.constituency:
-            super().create_non_terminals(dep_nodes, l1)
         for dep_node in dep_nodes:
             if dep_node.outgoing:
                 if not self.tree and dep_node.position and not dep_node.incoming:  # Create top node

@@ -65,19 +65,18 @@ def from_conllu(lines, passage_id=None, split=True, return_original=False, annot
     return ConlluConverter().from_format(lines, passage_id, split, return_original=return_original, annotate=annotate)
 
 
-def to_conllu(passage, test=False, tree=False, constituency=False, *args, **kwargs):
+def to_conllu(passage, test=False, tree=False, *args, **kwargs):
     """ Convert from a Passage object to a string in Universal Dependencies format (conllu)
 
     :param passage: the Passage object to convert
     :param test: whether to omit the head and deprel columns. Defaults to False
     :param tree: whether to omit columns for non-primary parents. Defaults to True
-    :param constituency: use UCCA conversion that introduces intermediate non-terminals
 
     :return list of lines representing the semantic dependencies in the passage
     """
     del args, kwargs
     from semstr.conversion.conllu import ConlluConverter
-    return ConlluConverter(constituency=constituency).to_format(passage, test, tree)
+    return ConlluConverter().to_format(passage, test, tree)
 
 
 def from_sdp(lines, passage_id, split=True, mark_aux=False, return_original=False, *args, **kwargs):
@@ -96,20 +95,19 @@ def from_sdp(lines, passage_id, split=True, mark_aux=False, return_original=Fals
     return SdpConverter(mark_aux=mark_aux).from_format(lines, passage_id, split, return_original=return_original)
 
 
-def to_sdp(passage, test=False, tree=False, mark_aux=False, constituency=False, *args, **kwargs):
+def to_sdp(passage, test=False, tree=False, mark_aux=False, *args, **kwargs):
     """ Convert from a Passage object to a string in SemEval 2015 SDP format (sdp)
 
     :param passage: the Passage object to convert
     :param test: whether to omit the top, head, frame, etc. columns. Defaults to False
     :param tree: whether to omit columns for non-primary parents. Defaults to False
     :param mark_aux: omit edges with labels with a preceding #
-    :param constituency: use UCCA conversion that introduces intermediate non-terminals
 
     :return list of lines representing the semantic dependencies in the passage
     """
     del args, kwargs
     from semstr.conversion.sdp import SdpConverter
-    return SdpConverter(mark_aux=mark_aux, constituency=constituency).to_format(passage, test, tree)
+    return SdpConverter(mark_aux=mark_aux).to_format(passage, test, tree)
 
 
 CONVERTERS = dict(convert.CONVERTERS)
