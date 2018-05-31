@@ -16,6 +16,7 @@ if __name__ == "__main__":
     argparser.add_argument("--out-dir", help="directory to save figures in (otherwise displayed immediately)")
     argparser.add_argument("--no-normalize", action="store_false", dest="normalize", help="normalize passage")
     argparser.add_argument("--label-map", help="CSV file specifying mapping of input edge labels to output edge labels")
+    argparser.add_argument("-i", "--node-ids", action="store_true", help="print tikz code rather than showing plots")
     args = argparser.parse_args()
 
     if args.out_dir:
@@ -25,7 +26,7 @@ if __name__ == "__main__":
         if args.normalize:
             normalize(passage)
         if args.tikz:
-            tikz = visualization.tikz(passage)
+            tikz = visualization.tikz(passage, node_ids=args.node_ids)
             if args.out_dir:
                 with open(os.path.join(args.out_dir, passage.ID + ".tikz.txt"), "w") as f:
                     print(tikz, file=f)
@@ -34,7 +35,7 @@ if __name__ == "__main__":
                     print(tikz)
         else:
             plt.figure(figsize=(19, 10))
-            visualization.draw(passage)
+            visualization.draw(passage, node_ids=args.node_ids)
             if args.out_dir:
                 plt.savefig(os.path.join(args.out_dir, passage.ID + ".png"))
             else:
