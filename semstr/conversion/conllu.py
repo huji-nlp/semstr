@@ -73,6 +73,11 @@ class ConlluConverter(DependencyConverter, convert.ConllConverter):
     def to_format(self, *args, **kwargs):
         return super().to_format(*args, **kwargs)
 
+    def generate_header_lines(self, passage_id, dep_nodes):
+        yield from super().generate_header_lines(passage_id, dep_nodes)
+        yield ["# text = " + " ".join(dep_node.token.text for dep_node in dep_nodes)]
+        yield ["# doc_id = " + passage_id.rpartition(".")[0]]
+
     def add_node(self, dep_node, edge, l1):
         if self.is_flat(edge):  # Unanalyzable unit
             dep_node.preterminal = edge.head.preterminal
