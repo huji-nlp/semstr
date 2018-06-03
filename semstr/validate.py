@@ -130,13 +130,17 @@ def check_tag_rules(constraints, node):
                               rule.violation(edge.child, edge, Direction.incoming, message=True)):
                 if violation:
                     yield "%s (%s)" % (violation, join([edge]))
-            if not constraints.allow_edge(edge):
-                "Illegal edge: %s" % join([edge])
-            if not constraints.allow_parent(node, edge.tag):
-                yield "%s may not be a '%s' parent (%s, %s)" % (node.ID, edge.tag, join(node.incoming), join(node))
-            if not constraints.allow_child(edge.child, edge.tag):
-                yield "%s may not be a '%s' child (%s, %s)" % (
-                    edge.child.ID, edge.tag, join(edge.child.incoming), join(edge.child))
+            valid = constraints.allow_parent(node, edge.tag)
+            if not valid:
+                yield "%s may not be a '%s' parent (%s, %s): %s" % (
+                    node.ID, edge.tag, join(node.incoming), join(node), valid)
+            valid = constraints.allow_child(edge.child, edge.tag)
+            if not valid:
+                yield "%s may not be a '%s' child (%s, %s): %s" % (
+                    edge.child.ID, edge.tag, join(edge.child.incoming), join(edge.child), valid)
+            valid = constraints.allow_edge(edge)
+            if not valid:
+                "Illegal edge: %s (%s)" % (join([edge]), valid)
 
 
 def main(args):
