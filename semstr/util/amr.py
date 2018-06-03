@@ -299,8 +299,8 @@ def lemmatize(terminal):
     except KeyError:
         return None
     if lemma == "-PRON-":
-        lemma = terminal.text.lower()
-    return lemma.translate(PUNCTUATION_REMOVER) if lemma else None
+        lemma = terminal.text
+    return lemma.translate(PUNCTUATION_REMOVER).lower() if lemma else None
 
 
 # If a token starts/ends with punctuation, merge it with the previous/next token
