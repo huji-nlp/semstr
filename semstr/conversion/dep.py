@@ -8,6 +8,7 @@ class DependencyConverter(convert.DependencyConverter):
     """
     TOP = "TOP"
     HEAD = "head"
+    ORPHAN = "orphan"
 
     def __init__(self, *args, tree=False, punct_tag=None, punct_rel=None, tag_priority=(),
                  **kwargs):
@@ -95,6 +96,7 @@ class DependencyConverter(convert.DependencyConverter):
         return [e for e in self.find_headed_unit(unit).incoming if e.tag not in (self.ROOT, self.TOP)]
 
     def preprocess(self, dep_nodes, to_dep=True):
+        roots = self.roots(dep_nodes)
         for dep_node in dep_nodes:
             if dep_node.incoming:
                 for edge in dep_node.incoming:
@@ -103,7 +105,14 @@ class DependencyConverter(convert.DependencyConverter):
                     else:
                         edge.remote = False
             elif self.tree:
-                dep_node.incoming = [(self.Edge(head_index=-1, rel=self.ROOT.lower(), remote=False))]
+                if roots:
+                    dep_node.incoming = [self.Edge(head_index=roots[0].position - 1, rel=self.ORPHAN, remote=False)]
+                else:
+                    roots = [dep_node]
+                    dep_node.incoming = [self.Edge(head_index=-1, rel=self.ROOT.lower(), remote=False)]
+
+    def roots(self, dep_nodes):
+        return [n for n in dep_nodes if any(e.rel == self.ROOT.lower() for e in n.incoming)]
 
     def find_headed_unit(self, unit):
         while unit.incoming and (not unit.outgoing or unit.incoming[0].tag == self.HEAD) and \
