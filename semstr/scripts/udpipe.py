@@ -36,13 +36,15 @@ def udpipe(sentences, model_name, verbose=False):
     text = "\n".join(lines1)
     error = ProcessingError()
     num_tokens = sum(1 for l in lines2 if l)
-    print("Running %s on %d tokens... " % (model_name, num_tokens), end="", flush=True)
+    with tqdm.external_write_mode():
+        print("Running %s on %d tokens... " % (model_name, num_tokens), end="", flush=True)
     start = time()
     processed = pipeline.process(text, error)
     duration = time() - start
-    print("Done (%.3fs, %.0f tokens/s)" % (duration, num_tokens / duration if duration else 0))
-    if verbose:
-        print(processed)
+    with tqdm.external_write_mode():
+        print("Done (%.3fs, %.0f tokens/s)" % (duration, num_tokens / duration if duration else 0))
+        if verbose:
+            print(processed)
     if error.occurred():
         raise RuntimeError(error.message)
     return processed.splitlines()
