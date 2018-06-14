@@ -1,4 +1,4 @@
-VERSION = "1.0.32"
+VERSION = "1.0.33"
 # noinspection PyBroadException
 try:
     from subprocess import check_output, DEVNULL
