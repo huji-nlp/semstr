@@ -82,7 +82,8 @@ class ConlluConverter(DependencyConverter, convert.ConllConverter):
         if self.is_flat(edge):  # Unanalyzable unit
             dep_node.preterminal = edge.head.preterminal
             dep_node.node = edge.head.node
-        elif edge.rel == AUX:  # Attached aux as sibling of main predicate TODO update to UCCA guidelines v1.0.6
+        elif edge.rel == AUX and edge.head.preterminal:  # Attached aux as sibling of main predicate
+            # TODO update to UCCA guidelines v1.0.6
             dep_node.preterminal = dep_node.node = l1.add_fnode(edge.head.preterminal, edge.rel)
             edge.head.preterminal = l1.add_fnode(edge.head.preterminal, self.HEAD)
         else:
