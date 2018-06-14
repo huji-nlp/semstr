@@ -42,11 +42,15 @@ def main(args):
                         word = word.lower()
                     if (not words or word in words) and (
                             not categories or parent.ftag in categories) and (
-                            not dependencies or terminal.get_annotation(Attr.DEP, as_array=True) in dependencies):
+                            not dependencies or get_annotation(terminal, udpipe) in dependencies):
                         print(passage.ID, parent.fparent, file=f)
                         found += 1
                         t.set_postfix(found=found)
         print("Wrote '%s'" % filename)
+
+
+def get_annotation(terminal, udpipe=False):
+    return terminal.tok[Attr.DEP.value] if udpipe else terminal.get_annotation(Attr.DEP, as_array=True)
 
 
 if __name__ == '__main__':
