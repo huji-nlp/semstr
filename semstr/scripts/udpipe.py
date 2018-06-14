@@ -3,10 +3,12 @@
 import argparse
 import os
 from itertools import tee, groupby
+from operator import itemgetter
 from time import time
 
 from tqdm import tqdm
 from ucca import layer0
+from ucca.convert import split2paragraphs
 
 from semstr.cfgutil import add_verbose_arg, read_specs, add_specs_args
 from semstr.convert import FROM_FORMAT, to_conllu, from_conllu
@@ -34,7 +36,7 @@ def udpipe(sentences, model_name, verbose=False):
     text = "\n".join(lines1)
     error = ProcessingError()
     num_tokens = sum(1 for l in lines2 if l)
-    print("Running UDPipe on %d tokens... " % num_tokens, end="", flush=True)
+    print("Running %s on %d tokens... " % (model_name, num_tokens), end="", flush=True)
     start = time()
     processed = pipeline.process(text, error)
     duration = time() - start
@@ -54,9 +56,18 @@ def parse_udpipe(passages, model_name, verbose=False, annotate=False):
 
 def annotate_udpipe(passages, model_name, verbose=False):
     if model_name:
-        for passage, annotated in parse_udpipe(passages, model_name, verbose, annotate=True):
-            # noinspection PyUnresolvedReferences
-            passage.layer(layer0.LAYER_ID).extra["doc"] = annotated.layer(layer0.LAYER_ID).extra["doc"]
+        t1, t2 = tee((paragraph, passage) for passage in passages for paragraph in split2paragraphs(passage))
+        paragraphs = map(itemgetter(0), t1)
+        passages = map(itemgetter(1), t2)
+        for key, group in groupby(zip(passages, parse_udpipe(paragraphs, model_name, verbose, annotate=True)),
+                                  key=itemgetter(0)):
+            passage = key
+            for passage, (paragraph, annotated) in group:
+                # noinspection PyUnresolvedReferences
+                l0 = annotated.layer(layer0.LAYER_ID)
+                if l0.all:
+                    i = next(iter(t.extra["orig_paragraph"] for t in paragraph.layer(layer0.LAYER_ID).all))
+                    passage.layer(layer0.LAYER_ID).doc(i)[:] = l0.doc(1)
             yield passage
     else:
         yield from passages
