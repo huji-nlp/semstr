@@ -1,6 +1,7 @@
 cache: apt
 dist: trusty
 sudo: false
+group: edge
 language: python
 cache:
   pip: true
@@ -10,8 +11,6 @@ python:
   - "3.6"
 addons:
   apt:
-    sources:
-    - ubuntu-toolchain-r-test
     packages:
     - pandoc
 install:
