@@ -45,7 +45,8 @@ def main(args):
             t.set_postfix(f=filename)
             with open(filename, "rb") as f:
                 shutil.copyfileobj(f, out_f)
-                out_f.write(os.linesep.encode("utf-8"))
+                if args.add_newlines:
+                    out_f.write(os.linesep.encode("utf-8"))
 
 
 if __name__ == '__main__':
@@ -53,4 +54,5 @@ if __name__ == '__main__':
     argparser.add_argument("out", help="output file")
     argparser.add_argument("reference", help="file with headers determining the reference order")
     argparser.add_argument("filenames", nargs="+", help="directory or files to join, identified by filename")
+    argparser.add_argument("-n", "--add-newlines", action="store_true", help="add extra newlines between files")
     main(argparser.parse_args())
