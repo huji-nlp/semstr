@@ -1,5 +1,5 @@
-from ..constraints import Constraints, EdgeTags
-from ..conversion.conllu import ConlluConverter, PUNCT, AUX
+from ..constraints import Constraints
+from ..conversion.conllu import ConlluConverter
 
 
 class ConlluConstraints(Constraints):
