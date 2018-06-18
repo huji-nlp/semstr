@@ -98,16 +98,19 @@ class DependencyConverter(convert.DependencyConverter):
     def preprocess(self, dep_nodes, to_dep=True):
         roots = self.roots(dep_nodes)
         for dep_node in dep_nodes:
-            if dep_node.incoming:
-                for edge in dep_node.incoming:
-                    if edge.remote and self.is_flat(edge):
+            is_parentless = True
+            for edge in dep_node.incoming:
+                if edge.remote:
+                    if self.is_flat(edge):  # Unanalyzable remote is not possible
                         edge.remove()
-                    else:
+                    else:  # Avoid * marking in CoNLL-U
                         edge.remote = False
-            elif self.tree:
-                if roots:
+                else:  # Found primary parent
+                    is_parentless = False
+            if is_parentless and self.tree:  # Must have exactly one root
+                if roots:  # Root already exist, so attach as its child
                     dep_node.incoming = [self.Edge(head_index=roots[0].position - 1, rel=self.ORPHAN, remote=False)]
-                else:
+                else:  # This is the first root
                     roots = [dep_node]
                     dep_node.incoming = [self.Edge(head_index=-1, rel=self.ROOT.lower(), remote=False)]
 
