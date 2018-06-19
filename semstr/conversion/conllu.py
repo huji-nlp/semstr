@@ -119,6 +119,10 @@ class ConlluConverter(DependencyConverter, convert.ConllConverter):
                             if heads:
                                 edge.head = heads[0]
         super().preprocess(dep_nodes, to_dep=to_dep)
+        if to_dep:
+            for dep_node in dep_nodes:
+                if dep_node.incoming:
+                    dep_node.enhanced = "|".join("%d:%s" % (e.head_index + 1, e.rel) for e in dep_node.incoming)
 
     @staticmethod
     def between(dep_node, edges, *rels):
