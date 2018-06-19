@@ -65,7 +65,7 @@ def from_conllu(lines, passage_id=None, split=True, return_original=False, annot
     return ConlluConverter().from_format(lines, passage_id, split, return_original=return_original, annotate=annotate)
 
 
-def to_conllu(passage, test=False, tree=False, *args, **kwargs):
+def to_conllu(passage, test=False, tree=True, *args, **kwargs):
     """ Convert from a Passage object to a string in Universal Dependencies format (conllu)
 
     :param passage: the Passage object to convert
