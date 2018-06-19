@@ -8,14 +8,70 @@ from glob import glob
 
 import configargparse
 from tqdm import tqdm
-from ucca import convert, ioutil, layer1
-from ucca.convert import from_text
+from ucca import ioutil, layer1
+from ucca.convert import from_text, from_json, to_json, split2sentences
 from ucca.normalization import normalize
 
 from semstr.cfgutil import add_verbose_arg
 
 desc = """Parses files in the specified format, and writes as the specified format.
 Each passage is written to the file: <outdir>/<prefix><passage_id>.<extension> """
+
+
+def from_conll(lines, passage_id, split=True, *args, **kwargs):
+    """Converts from parsed text in CoNLL format to a Passage object.
+
+    :param lines: iterable of lines in CoNLL format, describing a single passage.
+    :param passage_id: ID to set for passage
+    :param split: split each sentence to its own passage?
+
+    :return generator of Passage objects
+    """
+    del args, kwargs
+    from semstr.conversion.conll import ConllConverter
+    return ConllConverter().from_format(lines, passage_id, split)
+
+
+def to_conll(passage, test=False, tree=True, *args, **kwargs):
+    """ Convert from a Passage object to a string in CoNLL-X format (conll)
+
+    :param passage: the Passage object to convert
+    :param test: whether to omit the head and deprel columns. Defaults to False
+    :param tree: whether to omit columns for non-primary parents. Defaults to True
+
+    :return list of lines representing the dependencies in the passage
+    """
+    del args, kwargs
+    from semstr.conversion.conll import ConllConverter
+    return ConllConverter().to_format(passage, test, tree)
+
+
+def from_export(lines, passage_id=None, split=True, *args, **kwargs):
+    """Converts from parsed text in NeGra export format to a Passage object.
+
+    :param lines: iterable of lines in NeGra export format, describing a single passage.
+    :param passage_id: ID to set for passage, overriding the ID from the file
+    :param split: split each sentence to its own passage?
+
+    :return generator of Passage objects
+    """
+    del args, kwargs
+    from semstr.conversion.export import ExportConverter
+    return ExportConverter().from_format(lines, passage_id, split)
+
+
+def to_export(passage, test=False, tree=False, *args, **kwargs):
+    """ Convert from a Passage object to a string in NeGra export format (export)
+
+    :param passage: the Passage object to convert
+    :param test: whether to omit the edge and parent columns. Defaults to False
+    :param tree: whether to omit columns for non-primary parents. Defaults to False
+
+    :return list of lines representing a (discontinuous) tree structure constructed from the passage
+    """
+    del args, kwargs
+    from semstr.conversion.export import ExportConverter
+    return ExportConverter().to_format(passage, test, tree)
 
 
 def from_amr(lines, passage_id=None, return_original=False, save_original=True, *args, **kwargs):
@@ -109,13 +165,15 @@ def to_sdp(passage, test=False, tree=False, mark_aux=False, *args, **kwargs):
     return SdpConverter(mark_aux=mark_aux).to_format(passage, test, tree)
 
 
-CONVERTERS = dict(convert.CONVERTERS)
-CONVERTERS.update({
-    None:     (None,        None),
-    "sdp":    (from_sdp,    to_sdp),
+CONVERTERS = {
+    None: (None, None),
+    "json": (from_json, to_json),
+    "conll": (from_conll, to_conll),
     "conllu": (from_conllu, to_conllu),
-    "amr":    (from_amr,    to_amr),
-})
+    "sdp": (from_sdp, to_sdp),
+    "export": (from_export, to_export),
+    "amr": (from_amr, to_amr),
+}
 FROM_FORMAT = {f: c[0] for f, c in CONVERTERS.items() if c[0] is not None}
 TO_FORMAT = {f: c[1] for f, c in CONVERTERS.items() if c[1] is not None}
 
@@ -172,7 +230,7 @@ def write_passage(passage, args):
     else:
         converter = CONVERTERS[args.output_format][1]
         output = "\n".join(converter(passage)) if args.output_format == "amr" else \
-            "\n".join(line for p in (convert.split2sentences(passage) if args.split else [passage]) for line in
+            "\n".join(line for p in (split2sentences(passage) if args.split else [passage]) for line in
                       converter(p, test=args.test, tree=args.tree, mark_aux=args.mark_aux))
         with open(outfile, "w", encoding="utf-8") as f:
             print(output, file=f)

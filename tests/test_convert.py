@@ -1,9 +1,32 @@
 import pytest
 from ucca import layer0, textutil
+from ucca.ioutil import read_files_and_dirs
 
 from semstr import convert
 
 """Tests convert module correctness and API."""
+
+
+# def simple():
+#     p = core.Passage("120")
+#     l0 = layer0.Layer0(p)
+#     l1 = layer1.Layer1(p)
+#     terms = [l0.add_terminal(text=str(i), punct=False) for i in range(1, 3)]
+#     p1 = l1.add_fnode(None, layer1.EdgeTags.Process)
+#     a1 = l1.add_fnode(None, layer1.EdgeTags.Participant)
+#     p1.add(layer1.EdgeTags.Terminal, terms[0])
+#     a1.add(layer1.EdgeTags.Terminal, terms[1])
+#     return p
+
+
+def loaded(filename=None):
+    return next(iter(read_files_and_dirs(filename or "test_files/120.xml")))
+
+
+def conll_simple(): return "conll", ["# sent_id = 120",
+                                     "1	1	_	Word	Word	_	0	ROOT	_	_",
+                                     "2	2	_	Word	Word	_	1	A	_	_",
+                                     ""]
 
 
 def ud_simple(): return "conllu", \
@@ -78,3 +101,61 @@ def test_annotate(create):
         assert textutil.Attr.POS(t2.tok[textutil.Attr.POS.value]) == "NOUN"
         assert textutil.Attr.LEMMA(t2.tok[textutil.Attr.LEMMA.value]) == "@"
         assert textutil.Attr.ORTH(t2.tok[textutil.Attr.ORTH.value]) == "2"
+
+
+# @pytest.mark.parametrize("create_passage, create_lines", (
+#         (simple, conll_simple),
+#         (simple, sdp_simple),
+# ))
+# @pytest.mark.parametrize("num_passages", range(3))
+# @pytest.mark.parametrize("trailing_newlines", range(3))
+# def test_from_dep(create_passage, create_lines, num_passages, trailing_newlines):
+#     p = create_passage()
+#     f, lines = create_lines()
+#     converter = convert.FROM_FORMAT[f]
+#     lines = num_passages * lines
+#     lines[-1:] = trailing_newlines * [""]
+#     passages = list(converter(lines, "test"))
+#     assert len(passages) == num_passages
+#     for passage in passages:
+#         assert passage.equals(p), "%s: %s != %s" % (converter, str(passage), str(p))
+
+
+def test_to_conll():
+    passage = loaded()
+    converted = convert.to_conll(passage)
+    with open("test_files/120.conll", encoding="utf-8") as f:
+        # f.write("\n".join(converted))
+        assert converted == f.read().splitlines() + [""]
+    converted_passage = next(convert.from_conll(converted, passage.ID))
+    # ioutil.passage2file(converted_passage, "test_files/120.conll.xml")
+    ref = loaded("test_files/120.conll.xml")
+    assert converted_passage.equals(ref)
+    # Put the same sentence twice and try converting again
+    for converted_passage in convert.from_conll(converted * 2, passage.ID):
+        ref = loaded("test_files/120.conll.xml")
+    assert converted_passage.equals(ref), "Passage does not match expected"
+
+
+def test_to_sdp():
+    passage = loaded()
+    converted = convert.to_sdp(passage)
+    with open("test_files/120.sdp", encoding="utf-8") as f:
+        # f.write("\n".join(converted))
+        assert converted == f.read().splitlines() + [""]
+    converted_passage = next(convert.from_sdp(converted, passage.ID))
+    # ioutil.passage2file(converted_passage, "test_files/120.sdp.xml")
+    ref = loaded("test_files/120.sdp.xml")
+    assert converted_passage.equals(ref), "Passage does not match expected"
+
+
+def test_to_export():
+    passage = loaded()
+    converted = convert.to_export(passage)
+    with open("test_files/120.export", encoding="utf-8") as f:
+        # f.write("\n".join(converted))
+        assert converted == f.read().splitlines()
+    converted_passage = next(convert.from_export(converted, passage.ID))
+    # ioutil.passage2file(converted_passage, "test_files/120.export.xml")
+    ref = loaded("test_files/120.export.xml")
+    assert converted_passage.equals(ref), "Passage does not match expected"

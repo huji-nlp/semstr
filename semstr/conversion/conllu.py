@@ -1,8 +1,8 @@
 from operator import attrgetter
 
-from ucca import convert, layer0, layer1, textutil
+from ucca import layer0, layer1, textutil
 
-from .dep import DependencyConverter
+from .conll import ConllConverter
 
 
 def head_rel(n):
@@ -42,11 +42,11 @@ FLAT_RELS = (FLAT, layer1.EdgeTags.Terminal)
 REL_REPLACEMENTS = (FLAT_RELS, PUNCT_RELS)
 
 
-class ConlluConverter(DependencyConverter, convert.ConllConverter):
+class ConlluConverter(ConllConverter):
 
     def __init__(self, *args, **kwargs):
-        DependencyConverter.__init__(self, *args, tree=True, punct_tag=PUNCT_TAG, punct_rel=PUNCT,
-                                     tag_priority=[self.TOP, PARATAXIS, CONJ, ADVCL, XCOMP], **kwargs)
+        super().__init__(*args, tree=True, punct_tag=PUNCT_TAG, punct_rel=PUNCT,
+                         tag_priority=[self.TOP, PARATAXIS, CONJ, ADVCL, XCOMP], **kwargs)
 
     def modify_passage(self, passage):
         passage.extra["format"] = "conllu"
