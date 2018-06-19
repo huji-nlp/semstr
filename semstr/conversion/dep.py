@@ -97,6 +97,10 @@ class DependencyConverter(convert.DependencyConverter):
 
     def preprocess(self, dep_nodes, to_dep=True):
         roots = self.roots(dep_nodes)
+        if to_dep and self.tree and len(roots) > 1:
+            for root in roots[1:]:
+                root.incoming = [e for e in root.incoming if e.rel != self.ROOT.lower() and e.head_index >= 0]
+            roots = [roots[0]]
         for dep_node in dep_nodes:
             is_parentless = True
             for edge in dep_node.incoming:

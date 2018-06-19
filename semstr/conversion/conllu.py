@@ -119,9 +119,6 @@ class ConlluConverter(DependencyConverter, convert.ConllConverter):
                             if heads:
                                 edge.head = heads[0]
         super().preprocess(dep_nodes, to_dep=to_dep)
-        if to_dep:
-            roots = self.roots(dep_nodes)
-            assert len(roots) == 1, "Single root violated: %s" % roots
 
     @staticmethod
     def between(dep_node, edges, *rels):
