@@ -52,7 +52,7 @@ class DependencyConverter(FormatConverter):
             return self.position == other.position and self.span == other.span
 
         def __hash__(self):
-            return hash((self.position, self.span))
+            return hash((self.position, tuple(self.span or ())))
 
     class Edge:
         def __init__(self, head_index, rel, remote):

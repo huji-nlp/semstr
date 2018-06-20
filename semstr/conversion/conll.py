@@ -33,12 +33,11 @@ class ConllConverter(DependencyConverter):
                 copy_of[position] = m.group(1)
         if "." in position:
             return None
-        positions = list(map(int, position.split("-")))
-        if not edges or previous_node is None or previous_node.position != positions[0]:
-            is_multi_word = len(positions) > 1
-            return DependencyConverter.Node(positions if is_multi_word else positions[0], edges,
+        span = list(map(int, position.split("-")))
+        if not edges or previous_node is None or previous_node.position != span[0]:
+            return DependencyConverter.Node(None if len(span) > 1 else span[0], edges,
                                             token=DependencyConverter.Token(text, tag, lemma, pos, features),
-                                            is_multi_word=is_multi_word, enhanced=enhanced, misc=misc)
+                                            is_multi_word=len(span) > 1, enhanced=enhanced, misc=misc, span=span)
         previous_node.add_edges(edges)
 
     def generate_lines(self, passage_id, dep_nodes, test, tree):
@@ -47,8 +46,8 @@ class ConllConverter(DependencyConverter):
         for i, dep_node in enumerate(dep_nodes):
             position = i + 1
             assert position == dep_node.position
-            if dep_node.parent_multi_word and position == dep_node.parent_multi_word.position[0]:
-                yield ["-".join(map(str, dep_node.parent_multi_word.position)),
+            if dep_node.parent_multi_word and position == dep_node.parent_multi_word.span[0]:
+                yield ["-".join(map(str, dep_node.parent_multi_word.span)),
                        dep_node.parent_multi_word.token.text] + 8 * ["_"]
             fields = [position, dep_node.token.text, dep_node.token.lemma, dep_node.token.pos, dep_node.token.tag,
                       dep_node.token.features]
