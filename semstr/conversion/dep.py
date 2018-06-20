@@ -22,7 +22,7 @@ class DependencyConverter(FormatConverter):
 
     class Node:
         def __init__(self, position=0, incoming=None, token=None, terminal=None, is_head=True, is_top=False,
-                     is_multi_word=False, parent_multi_word=None, frame=None, enhanced=None, misc=None):
+                     is_multi_word=False, parent_multi_word=None, frame=None, enhanced=None, misc=None, span=None):
             self.position = position
             self.incoming = []
             if incoming is not None:
@@ -39,6 +39,7 @@ class DependencyConverter(FormatConverter):
             self.frame = "_" if frame is None else frame
             self.enhanced = "_" if enhanced is None else enhanced
             self.misc = "_" if misc is None else misc
+            self.span = span
 
         def add_edges(self, edges):
             for edge in edges:
@@ -48,10 +49,10 @@ class DependencyConverter(FormatConverter):
             return self.token.text if self.token else DependencyConverter.ROOT
 
         def __eq__(self, other):
-            return self.position == other.position
+            return self.position == other.position and self.span == other.span
 
         def __hash__(self):
-            return hash(self.position)
+            return hash((self.position, self.span))
 
     class Edge:
         def __init__(self, head_index, rel, remote):
@@ -141,7 +142,7 @@ class DependencyConverter(FormatConverter):
             for edge in dep_node.incoming:
                 edge.link_head(heads, copy_of)
         for dep_node in multi_word_nodes:
-            start, end = dep_node.position
+            start, end = dep_node.span
             for position in range(start, end + 1):
                 dep_nodes[position].parent_multi_word = dep_node
 
@@ -522,9 +523,10 @@ class DependencyConverter(FormatConverter):
         if multi_word_text is None:
             multi_words[0] = None
         elif multi_words[0] is None or multi_word_text != multi_words[0].token.text:
-            multi_words[0] = self.Node(2 * [terminal.position], token=self.Token(multi_word_text, tag="_"))
+            multi_words[0] = self.Node(terminal.position, token=self.Token(multi_word_text, tag="_"),
+                                       span=2 * [terminal.position])
         else:
-            multi_words[0].position[-1] = terminal.position
+            multi_words[0].span[-1] = terminal.position
         return multi_words[0]
 
     def read_line_and_append(self, read_line, line, *args, **kwargs):
