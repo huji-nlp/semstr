@@ -20,7 +20,7 @@ from semstr import convert
 
 
 def loaded(filename=None):
-    return next(iter(read_files_and_dirs(filename or "test_files/120.xml")))
+    return next(iter(read_files_and_dirs(filename or "test_files/conversion/120.xml")))
 
 
 def conll_simple(): return "conll", ["# sent_id = 120",
@@ -124,38 +124,38 @@ def test_annotate(create):
 def test_to_conll():
     passage = loaded()
     converted = convert.to_conll(passage)
-    with open("test_files/120.conll", encoding="utf-8") as f:
+    with open("test_files/conversion/120.conll", encoding="utf-8") as f:
         # f.write("\n".join(converted))
         assert converted == f.read().splitlines() + [""]
     converted_passage = next(convert.from_conll(converted, passage.ID))
-    # ioutil.passage2file(converted_passage, "test_files/120.conll.xml")
-    ref = loaded("test_files/120.conll.xml")
+    # ioutil.passage2file(converted_passage, "test_files/conversion/120.conll.xml")
+    ref = loaded("test_files/conversion/120.conll.xml")
     assert converted_passage.equals(ref)
     # Put the same sentence twice and try converting again
     for converted_passage in convert.from_conll(converted * 2, passage.ID):
-        ref = loaded("test_files/120.conll.xml")
+        ref = loaded("test_files/conversion/120.conll.xml")
     assert converted_passage.equals(ref), "Passage does not match expected"
 
 
 def test_to_sdp():
     passage = loaded()
     converted = convert.to_sdp(passage)
-    with open("test_files/120.sdp", encoding="utf-8") as f:
+    with open("test_files/conversion/120.sdp", encoding="utf-8") as f:
         # f.write("\n".join(converted))
         assert converted == f.read().splitlines() + [""]
     converted_passage = next(convert.from_sdp(converted, passage.ID))
-    # ioutil.passage2file(converted_passage, "test_files/120.sdp.xml")
-    ref = loaded("test_files/120.sdp.xml")
+    # ioutil.passage2file(converted_passage, "test_files/conversion/120.sdp.xml")
+    ref = loaded("test_files/conversion/120.sdp.xml")
     assert converted_passage.equals(ref), "Passage does not match expected"
 
 
 def test_to_export():
     passage = loaded()
     converted = convert.to_export(passage)
-    with open("test_files/120.export", encoding="utf-8") as f:
+    with open("test_files/conversion/120.export", encoding="utf-8") as f:
         # f.write("\n".join(converted))
         assert converted == f.read().splitlines()
     converted_passage = next(convert.from_export(converted, passage.ID))
-    # ioutil.passage2file(converted_passage, "test_files/120.export.xml")
-    ref = loaded("test_files/120.export.xml")
+    # ioutil.passage2file(converted_passage, "test_files/conversion/120.export.xml")
+    ref = loaded("test_files/conversion/120.export.xml")
     assert converted_passage.equals(ref), "Passage does not match expected"
