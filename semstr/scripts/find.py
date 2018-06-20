@@ -58,6 +58,6 @@ if __name__ == '__main__':
     add_specs_args(argparser)
     argparser.add_argument("-w", "--word", nargs="+", help="Word(s) to find")
     argparser.add_argument("-i", "--case-insensitive", action="store_true", help="Ignore case when looking up words")
-    argparser.add_argument("-c", "--category", nargs="+", help="Incoming edge categories to find")
+    argparser.add_argument("-e", "--category", nargs="+", help="Incoming edge categories to find")
     argparser.add_argument("-d", "--dependency", nargs="+", help="Dependency relation(s) to find dependents of")
     main(argparser.parse_args())
