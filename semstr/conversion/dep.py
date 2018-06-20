@@ -333,7 +333,8 @@ class DependencyConverter(FormatConverter):
                 if dep_node.parent_multi_word:  # part of a multi-word token (e.g. zum = zu + dem)
                     dep_node.terminal.extra[self.MULTI_WORD_TEXT_ATTRIB] = dep_node.parent_multi_word.token.text
 
-    def link_pre_terminals(self, dep_nodes):
+    @staticmethod
+    def link_pre_terminals(dep_nodes):
         preterminals = []
         for dep_node in dep_nodes:
             if dep_node.preterminal is not None:  # link pre-terminal to terminal
@@ -570,7 +571,7 @@ class DependencyConverter(FormatConverter):
         return any(e.tag == self.TOP for e in self.find_headed_unit(unit).incoming)
 
     def is_punct(self, dep_node):
-        return dep_node.token and dep_node.token.tag in (layer0.NodeTags.Punct, self.punct_tag)
+        return dep_node.token and {dep_node.token.tag, dep_node.token.pos} & {layer0.NodeTags.Punct, self.punct_tag}
 
     def is_flat(self, edge):
         return False
