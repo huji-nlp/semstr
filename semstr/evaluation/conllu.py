@@ -35,7 +35,7 @@ def get_scores(s1, s2, eval_type, verbose=False, units=False):
 
 
 def join_tokens(dep_nodes):
-    return "".join((n.parent_multi_word.token.text if n.position == n.parent_multi_word.position[0] else "")
+    return "".join((n.parent_multi_word.token.text if n.position == n.parent_multi_word.span[0] else "")
                    if n.parent_multi_word else n.token.text for nodes, _ in dep_nodes for n in nodes[1:])
 
 
