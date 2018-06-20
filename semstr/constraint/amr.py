@@ -4,11 +4,11 @@ from ..util.amr import TERMINAL_DEP, WIKI, POLARITY, CENTURY, DECADE, TERMINAL_T
 
 
 class AmrConstraints(Constraints):
-    def __init__(self, args):
-        super().__init__(args, multigraph=True, require_implicit_childless=False, allow_orphan_terminals=True,
+    def __init__(self, **kwargs):
+        super().__init__(multigraph=True, require_implicit_childless=False, allow_orphan_terminals=True,
                          allow_root_terminal_children=True, possible_multiple_incoming={TERMINAL_DEP},
                          childless_incoming_trigger={WIKI, POLARITY, CENTURY, DECADE, "polite", "li"},
-                         childless_outgoing_allowed=TERMINAL_TAGS)
+                         childless_outgoing_allowed=TERMINAL_TAGS, **kwargs)
 
     def allow_action(self, action, history):
         return True

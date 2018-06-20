@@ -1,7 +1,5 @@
 from enum import Enum
 
-from ucca.layer1 import EdgeTags
-
 
 class Direction(Enum):
     incoming = 0
@@ -81,12 +79,11 @@ class Valid:
 
 # Generic class to define constraints on parser actions
 class Constraints:
-    def __init__(self, args, multigraph=False, require_implicit_childless=True, allow_orphan_terminals=False,
+    def __init__(self, multigraph=False, require_implicit_childless=True, allow_orphan_terminals=False,
                  allow_root_terminal_children=False, top_level_allowed=None, top_level_only=None,
                  possible_multiple_incoming=(), childless_incoming_trigger=(), childless_outgoing_allowed=(),
                  unique_incoming=(), unique_outgoing=(), mutually_exclusive_incoming=(), mutually_exclusive_outgoing=(),
-                 exclusive_outgoing=(), required_outgoing=()):
-        self.args = args
+                 exclusive_outgoing=(), required_outgoing=(), implicit=False, **kwargs):
         self.multigraph = multigraph
         self.require_implicit_childless = require_implicit_childless
         self.allow_orphan_terminals = allow_orphan_terminals
@@ -95,6 +92,7 @@ class Constraints:
         self.top_level_only = top_level_only
         self.possible_multiple_incoming = possible_multiple_incoming
         self.required_outgoing = required_outgoing
+        self.implicit = implicit
         self.tag_rules = \
             [TagRule(trigger={Direction.incoming: childless_incoming_trigger},
                      allowed={Direction.outgoing: childless_outgoing_allowed}),
@@ -108,7 +106,7 @@ class Constraints:
              for t1, t2 in set_prod(mutually_exclusive_outgoing)]
 
     def allow_action(self, action, history):
-        return self.args.implicit or history or action.tag is None  # First action must not create nodes/edges
+        return self.implicit or history or action.tag is None  # First action must not create nodes/edges
 
     def allow_edge(self, edge):
         return True
@@ -121,27 +119,3 @@ class Constraints:
 
     def allow_label(self, node, label):
         return True
-
-
-LINKAGE_TAGS = {EdgeTags.LinkArgument, EdgeTags.LinkRelation}
-
-
-class UccaConstraints(Constraints):
-    def __init__(self, args):
-        super().__init__(args, require_implicit_childless=True, allow_orphan_terminals=False,
-                         allow_root_terminal_children=False,
-                         top_level_allowed={EdgeTags.ParallelScene, EdgeTags.Linker,
-                                            EdgeTags.Function, EdgeTags.Ground,
-                                            EdgeTags.Punctuation, EdgeTags.LinkRelation, EdgeTags.LinkArgument},
-                         possible_multiple_incoming=LINKAGE_TAGS,
-                         childless_incoming_trigger=EdgeTags.Function,
-                         childless_outgoing_allowed={EdgeTags.Terminal, EdgeTags.Punctuation},
-                         unique_incoming={EdgeTags.Function, EdgeTags.Ground,
-                                          EdgeTags.ParallelScene, EdgeTags.Linker,
-                                          EdgeTags.LinkRelation, EdgeTags.Connector,
-                                          EdgeTags.Punctuation, EdgeTags.Terminal},
-                         unique_outgoing={EdgeTags.LinkRelation, EdgeTags.Process, EdgeTags.State},
-                         mutually_exclusive_outgoing={EdgeTags.Process, EdgeTags.State},
-                         exclusive_outgoing=LINKAGE_TAGS)
-    # LinkerIncoming = {EdgeTags.Linker, EdgeTags.LinkRelation}
-    # TagRule(trigger=(LinkerIncoming, None), allowed=(LinkerIncoming, None)),  # disabled due to passage 106 unit 1.300

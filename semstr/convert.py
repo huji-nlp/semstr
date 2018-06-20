@@ -13,6 +13,7 @@ from ucca.convert import from_text, from_json, to_json, split2sentences
 from ucca.normalization import normalize
 
 from semstr.cfgutil import add_verbose_arg
+from semstr.validation import validate, print_errors
 
 desc = """Parses files in the specified format, and writes as the specified format.
 Each passage is written to the file: <outdir>/<prefix><passage_id>.<extension> """
@@ -250,6 +251,11 @@ def main(args):
         if args.lang:
             passage.attrib["lang"] = args.lang
         write_passage(passage, args)
+        if args.validate:
+            errors = list(validate(passage, ucca_validation=args.ucca_validation, output_format=args.output_format))
+            if errors:
+                print_errors(errors, passage.ID)
+                sys.exit(1)
 
 
 def add_convert_args(p):
@@ -270,6 +276,8 @@ if __name__ == '__main__':
     argparser.add_argument("-p", "--prefix", default="", help="output passage ID prefix")
     argparser.add_argument("-b", "--binary", action="store_true", help="write in binary format (.%s)" % UCCA_EXT[1])
     argparser.add_argument("-a", "--annotate", action="store_true", help="store dependency annotations in 'extra' dict")
+    argparser.add_argument("-V", "--validate", action="store_true", help="validate every passage after conversion")
+    argparser.add_argument("-u", "--ucca-validation", action="store_true", help="apply UCCA-specific validations")
     group = argparser.add_mutually_exclusive_group()
     group.add_argument("--no-normalize", action="store_false", dest="normalize", help="do not normalize passage")
     group.add_argument("-e", "--extra-normalization", action="store_true", help="more normalization rules")

@@ -1,15 +1,13 @@
-import argparse
-import sys
-from itertools import groupby, islice
+from itertools import groupby
 
-from ucca import layer0, layer1, validation
+from ucca import layer0, layer1, validation as ucca_validations
 from ucca.normalization import normalize
 
-from semstr.constraint.amr import AmrConstraints
-from semstr.constraint.conllu import ConlluConstraints
-from semstr.constraint.sdp import SdpConstraints
-from semstr.constraints import UccaConstraints, Direction
-from semstr.convert import iter_passages
+from .constraint.amr import AmrConstraints
+from .constraint.conllu import ConlluConstraints
+from .constraint.sdp import SdpConstraints
+from .constraint.ucca import UccaConstraints
+from .constraints import Direction
 
 CONSTRAINTS = {
     None:     UccaConstraints,
@@ -43,30 +41,6 @@ def detect_cycles(passage):
 def join(edges):
     return ", ".join("%s-[%s%s]->%s" % (e.parent.ID, e.tag, "*" if e.attrib.get("remote") else "", e.child.ID)
                      for e in edges)
-
-
-def validate(passage, args):
-    if args.normalize:
-        normalize(passage, extra=args.extra_normalization)
-    if args.ucca_validation:
-        validation.validate(passage)
-    else:  # Generic validations depending on format-specific constraints
-        constraints = CONSTRAINTS[passage.extra.get("format", args.format)](args)
-        yield from detect_cycles(passage)
-        l0 = passage.layer(layer0.LAYER_ID)
-        l1 = passage.layer(layer1.LAYER_ID)
-        for terminal in l0.all:
-            yield from check_orphan_terminals(constraints, terminal)
-            yield from check_root_terminal_children(constraints, l1, terminal)
-            yield from check_multiple_incoming(constraints, terminal)
-        yield from check_top_level_allowed(constraints, l1)
-        for node in l1.all:
-            yield from check_multigraph(constraints, node)
-            yield from check_implicit_children(constraints, node)
-            yield from check_multiple_incoming(constraints, node)
-            yield from check_top_level_only(constraints, l1, node)
-            yield from check_required_outgoing(constraints, node)
-            yield from check_tag_rules(constraints, node)
 
 
 def check_orphan_terminals(constraints, terminal):
@@ -143,34 +117,32 @@ def check_tag_rules(constraints, node):
                 "Illegal edge: %s (%s)" % (join([edge]), valid)
 
 
-def main(args):
-    errors = ((p.ID, list(validate(p, args=args)))
-              for p in iter_passages(args.filenames, desc="Validating", split=args.split))
-    errors = dict(islice(((k, v) for k, v in errors if v), 1 if args.strict else None))
-    if errors:
-        id_len = max(map(len, errors))
-        for passage_id, es in sorted(errors.items()):
-            for i, e in enumerate(es):
-                print("%-*s|%s" % (id_len, "" if i else passage_id, e))
-        sys.exit(1)
-    else:
-        print("No errors found.")
+def validate(passage, normalization=False, extra_normalization=False, ucca_validation=False, output_format=None):
+    if normalization:
+        normalize(passage, extra=extra_normalization)
+    if ucca_validation:
+        yield from ucca_validations.validate(passage)
+    else:  # Generic validations depending on format-specific constraints
+        constraints = CONSTRAINTS[passage.extra.get("format", output_format)]()
+        yield from detect_cycles(passage)
+        l0 = passage.layer(layer0.LAYER_ID)
+        l1 = passage.layer(layer1.LAYER_ID)
+        for terminal in l0.all:
+            yield from check_orphan_terminals(constraints, terminal)
+            yield from check_root_terminal_children(constraints, l1, terminal)
+            yield from check_multiple_incoming(constraints, terminal)
+        yield from check_top_level_allowed(constraints, l1)
+        for node in l1.all:
+            yield from check_multigraph(constraints, node)
+            yield from check_implicit_children(constraints, node)
+            yield from check_multiple_incoming(constraints, node)
+            yield from check_top_level_only(constraints, l1, node)
+            yield from check_required_outgoing(constraints, node)
+            yield from check_tag_rules(constraints, node)
 
 
-def check_args(parser, args):
-    if args.extra_normalization and not args.normalize:
-        parser.error("Cannot specify --extra-normalization without --normalize")
-    return args
-
-
-if __name__ == "__main__":
-    argparser = argparse.ArgumentParser(description="Validate UCCA passages")
-    argparser.add_argument("filenames", nargs="+", help="files or directories to validate")
-    argparser.add_argument("-f", "--format", help="default format (if cannot determine by suffix)")
-    argparser.add_argument("-s", "--split", action="store_true", help="split each sentence to its own passage")
-    argparser.add_argument("-i", "--implicit", action="store_true", help="allow implicit nodes")
-    argparser.add_argument("-S", "--strict", action="store_true", help="fail as soon as a violation is found")
-    argparser.add_argument("-u", "--ucca-validation", action="store_true", help="apply UCCA-specific validations")
-    argparser.add_argument("-n", "--normalize", action="store_true", help="normalize passages before validation")
-    argparser.add_argument("-e", "--extra-normalization", action="store_true", help="more normalization rules")
-    main(check_args(argparser, argparser.parse_args()))
+def print_errors(errors, passage_id, id_len=None):
+    if id_len is None:
+        id_len = len(passage_id)
+    for i, e in enumerate(errors):
+        print("%-*s|%s" % (id_len, "" if i else passage_id, e))
