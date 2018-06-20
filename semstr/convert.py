@@ -226,7 +226,7 @@ def write_passage(passage, args):
         with tqdm.external_write_mode():
             print("Writing '%s'..." % outfile, file=sys.stderr)
     if args.output_format is None:  # UCCA output
-        ioutil.passage2file(passage, outfile, args.binary)
+        ioutil.passage2file(passage, outfile, binary=args.binary)
     else:
         converter = CONVERTERS[args.output_format][1]
         output = "\n".join(converter(passage)) if args.output_format == "amr" else \
