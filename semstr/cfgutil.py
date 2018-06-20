@@ -48,21 +48,34 @@ def add_boolean_option(argparser, name, description, default=False, short=None, 
     return group
 
 
+class AnnotationSpecification:
+    def __init__(self, passages, out_dir, lang, udpipe=None, conllu=None):
+        if out_dir:
+            os.makedirs(out_dir, exist_ok=True)
+        self.passages = passages
+        self.out_dir = out_dir
+        self.lang = lang
+        if udpipe and conllu:
+            raise ValueError("Cannot specify both UDPipe model and CoNLL-U files to get annotation from")
+        self.udpipe = udpipe
+        self.conllu = conllu
+
+
 def read_specs(args, converters=None):
-    specs = [(pattern, args.out_dir, args.lang, args.udpipe) for pattern in args.filenames]
+    specs = [(pattern, args.out_dir, args.lang, args.udpipe, args.conllu) for pattern in args.filenames]
     if args.list_file:
         with open(args.list_file, encoding="utf-8") as f:
             specs += [l.strip().split() for l in f if not l.startswith("#")]
     for spec in specs:
         pattern = spec[0]
-        out_dir = spec[1] if len(spec) > 1 else args.out_dir
-        lang = spec[2] if len(spec) > 2 else args.lang
-        udpipe = spec[3] if len(spec) > 3 else args.udpipe
-        os.makedirs(out_dir, exist_ok=True)
         filenames = glob(pattern)
         if not filenames:
             raise IOError("Not found: " + pattern)
-        yield read_files_and_dirs(filenames, converters=converters), out_dir, lang, udpipe
+        yield AnnotationSpecification(passages=read_files_and_dirs(filenames, converters=converters),
+                                      out_dir=spec[1] if len(spec) > 1 else args.out_dir,
+                                      lang=spec[2] if len(spec) > 2 else args.lang,
+                                      udpipe=spec[3] if len(spec) > 3 else args.udpipe,
+                                      conllu=spec[4] if len(spec) > 4 else args.conllu)
 
 
 def add_specs_args(p):
@@ -70,5 +83,7 @@ def add_specs_args(p):
     p.add_argument("-f", "--list-file", help="file whose rows are <PATTERN> <OUT-DIR> <LANGUAGE>")
     p.add_argument("-o", "--out-dir", default=".", help="directory to write annotated files to")
     p.add_argument("-l", "--lang", default="en", help="small two-letter language code to use for spaCy model")
-    p.add_argument("-u", "--udpipe", help="use specified UDPipe model, not spaCy, for syntactic annotation")
+    group = p.add_mutually_exclusive_group()
+    group.add_argument("-u", "--udpipe", help="use specified UDPipe model, not spaCy, for syntactic annotation")
+    group.add_argument("-c", "--conllu", help="copy syntactic annotation from specified CoNLL-U files instead of spaCy")
     p.add_argument("-b", "--binary", action="store_true", help="write in binary format (.pickle)")

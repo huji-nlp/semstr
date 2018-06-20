@@ -46,11 +46,12 @@ def parse(passages, lang, udpipe, verbose):
 
 
 def main(args):
-    for passages, out_dir, lang, udpipe in read_specs(args, converters=FROM_FORMAT):
+    for spec in read_specs(args, converters=FROM_FORMAT):
         scores = []
         if not args.verbose:
-            passages = tqdm(passages, unit=" passages", desc="Parsing " + (out_dir if out_dir != "." else lang))
-        for passage, parsed in parse(passages, lang, udpipe, args.verbose):
+            spec.passages = tqdm(spec.passages, unit=" passages",
+                                 desc="Parsing " + (spec.out_dir if spec.out_dir != "." else spec.lang))
+        for passage, parsed in parse(spec.passages, spec.lang, spec.udpipe, args.verbose):
             map_labels(parsed, args.label_map)
             normalize(parsed, extra=True)
             if args.write:

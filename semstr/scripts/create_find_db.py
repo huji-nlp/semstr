@@ -16,10 +16,10 @@ desc = """Create an index containing all terminals from a corpus, with their dep
 
 
 def main(args):
-    for passages, out_dir, lang, udpipe in read_specs(args, converters=FROM_FORMAT):
-        passages = annotate_udpipe(passages, udpipe) if udpipe else \
-            annotate_all(passages, as_array=True, replace=not udpipe, lang=lang)
-        filename = os.path.join(out_dir, "find.db")
+    for spec in read_specs(args, converters=FROM_FORMAT):
+        spec.passages = annotate_udpipe(spec.passages, spec.udpipe) if spec.udpipe else \
+            annotate_all(spec.passages, as_array=True, replace=not spec.udpipe, lang=spec.lang)
+        filename = os.path.join(spec.out_dir, "find.db")
         with sqlite3.connect(filename) as conn:
             c = conn.cursor()
             c.execute("DROP TABLE terminals")
@@ -28,12 +28,12 @@ def main(args):
             c.execute("CREATE INDEX idx_terminals_text ON terminals (text)")
             c.execute("CREATE INDEX idx_terminals_ftag ON terminals (ftag)")
             c.execute("CREATE INDEX idx_terminals_dep ON terminals (dep)")
-            for passage in tqdm(passages, unit=" passages", desc="Creating " + filename):
+            for passage in tqdm(spec.passages, unit=" passages", desc="Creating " + filename):
                 rows = []
                 for terminal in passage.layer(layer0.LAYER_ID).all:
                     parent = terminal.parents[0]
                     rows.append((passage.ID, terminal.ID, terminal.text, parent.ftag, str(parent.fparent),
-                                 get_annotation(terminal, udpipe)))
+                                 get_annotation(terminal, spec.udpipe)))
                 c.executemany("INSERT INTO terminals VALUES (?,?,?,?,?,?)", rows)
                 conn.commit()
 

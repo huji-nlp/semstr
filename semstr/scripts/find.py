@@ -20,11 +20,11 @@ def main(args):
     dependencies = list(args.dependency or ())
     if args.case_insensitive:
         words = list(map(str.lower, words))
-    for passages, out_dir, lang, udpipe in read_specs(args, converters=FROM_FORMAT):
+    for spec in read_specs(args, converters=FROM_FORMAT):
         if args.dependency:
-            passages = annotate_udpipe(passages, udpipe) if udpipe else \
-                annotate_all(passages, as_array=True, replace=not udpipe, lang=lang)
-        t = tqdm(passages, unit=" passages", desc="Finding")
+            spec.passages = annotate_udpipe(spec.passages, spec.udpipe) if spec.udpipe else \
+                annotate_all(spec.passages, as_array=True, replace=not spec.udpipe, lang=spec.lang)
+        t = tqdm(spec.passages, unit=" passages", desc="Finding")
         if words:
             t.set_postfix(words=",".join(words))
         if categories:
@@ -32,7 +32,7 @@ def main(args):
         if dependencies:
             t.set_postfix(dependencies=",".join(dependencies))
         found = 0
-        filename = os.path.join(out_dir, "_".join(words + categories + dependencies) + ".txt")
+        filename = os.path.join(spec.out_dir, "_".join(words + categories + dependencies) + ".txt")
         with open(filename, "w", encoding="utf-8") as f:
             for passage in t:
                 for terminal in passage.layer(layer0.LAYER_ID).all:
@@ -42,7 +42,7 @@ def main(args):
                         word = word.lower()
                     if (not words or word in words) and (
                             not categories or parent.ftag in categories) and (
-                            not dependencies or get_annotation(terminal, udpipe) in dependencies):
+                            not dependencies or get_annotation(terminal, spec.udpipe) in dependencies):
                         print(passage.ID, parent.fparent, file=f)
                         found += 1
                         t.set_postfix(found=found)

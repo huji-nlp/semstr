@@ -56,8 +56,10 @@ def parse_udpipe(passages, model_name, verbose=False, annotate=False):
     return zip(passages2, from_conllu(processed, passage_id=None, annotate=annotate))
 
 
-def annotate_udpipe(passages, model_name, verbose=False):
+def annotate_udpipe(passages, model_name, as_array=True, verbose=False):
     if model_name:
+        if not as_array:
+            raise ValueError("Annotating with UDPipe and as_array=False are currently not supported; use --as-array")
         t1, t2 = tee((paragraph, passage) for passage in passages for paragraph in split2paragraphs(passage))
         paragraphs = map(itemgetter(0), t1)
         passages = map(itemgetter(1), t2)
@@ -85,16 +87,17 @@ CONVERTERS["conllu"] = split_by_empty_lines
 
 
 def main(args):
-    for sentences, out_dir, lang, model_name in read_specs(args, converters=CONVERTERS):
+    for spec in read_specs(args, converters=CONVERTERS):
         scores = []
-        sentences1, sentences2 = tee(sentences)
-        t = tqdm(zip(sentences1, split_by_empty_lines(udpipe(sentences2, model_name, args.verbose))), unit=" sentences")
+        sentences1, sentences2 = tee(spec.passages)
+        t = tqdm(zip(sentences1, split_by_empty_lines(udpipe(sentences2, spec.udpipe, args.verbose))),
+                 unit=" sentences")
         for sentence, parsed in t:
             sentence = list(sentence)
             if args.write:
                 i = next(find_ids(sentence))
                 t.set_postfix(id=i)
-                with open(os.path.join(out_dir, i + ".conllu"), "w", encoding="utf-8") as f:
+                with open(os.path.join(spec.out_dir, i + ".conllu"), "w", encoding="utf-8") as f:
                     for line in parsed:
                         print(line, file=f)
             if args.evaluate:
