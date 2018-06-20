@@ -8,7 +8,7 @@ from itertools import groupby
 
 import configargparse
 from tqdm import tqdm
-from ucca import evaluation, ioutil
+from ucca import evaluation, ioutil, constructions as ucca_constructions
 from ucca.evaluation import LABELED, UNLABELED
 
 from semstr.cfgutil import add_verbose_arg
@@ -99,7 +99,7 @@ def read_files(files, default_format=None, verbose=0, force_basename=False):
 
 
 def evaluate_all(evaluate, files, name=None, verbose=0, quiet=False, basename=False, matching_ids=False,
-                 units=False, errors=False, unlabeled=False, **kwargs):
+                 units=False, errors=False, unlabeled=False, normalize=True, constructions=None, **kwargs):
     guessed, ref = [iter(read_files(f, kwargs["format"], verbose=verbose, force_basename=basename)) for f in files]
     for (g, r) in tqdm(zip(guessed, ref), unit=" passages", desc=name, total=len(files[-1])):
         if matching_ids:
@@ -115,7 +115,8 @@ def evaluate_all(evaluate, files, name=None, verbose=0, quiet=False, basename=Fa
             g.passage = next(iter(g.in_converter(g.passage + [""], passage_id=r.ID))) if \
                 r.out_converter is None else r.out_converter(g.converted)
         result = evaluate(g.passage, r.passage, verbose=verbose > 1 or units, units=units, errors=errors,
-                          eval_type=UNLABELED if unlabeled else None)
+                          eval_type=UNLABELED if unlabeled else None, normalize=normalize,
+                          constructions=constructions)
         if not quiet:
             with tqdm.external_write_mode():
                 print("F1: %.3f" % result.average_f1(UNLABELED if unlabeled else LABELED))
@@ -165,6 +166,8 @@ if __name__ == '__main__':
     argparser.add_argument("-o", "--out-file", help="file to write results for each evaluated passage to in CSV format")
     argparser.add_argument("-s", "--summary-file", help="file to write aggregated results to, in CSV format")
     argparser.add_argument("-u", "--unlabeled", action="store_true", help="print unlabeled F1 for individual passages")
+    argparser.add_argument("-N", "--no-normalize", dest="normalize", action="store_false",
+                           help="do not normalize passages before evaluation")
     argparser.add_argument("-i", "--matching-ids", action="store_true", help="skip passages without a match (by ID)")
     argparser.add_argument("-b", "--basename", action="store_true", help="force passage ID to be file basename")
     argparser.add_argument("--units", action="store_true", help="print mutual and unique units")
@@ -172,4 +175,5 @@ if __name__ == '__main__':
     group = argparser.add_mutually_exclusive_group()
     add_verbose_arg(group, help="detailed evaluation output")
     group.add_argument("-q", "--quiet", action="store_true", help="do not print anything")
+    ucca_constructions.add_argument(argparser)
     main(argparser.parse_args())
