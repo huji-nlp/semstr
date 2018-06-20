@@ -217,6 +217,10 @@ def map_labels(passage, label_map_file):
                 mapped = label_map.get(edge.tag) or label_map.get(edge.tag.partition(":")[0])
                 if mapped is not None:
                     edge.tag = mapped
+        try:
+            del passage.extra["format"]  # Remove original format as it no longer applies, after labels were replaced
+        except KeyError:
+            pass
 
 
 def write_passage(passage, args):
