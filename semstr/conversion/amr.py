@@ -6,6 +6,7 @@ from collections import namedtuple, OrderedDict
 import penman
 from ucca import layer0, layer1, convert, textutil
 
+from .format import FormatConverter
 from ..util.amr import parse, amr_lib, resolve_label, EXTENSIONS, COMMENT_PREFIX, ID_PATTERN, TOK_PATTERN, DEP_PREFIX, \
     TOP_DEP, PREFIXED_RELATION_PATTERN, PREFIXED_RELATION_SUBSTITUTION, LABEL_ATTRIB, NAME, OP, PUNCTUATION_DEP, \
     PUNCTUATION_LABEL, TERMINAL_DEP, ALIGNMENT_PREFIX, ALIGNMENT_SEP, SKIP_TOKEN_PATTERN, CONCEPT, NUM, WIKI, CONST, \
@@ -14,7 +15,7 @@ from ..util.amr import parse, amr_lib, resolve_label, EXTENSIONS, COMMENT_PREFIX
 DELETE_PATTERN = re.compile("\\\\|(?<=(?<!<)<)[^<>]+(?=>(?!>))")  # Delete text inside single angle brackets
 
 
-class AmrConverter(convert.FormatConverter):
+class AmrConverter(FormatConverter):
     def __init__(self):
         self.passage_id = self.nodes = self.return_original = self.save_original = self.remove_cycles = \
             self.extensions = self.excluded = None
