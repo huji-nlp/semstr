@@ -16,16 +16,7 @@ desc = """Convert files to UCCA standard format, convert back to the original fo
 """
 
 
-def main():
-    argparser = configargparse.ArgParser(description=desc)
-    argparser.add_argument("filenames", nargs="+", help="file names to convert and evaluate")
-    add_verbose_arg(argparser, help="detailed evaluation output")
-    add_boolean_option(argparser, "wikification", "Spotlight to wikify any named node (for AMR)")
-    argparser.add_argument("-o", "--out-dir", help="output directory (if unspecified, files are not written)")
-    argparser.add_argument("-n", "--normalize", action="store_true", help="normalize passages before conversion")
-    argparser.add_argument("-e", "--extra-normalization", action="store_true", help="more normalization rules")
-    args = argparser.parse_args()
-
+def main(args):
     scores = []
     for pattern in args.filenames:
         filenames = glob(pattern)
@@ -70,8 +61,19 @@ def main():
         print("Aggregated scores:")
     Scores(scores).print()
 
-    sys.exit(0)
+
+def check_args(parser, args):
+    if args.extra_normalization and not args.normalize:
+        parser.error("Cannot specify --extra-normalization without --normalize")
+    return args
 
 
 if __name__ == '__main__':
-    main()
+    argparser = configargparse.ArgParser(description=desc)
+    argparser.add_argument("filenames", nargs="+", help="file names to convert and evaluate")
+    add_verbose_arg(argparser, help="detailed evaluation output")
+    add_boolean_option(argparser, "wikification", "Spotlight to wikify any named node (for AMR)")
+    argparser.add_argument("-o", "--out-dir", help="output directory (if unspecified, files are not written)")
+    argparser.add_argument("-n", "--normalize", action="store_true", help="normalize passages before conversion")
+    argparser.add_argument("-e", "--extra-normalization", action="store_true", help="more normalization rules")
+    main(check_args(argparser, argparser.parse_args()))

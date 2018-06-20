@@ -157,6 +157,12 @@ def main(args):
         print("No errors found.")
 
 
+def check_args(parser, args):
+    if args.extra_normalization and not args.normalize:
+        parser.error("Cannot specify --extra-normalization without --normalize")
+    return args
+
+
 if __name__ == "__main__":
     argparser = argparse.ArgumentParser(description="Validate UCCA passages")
     argparser.add_argument("filenames", nargs="+", help="files or directories to validate")
@@ -167,4 +173,4 @@ if __name__ == "__main__":
     argparser.add_argument("-u", "--ucca-validation", action="store_true", help="apply UCCA-specific validations")
     argparser.add_argument("-n", "--normalize", action="store_true", help="normalize passages before validation")
     argparser.add_argument("-e", "--extra-normalization", action="store_true", help="more normalization rules")
-    main(argparser.parse_args())
+    main(check_args(argparser, argparser.parse_args()))
