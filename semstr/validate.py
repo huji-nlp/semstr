@@ -165,6 +165,6 @@ if __name__ == "__main__":
     argparser.add_argument("-i", "--implicit", action="store_true", help="allow implicit nodes")
     argparser.add_argument("-S", "--strict", action="store_true", help="fail as soon as a violation is found")
     argparser.add_argument("-u", "--ucca-validation", action="store_true", help="apply UCCA-specific validations")
-    argparser.add_argument("-n", "--normalize", action="store_true", help="more normalization rules")
+    argparser.add_argument("-n", "--normalize", action="store_true", help="normalize passages before validation")
     argparser.add_argument("-e", "--extra-normalization", action="store_true", help="more normalization rules")
     main(argparser.parse_args())

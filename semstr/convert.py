@@ -241,7 +241,8 @@ def main(args):
     for passage in iter_passages(args.filenames, desc="Converting", input_format=args.input_format, prefix=args.prefix,
                                  split=args.split, mark_aux=args.mark_aux, annotate=args.annotate):
         map_labels(passage, args.label_map)
-        normalize(passage, extra=args.extra_normalization)
+        if args.normalize:
+            normalize(passage, extra=args.extra_normalization)
         if args.lang:
             passage.attrib["lang"] = args.lang
         write_passage(passage, args)
@@ -265,7 +266,9 @@ if __name__ == '__main__':
     argparser.add_argument("-p", "--prefix", default="", help="output passage ID prefix")
     argparser.add_argument("-b", "--binary", action="store_true", help="write in binary format (.%s)" % UCCA_EXT[1])
     argparser.add_argument("-a", "--annotate", action="store_true", help="store dependency annotations in 'extra' dict")
-    argparser.add_argument("-e", "--extra-normalization", action="store_true", help="more normalization rules")
+    group = argparser.add_mutually_exclusive_group()
+    group.add_argument("--no-normalize", action="store_false", dest="normalize", help="do not normalize passage")
+    group.add_argument("-e", "--extra-normalization", action="store_true", help="more normalization rules")
     argparser.add_argument("-l", "--lang", help="small two-letter language code to set in output passage metadata")
     add_convert_args(argparser)
     add_verbose_arg(argparser, help="detailed output")

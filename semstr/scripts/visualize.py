@@ -14,7 +14,9 @@ if __name__ == "__main__":
     argparser.add_argument("passages", nargs="+", help="Passages in any format")
     argparser.add_argument("--tikz", action="store_true", help="print tikz code rather than showing plots")
     argparser.add_argument("--out-dir", help="directory to save figures in (otherwise displayed immediately)")
-    argparser.add_argument("--no-normalize", action="store_false", dest="normalize", help="normalize passage")
+    group = argparser.add_mutually_exclusive_group()
+    group.add_argument("--no-normalize", action="store_false", dest="normalize", help="do not normalize passage")
+    group.add_argument("-e", "--extra-normalization", action="store_true", help="more normalization rules")
     argparser.add_argument("--label-map", help="CSV file specifying mapping of input edge labels to output edge labels")
     argparser.add_argument("-i", "--node-ids", action="store_true", help="print tikz code rather than showing plots")
     args = argparser.parse_args()
@@ -24,7 +26,7 @@ if __name__ == "__main__":
     for passage in get_passages_with_progress_bar(args.passages, desc="Visualizing", converters=FROM_FORMAT):
         map_labels(passage, args.label_map)
         if args.normalize:
-            normalize(passage)
+            normalize(passage, extra=args.extra_normalization)
         if args.tikz:
             tikz = visualization.tikz(passage, node_ids=args.node_ids)
             if args.out_dir:

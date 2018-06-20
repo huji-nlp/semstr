@@ -22,7 +22,7 @@ def main():
     add_verbose_arg(argparser, help="detailed evaluation output")
     add_boolean_option(argparser, "wikification", "Spotlight to wikify any named node (for AMR)")
     argparser.add_argument("-o", "--out-dir", help="output directory (if unspecified, files are not written)")
-    argparser.add_argument("-n", "--normalize", action="store_true", help="more normalization rules")
+    argparser.add_argument("-n", "--normalize", action="store_true", help="normalize passages before conversion")
     argparser.add_argument("-e", "--extra-normalization", action="store_true", help="more normalization rules")
     args = argparser.parse_args()
 
