@@ -1,5 +1,5 @@
 penman==0.6.2
 nltk==3.3
-parsimonious==0.8.0
+parsimonious==0.8.1
 word2number==1.1
 pyspotlight==0.7.2
