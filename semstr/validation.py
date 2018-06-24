@@ -3,17 +3,34 @@ from itertools import groupby
 from ucca import layer0, layer1, validation as ucca_validations
 from ucca.normalization import normalize
 
-from .constraint.amr import AmrConstraints
-from .constraint.conllu import ConlluConstraints
-from .constraint.sdp import SdpConstraints
-from .constraint.ucca import UccaConstraints
 from .constraints import Direction
 
+
+def ucca_constraints():
+    from .constraint.ucca import UccaConstraints
+    return UccaConstraints()
+
+
+def sdp_constraints():
+    from .constraint.sdp import SdpConstraints
+    return SdpConstraints()
+
+
+def conllu_constraints():
+    from .constraint.conllu import ConlluConstraints
+    return ConlluConstraints()
+
+
+def amr_constraints():
+    from .constraint.amr import AmrConstraints
+    return AmrConstraints()
+
+
 CONSTRAINTS = {
-    None:     UccaConstraints,
-    "amr":    AmrConstraints,
-    "sdp":    SdpConstraints,
-    "conllu": ConlluConstraints,
+    None:     ucca_constraints,
+    "amr":    amr_constraints,
+    "sdp":    sdp_constraints,
+    "conllu": conllu_constraints,
 }
 
 
