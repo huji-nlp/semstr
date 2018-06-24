@@ -238,7 +238,7 @@ def write_passage(passage, args):
         output = "\n".join(converter(passage)) if args.output_format == "amr" else \
             "\n".join(line for p in (split2sentences(passage) if args.split else [passage]) for line in
                       converter(p, test=args.test, tree=args.tree, mark_aux=args.mark_aux,
-                                wikification=args.wikification, label=args.label))
+                                wikification=args.wikification, default_label=args.default_label))
         with open(outfile, "w", encoding="utf-8") as f:
             print(output, file=f)
 
