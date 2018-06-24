@@ -243,7 +243,7 @@ class AmrConverter(FormatConverter):
                     label = CONST + "(" + MINUS + ")"
             node.attrib[LABEL_ATTRIB] = label
 
-    def to_format(self, passage, metadata=True, wikification=True, verbose=False, use_original=True):
+    def to_format(self, passage, metadata=True, wikification=True, verbose=False, use_original=True, default_label=None):
         if use_original:
             original = passage.extra.get("original")
             if original:
@@ -257,10 +257,10 @@ class AmrConverter(FormatConverter):
         if verbose:
             print("Expanding names...")
         self._expand_names(passage.layer(layer1.LAYER_ID))
-        return lines + (penman.encode(penman.Graph(list(self._to_triples(passage)))).split("\n") or ["(y / yes)"])
+        return lines + (penman.encode(penman.Graph(list(self._to_triples(passage, default_label=default_label)))).split("\n") or ["(y / yes)"])
 
     @staticmethod
-    def _to_triples(passage):
+    def _to_triples(passage, default_label=None):
         class _IdGenerator:
             def __init__(self):
                 self._id = 0
@@ -288,7 +288,9 @@ class AmrConverter(FormatConverter):
                 for node in nodes:
                     label = resolve_label(node)
                     if label is None:
-                        raise ValueError("Missing label for node '%s' (%s) in '%s'" % (node, node.ID, passage.ID))
+                        if default_label is None:
+                            raise ValueError("Missing label for node '%s' (%s) in '%s'" % (node, node.ID, passage.ID))
+                        label = default_label
                     elif is_concept(label):  # collapsed variable + concept: create both AMR nodes and the instance-of
                         concept = None if node.ID in labels else AmrConverter.strip(label)
                         label = labels[node.ID]  # generate variable label

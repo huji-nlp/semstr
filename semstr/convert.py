@@ -90,7 +90,7 @@ def from_amr(lines, passage_id=None, return_original=False, save_original=True, 
     return AmrConverter().from_format(lines, passage_id, return_original=return_original, save_original=save_original)
 
 
-def to_amr(passage, metadata=True, wikification=True, use_original=True, verbose=False, *args, **kwargs):
+def to_amr(passage, metadata=True, wikification=True, use_original=True, verbose=False, default_label=None, *args, **kwargs):
     """ Convert from a Passage object to a string in AMR PENMAN format (export)
 
     :param passage: the Passage object to convert
@@ -98,12 +98,13 @@ def to_amr(passage, metadata=True, wikification=True, use_original=True, verbose
     :param wikification: whether to wikify named concepts, adding a :wiki triple
     :param use_original: whether to use original AMR text from passage.extra
     :param verbose: whether to print extra information
+    :param default_label: label to use in case node has no label attribute
 
     :return list of lines representing an AMR in PENMAN format, constructed from the passage
     """
     del args, kwargs
     from semstr.conversion.amr import AmrConverter
-    return AmrConverter().to_format(passage, metadata, wikification, verbose, use_original=use_original)
+    return AmrConverter().to_format(passage, metadata, wikification, verbose, use_original=use_original, default_label=default_label)
 
 
 def from_conllu(lines, passage_id=None, split=True, return_original=False, annotate=False, *args, **kwargs):
@@ -236,7 +237,8 @@ def write_passage(passage, args):
         converter = CONVERTERS[args.output_format][1]
         output = "\n".join(converter(passage)) if args.output_format == "amr" else \
             "\n".join(line for p in (split2sentences(passage) if args.split else [passage]) for line in
-                      converter(p, test=args.test, tree=args.tree, mark_aux=args.mark_aux))
+                      converter(p, test=args.test, tree=args.tree, mark_aux=args.mark_aux,
+                                wikification=args.wikification, label=args.label))
         with open(outfile, "w", encoding="utf-8") as f:
             print(output, file=f)
 
@@ -278,6 +280,8 @@ if __name__ == '__main__':
     argparser.add_argument("-a", "--annotate", action="store_true", help="store dependency annotations in 'extra' dict")
     argparser.add_argument("-V", "--validate", action="store_true", help="validate every passage after conversion")
     argparser.add_argument("-u", "--ucca-validation", action="store_true", help="apply UCCA-specific validations")
+    argparser.add_argument("--no-wikification", action="store_false", dest="wikification", help="no AMR wikification")
+    argparser.add_argument("--default-label", help="use this for missing AMR labels, otherwise raise exception")
     group = argparser.add_mutually_exclusive_group()
     group.add_argument("--no-normalize", action="store_false", dest="normalize", help="do not normalize passage")
     group.add_argument("-e", "--extra-normalization", action="store_true", help="more normalization rules")
