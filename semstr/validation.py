@@ -6,24 +6,24 @@ from ucca.normalization import normalize
 from .constraints import Direction
 
 
-def ucca_constraints():
+def ucca_constraints(*args, **kwargs):
     from .constraint.ucca import UccaConstraints
-    return UccaConstraints()
+    return UccaConstraints(*args, **kwargs)
 
 
-def sdp_constraints():
+def sdp_constraints(*args, **kwargs):
     from .constraint.sdp import SdpConstraints
-    return SdpConstraints()
+    return SdpConstraints(*args, **kwargs)
 
 
-def conllu_constraints():
+def conllu_constraints(*args, **kwargs):
     from .constraint.conllu import ConlluConstraints
-    return ConlluConstraints()
+    return ConlluConstraints(*args, **kwargs)
 
 
-def amr_constraints():
+def amr_constraints(*args, **kwargs):
     from .constraint.amr import AmrConstraints
-    return AmrConstraints()
+    return AmrConstraints(*args, **kwargs)
 
 
 CONSTRAINTS = {
