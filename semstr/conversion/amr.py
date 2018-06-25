@@ -243,7 +243,8 @@ class AmrConverter(FormatConverter):
                     label = CONST + "(" + MINUS + ")"
             node.attrib[LABEL_ATTRIB] = label
 
-    def to_format(self, passage, metadata=True, wikification=True, verbose=False, use_original=True, default_label=None):
+    def to_format(self, passage, metadata=True, wikification=True, verbose=False, use_original=True,
+                  default_label=None):
         if use_original:
             original = passage.extra.get("original")
             if original:
@@ -257,7 +258,8 @@ class AmrConverter(FormatConverter):
         if verbose:
             print("Expanding names...")
         self._expand_names(passage.layer(layer1.LAYER_ID))
-        return lines + (penman.encode(penman.Graph(list(self._to_triples(passage, default_label=default_label)))).split("\n") or ["(y / yes)"])
+        return lines + (penman.encode(penman.Graph(list(
+            self._to_triples(passage, default_label=default_label)))).split("\n") or ["(y / yes)"])
 
     @staticmethod
     def _to_triples(passage, default_label=None):

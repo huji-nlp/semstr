@@ -15,7 +15,7 @@ from ucca.normalization import normalize
 from semstr.cfgutil import add_verbose_arg
 from semstr.validation import validate, print_errors
 
-desc = """Parses files in the specified format, and writes as the specified format.
+description = """Parses files in the specified format, and writes as the specified format.
 Each passage is written to the file: <outdir>/<prefix><passage_id>.<extension> """
 
 
@@ -90,7 +90,8 @@ def from_amr(lines, passage_id=None, return_original=False, save_original=True, 
     return AmrConverter().from_format(lines, passage_id, return_original=return_original, save_original=save_original)
 
 
-def to_amr(passage, metadata=True, wikification=True, use_original=True, verbose=False, default_label=None, *args, **kwargs):
+def to_amr(passage, metadata=True, wikification=True, use_original=True, verbose=False, default_label=None,
+           *args, **kwargs):
     """ Convert from a Passage object to a string in AMR PENMAN format (export)
 
     :param passage: the Passage object to convert
@@ -104,7 +105,8 @@ def to_amr(passage, metadata=True, wikification=True, use_original=True, verbose
     """
     del args, kwargs
     from semstr.conversion.amr import AmrConverter
-    return AmrConverter().to_format(passage, metadata, wikification, verbose, use_original=use_original, default_label=default_label)
+    return AmrConverter().to_format(passage, metadata, wikification, verbose, use_original=use_original,
+                                    default_label=default_label)
 
 
 def from_conllu(lines, passage_id=None, split=True, return_original=False, annotate=False, *args, **kwargs):
@@ -235,10 +237,10 @@ def write_passage(passage, args):
         ioutil.passage2file(passage, outfile, binary=args.binary)
     else:
         converter = CONVERTERS[args.output_format][1]
-        output = "\n".join(converter(passage)) if args.output_format == "amr" else \
+        output = "\n".join(converter(passage, wikification=args.wikification, default_label=args.default_label)) \
+            if args.output_format == "amr" else \
             "\n".join(line for p in (split2sentences(passage) if args.split else [passage]) for line in
-                      converter(p, test=args.test, tree=args.tree, mark_aux=args.mark_aux,
-                                wikification=args.wikification, default_label=args.default_label))
+                      converter(p, test=args.test, tree=args.tree, mark_aux=args.mark_aux))
         with open(outfile, "w", encoding="utf-8") as f:
             print(output, file=f)
 
@@ -270,7 +272,7 @@ def add_convert_args(p):
 
 
 if __name__ == '__main__':
-    argparser = configargparse.ArgParser(description=desc)
+    argparser = configargparse.ArgParser(description=description)
     argparser.add_argument("filenames", nargs="+", help="file names to convert")
     argparser.add_argument("-i", "--input-format", choices=CONVERTERS, help="input file format (detected by extension)")
     argparser.add_argument("-f", "--output-format", choices=CONVERTERS, help="output file format (default: UCCA)")
