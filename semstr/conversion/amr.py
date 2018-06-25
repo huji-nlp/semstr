@@ -259,7 +259,7 @@ class AmrConverter(FormatConverter):
             print("Expanding names...")
         self._expand_names(passage.layer(layer1.LAYER_ID))
         return lines + (penman.encode(penman.Graph(list(
-            self._to_triples(passage, default_label=default_label)))).split("\n") or ["(y / yes)"])
+            self._to_triples(passage, default_label=default_label)) or [("y", INSTANCE, "yes")])).split("\n"))
 
     @staticmethod
     def _to_triples(passage, default_label=None):
