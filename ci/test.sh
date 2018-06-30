@@ -55,4 +55,7 @@ parse_udpipe)
     python -m semstr.scripts.parse_ud "$DEV_DATA" -We --udpipe udpipe-ud-2.0-170801/english-ud-2.0-170801.udpipe \
         --label-map=semstr/util/resources/ud_ucca_label_map.csv
     ;;
+tupa)
+    pip install -U --upgrade-strategy=only-if-needed tupa
+    python -m tupa test_files/504.xml -t test_files/504.xml
 esac
