@@ -57,5 +57,5 @@ parse_udpipe)
     ;;
 tupa)
     pip install -U --upgrade-strategy=only-if-needed tupa
-    python -m tupa test_files/504.xml -t test_files/504.xml
+    python -m tupa test_files/504.xml -t test_files/504.xml -I 1 --max-words-external=50 --word-dim=10 --lstm-layer-dim=10 --embedding-layer-dim=10
 esac
