@@ -9,7 +9,7 @@ from glob import glob
 import configargparse
 from tqdm import tqdm
 from ucca import ioutil, layer1
-from ucca.convert import from_text, from_json, to_json, split2sentences
+from ucca.convert import from_text, to_text, from_json, to_json, split2sentences
 from ucca.normalization import normalize
 
 from semstr.cfgutil import add_verbose_arg
@@ -177,6 +177,7 @@ CONVERTERS = {
     "sdp": (from_sdp, to_sdp),
     "export": (from_export, to_export),
     "amr": (from_amr, to_amr),
+    "txt": (from_text, to_text),
 }
 FROM_FORMAT = {f: c[0] for f, c in CONVERTERS.items() if c[0] is not None}
 TO_FORMAT = {f: c[1] for f, c in CONVERTERS.items() if c[1] is not None}
