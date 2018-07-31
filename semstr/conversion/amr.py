@@ -18,7 +18,7 @@ DELETE_PATTERN = re.compile("\\\\|(?<=(?<!<)<)[^<>]+(?=>(?!>))")  # Delete text 
 class AmrConverter(FormatConverter):
     def __init__(self):
         self.passage_id = self.nodes = self.return_original = self.save_original = self.remove_cycles = \
-            self.extensions = self.excluded = None
+            self.extensions = self.excluded = self.alignments = None
 
     def from_format(self, lines, passage_id, return_original=False, save_original=True, remove_cycles=True, **kwargs):
         self.passage_id = passage_id
@@ -250,7 +250,6 @@ class AmrConverter(FormatConverter):
             if original:
                 return original
         textutil.annotate(passage, as_array=True)
-        lines = self.header(passage) if metadata else []
         if wikification:
             if verbose:
                 print("Wikifying passage...")
@@ -258,11 +257,16 @@ class AmrConverter(FormatConverter):
         if verbose:
             print("Expanding names...")
         self._expand_names(passage.layer(layer1.LAYER_ID))
-        return lines + (penman.encode(penman.Graph(list(
-            self._to_triples(passage, default_label=default_label)) or [("y", INSTANCE, "yes")])).split("\n"))
+        triples = list(self._to_triples(passage, default_label=default_label)) or [("y", INSTANCE, "yes")]
+        return (self.header(passage) if metadata else []) + (penman.encode(penman.Graph(triples)).split("\n"))
 
-    @staticmethod
-    def _to_triples(passage, default_label=None):
+    def _to_triples(self, passage, default_label=None):
+        class PathElement:
+            # noinspection PyShadowingNames
+            def __init__(self, edge, path):
+                self.edge = edge
+                self.path = path
+
         class _IdGenerator:
             def __init__(self):
                 self._id = 0
@@ -272,20 +276,28 @@ class AmrConverter(FormatConverter):
                 return "v" + str(self._id)
 
         root = passage.layer(layer1.LAYER_ID).heads[0]
-        pending = list(root)  # all the root's outgoing edges (NOT a list containing just the root)
+        pending = [PathElement(edge=e, path=[1, i]) for i, e in enumerate(root, start=1)]
         if not pending:  # there is nothing but the root node: add a dummy edge to stop the loop immediately
-            pending = [namedtuple("Edge", ["parent", "child", "tag"])(root, None, None)]
+            pending = [PathElement(edge=namedtuple("Edge", ["parent", "child", "tag"])(root, None, None), path=[1])]
         visited = set()  # to avoid cycles
         labels = defaultdict(_IdGenerator())  # to generate a different label for each variable
         prefixed_relation_counter = defaultdict(int)  # to add the index back to :op and :snt relations
+        self.alignments = {}
         while pending:  # breadth-first search
-            edge = pending.pop(0)
-            if edge not in visited:  # skip cycles
-                visited.add(edge)
-                nodes = [edge.parent]  # nodes taking part in the relation being created
-                if edge.child is not None and edge.tag not in TERMINAL_TAGS | {layer1.EdgeTags.Function}:  # skip
-                    nodes.append(edge.child)
-                    pending += edge.child  # all the child's outgoing edges
+            elem = pending.pop(0)
+            if elem.edge not in visited:  # skip cycles
+                visited.add(elem.edge)
+                nodes = [elem.edge.parent]  # nodes taking part in the relation being created
+                if elem.edge.child is not None:
+                    if elem.edge.tag in TERMINAL_TAGS:  # skip terminals but keep them for the alignments
+                        for terminal in elem.edge.child.get_terminals(punct=False):
+                            self.alignments[terminal.position - 1] = ".".join(map(str, elem.path[:-1]))
+                    elif elem.edge.tag == layer1.EdgeTags.Function:  # skip functions
+                        pass
+                    else:
+                        nodes.append(elem.edge.child)
+                        pending += [PathElement(edge=e, path=elem.path + [i])
+                                    for i, e in enumerate(elem.edge.child, start=1)]
                 head_dep = []  # will be pair of (parent label, child label)
                 for node in nodes:
                     label = resolve_label(node)
@@ -302,14 +314,15 @@ class AmrConverter(FormatConverter):
                         label = AmrConverter.strip(label)
                     head_dep.append(label)
                 if len(head_dep) > 1:
-                    rel = edge.tag or "label"
+                    rel = elem.edge.tag or "label"
                     if rel in PREFIXED_RELATION_ENUM:
-                        key = (rel, edge.parent.ID)
+                        key = (rel, elem.edge.parent.ID)
                         prefixed_relation_counter[key] += 1
                         rel += str(prefixed_relation_counter[key])
                     elif rel == PREFIXED_RELATION_PREP:
                         # noinspection PyTypeChecker
-                        rel = "-".join([rel] + list(OrderedDict.fromkeys(t.text for t in edge.child.get_terminals())))
+                        rel = "-".join([rel] + list(OrderedDict.fromkeys(
+                            t.text for t in elem.edge.child.get_terminals())))
                     yield head_dep[0], rel, head_dep[1]
 
     @staticmethod
@@ -325,7 +338,9 @@ class AmrConverter(FormatConverter):
     def strip_quotes(label):
         return label[1:-1] if len(label) > 1 and label.startswith('"') and label.endswith('"') else label
 
-    @staticmethod
-    def header(passage):
-        return ["# ::id " + passage.ID,
-                "# ::tok " + " ".join(t.text for t in passage.layer(layer0.LAYER_ID).all)]
+    def header(self, passage):
+        ret = ["# ::id " + passage.ID,
+               "# ::tok " + " ".join(t.text for t in passage.layer(layer0.LAYER_ID).all)]
+        if self.alignments:
+            ret.append("# ::alignments " + " ".join("%d-%s" % (i, a) for i, a in sorted(self.alignments.items())))
+        return ret
