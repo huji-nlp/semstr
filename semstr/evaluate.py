@@ -134,7 +134,10 @@ def write_csv(filename, rows):
 
 def main(args):
     files = [[os.path.join(d, f) for f in os.listdir(d)] if os.path.isdir(d) else [d] for d in (args.guessed, args.ref)]
-    evaluate = EVALUATORS.get(passage_format(files[1][0])[1], EVALUATORS[args.format]).evaluate
+    try:
+        evaluate = EVALUATORS.get(passage_format(files[1][0])[1], EVALUATORS[args.format]).evaluate
+    except IndexError as e:
+        raise ValueError("No reference passages found: %s" % args.ref) from e
     results = list(evaluate_all(evaluate, files, **vars(args)))
     summary = Scores(results)
     eval_type = UNLABELED if args.unlabeled else LABELED
