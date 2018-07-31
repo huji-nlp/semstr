@@ -84,6 +84,8 @@ def passage_format(filename):
 def read_files(files, default_format=None, verbose=0, force_basename=False):
     for filename in sorted(files, key=lambda x: tuple(map(int, re.findall("\d+", x))) or x):
         basename, converted_format = passage_format(filename)
+        if converted_format == "txt":
+            converted_format = default_format
         in_converter, out_converter = CONVERTERS.get(converted_format, CONVERTERS[default_format])
         kwargs = dict(converted_format=converted_format, in_converter=in_converter, out_converter=out_converter)
         if in_converter:
