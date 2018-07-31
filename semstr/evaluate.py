@@ -114,8 +114,7 @@ def evaluate_all(evaluate, files, name=None, verbose=0, quiet=False, basename=Fa
                 print(r.ID, end=" ")
         if g.format != r.format:
             # noinspection PyCallingNonCallable
-            g.passage = next(iter(g.in_converter(g.passage + [""], passage_id=r.ID))) if \
-                r.out_converter is None else r.out_converter(g.converted)
+            g.passage = g.converted if r.out_converter is None else r.out_converter(g.converted)
         result = evaluate(g.passage, r.passage, verbose=verbose > 1 or units, units=units, errors=errors,
                           eval_type=UNLABELED if unlabeled else None, normalize=normalize,
                           constructions=constructions)
