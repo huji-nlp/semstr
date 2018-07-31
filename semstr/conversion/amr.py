@@ -309,13 +309,13 @@ class AmrConverter(FormatConverter):
                         concept = None if node.ID in labels else AmrConverter.strip(label)
                         label = labels[node.ID]  # generate variable label
                         if concept is not None:  # first time we encounter the variable
-                            yield label, INSTANCE, concept  # add instance-of edge
+                            yield label, INSTANCE, concept + self.alignment_str(node)  # add instance-of edge
                     else:  # constant
-                        label = AmrConverter.strip(label)
+                        label = AmrConverter.strip(label) + self.alignment_str(node)
                     head_dep.append(label)
                 if len(head_dep) > 1:
                     rel = elem.edge.tag or "label"
-                    if rel in PREFIXED_RELATION_ENUM:
+                    if rel in PREFIXED_RELATION_ENUM:  # e.g. :op
                         key = (rel, elem.edge.parent.ID)
                         prefixed_relation_counter[key] += 1
                         rel += str(prefixed_relation_counter[key])
@@ -337,6 +337,10 @@ class AmrConverter(FormatConverter):
     @staticmethod
     def strip_quotes(label):
         return label[1:-1] if len(label) > 1 and label.startswith('"') and label.endswith('"') else label
+
+    @staticmethod
+    def alignment_str(node):
+        return "~e." + ",".join([str(t.position - 1) for t in node.terminals]) if node.terminals else ""
 
     def header(self, passage):
         ret = ["# ::id " + passage.ID,
