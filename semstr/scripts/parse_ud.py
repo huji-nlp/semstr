@@ -4,7 +4,7 @@ import argparse
 import operator
 
 from tqdm import tqdm
-from ucca import layer0
+from ucca import layer0, constructions as ucca_constructions
 from ucca.normalization import normalize
 from ucca.textutil import annotate_all, Attr
 
@@ -62,7 +62,8 @@ def main(args):
                 if converter is not None:
                     passage, parsed = map(converter, (passage, parsed))
                 if evaluator is not None:
-                    scores.append(evaluator.evaluate(parsed, passage, verbose=args.verbose > 1))
+                    scores.append(evaluator.evaluate(parsed, passage, constructions=args.constructions,
+                                                     verbose=args.verbose > 1))
         if scores:
             Scores(scores).print()
 
@@ -73,6 +74,7 @@ if __name__ == '__main__':
     argparser.add_argument("--output-format", choices=TO_FORMAT, help="output file format (default: UCCA)")
     add_convert_args(argparser)
     argparser.add_argument("-e", "--evaluate", action="store_true", help="evaluate against original passages")
+    ucca_constructions.add_argument(argparser)
     argparser.add_argument("-W", "--no-write", action="store_false", dest="write", help="do not write parsed passages")
     add_verbose_arg(argparser, help="detailed output")
     main(argparser.parse_args())
