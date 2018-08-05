@@ -82,7 +82,11 @@ def passage_format(filename):
 
 
 def read_files(files, default_format=None, verbose=0, force_basename=False):
-    for filename in sorted(files, key=lambda x: tuple(map(int, re.findall("\d+", x))) or x):
+    try:
+        files = sorted(files, key=lambda x: tuple(map(int, re.findall("\d+", x))) or (x,))
+    except TypeError as e:
+        print("Cannot sort filenames: %s" % e, file=sys.stderr)
+    for filename in files:
         basename, converted_format = passage_format(filename)
         if converted_format == "txt":
             converted_format = default_format
@@ -134,7 +138,8 @@ def write_csv(filename, rows):
 
 
 def main(args):
-    files = [[os.path.join(d, f) for f in os.listdir(d)] if os.path.isdir(d) else [d] for d in (args.guessed, args.ref)]
+    files = [[os.path.join(d, f) for f in os.listdir(d) if not os.path.isdir(os.path.join(d, f))]
+             if os.path.isdir(d) else [d] for d in (args.guessed, args.ref)]
     try:
         evaluate = EVALUATORS.get(passage_format(files[1][0])[1], EVALUATORS[args.format]).evaluate
     except IndexError as e:
