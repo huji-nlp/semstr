@@ -2,9 +2,8 @@ import os
 from argparse import ArgumentParser
 
 import matplotlib.pyplot as plt
-from tqdm import tqdm
 from ucca import visualization
-from ucca.ioutil import get_passages_with_progress_bar
+from ucca.ioutil import get_passages_with_progress_bar, external_write_mode
 from ucca.normalization import normalize
 
 from semstr.convert import FROM_FORMAT, map_labels
@@ -33,7 +32,7 @@ if __name__ == "__main__":
                 with open(os.path.join(args.out_dir, passage.ID + ".tikz.txt"), "w") as f:
                     print(tikz, file=f)
             else:
-                with tqdm.external_write_mode():
+                with external_write_mode():
                     print(tikz)
         else:
             plt.figure(figsize=(19, 10))

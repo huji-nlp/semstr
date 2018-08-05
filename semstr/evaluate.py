@@ -96,7 +96,7 @@ def read_files(files, default_format=None, verbose=0, force_basename=False):
             with open(filename, encoding="utf-8") as f:
                 for converted, passage, passage_id in in_converter(f, passage_id=basename, return_original=True):
                     if verbose:
-                        with tqdm.external_write_mode():
+                        with ioutil.external_write_mode():
                             print("Converting %s from %s" % (filename, converted_format))
                     yield ConvertedPassage(converted, passage, basename if force_basename else passage_id, **kwargs)
         else:
@@ -114,7 +114,7 @@ def evaluate_all(evaluate, files, name=None, verbose=0, quiet=False, basename=Fa
             while g.ID > r.ID:
                 r = next(ref)
         if not quiet:
-            with tqdm.external_write_mode():
+            with ioutil.external_write_mode():
                 print(r.ID, end=" ")
         if g.format != r.format:
             # noinspection PyCallingNonCallable
@@ -123,10 +123,10 @@ def evaluate_all(evaluate, files, name=None, verbose=0, quiet=False, basename=Fa
                           eval_type=UNLABELED if unlabeled else None, normalize=normalize,
                           constructions=constructions)
         if not quiet:
-            with tqdm.external_write_mode():
+            with ioutil.external_write_mode():
                 print("F1: %.3f" % result.average_f1(UNLABELED if unlabeled else LABELED))
         if verbose:
-            with tqdm.external_write_mode():
+            with ioutil.external_write_mode():
                 result.print()
         yield result
 

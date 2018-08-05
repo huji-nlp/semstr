@@ -5,7 +5,7 @@ from functools import partial
 
 from tqdm import tqdm
 from ucca import layer0
-from ucca.ioutil import write_passage, read_files_and_dirs
+from ucca.ioutil import write_passage, read_files_and_dirs, external_write_mode
 from ucca.textutil import annotate_all
 
 from semstr.cfgutil import read_specs, add_specs_args
@@ -23,7 +23,7 @@ def copy_annotation(passages, conllu, as_array=True, verbose=False):
         raise ValueError("Annotating with CoNLL-U files and as_array=False are currently not supported; use --as-array")
     for passage, annotated in zip(passages, read_files_and_dirs(conllu, converters=CONVERTERS)):
         if verbose:
-            with tqdm.external_write_mode():
+            with external_write_mode():
                 print("Reading annotation from '%s'" % annotated.ID)
         passage.layer(layer0.LAYER_ID).docs()[:] = annotated.layer(layer0.LAYER_ID).docs()
         yield passage

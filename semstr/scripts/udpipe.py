@@ -7,7 +7,7 @@ from operator import itemgetter
 from time import time
 
 from tqdm import tqdm
-from ucca import layer0
+from ucca import layer0, ioutil
 from ucca.convert import split2paragraphs
 
 from semstr.cfgutil import add_verbose_arg, read_specs, add_specs_args
@@ -36,12 +36,12 @@ def udpipe(sentences, model_name, verbose=False):
     text = "\n".join(lines1)
     error = ProcessingError()
     num_tokens = sum(1 for l in lines2 if l)
-    with tqdm.external_write_mode():
+    with ioutil.external_write_mode():
         print("Running %s on %d tokens... " % (model_name, num_tokens), end="", flush=True)
     start = time()
     processed = pipeline.process(text, error)
     duration = time() - start
-    with tqdm.external_write_mode():
+    with ioutil.external_write_mode():
         print("Done (%.3fs, %.0f tokens/s)" % (duration, num_tokens / duration if duration else 0))
         if verbose:
             print(processed)
