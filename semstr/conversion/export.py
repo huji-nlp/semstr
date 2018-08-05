@@ -39,6 +39,7 @@ class ExportConverter(FormatConverter):
         self.node_ids_with_children = set()
         self.in_terminals_section = True
         self.generate_id = self._IdGenerator()
+        self.lines_read = []
 
     @staticmethod
     def _split_tags(tag, edge_tag):
@@ -48,6 +49,7 @@ class ExportConverter(FormatConverter):
         return tag, edge_tag
 
     def _read_line(self, line):
+        self.lines_read.append(line)
         fields = self.split_line(line)
         text, tag = fields[:2]
         m = re.match("#(\d+)", text)
@@ -117,15 +119,17 @@ class ExportConverter(FormatConverter):
 
         return p
 
-    def from_format(self, lines, passage_id, split=False):
+    def from_format(self, lines, passage_id, split=False, return_original=False):
         self.passage_id = passage_id
         self.node_by_id = None
         for line in filter(str.strip, lines):
             if self.node_by_id is None:
                 self._init_nodes(line)
             elif line.startswith("#EOS"):  # finished reading input for a passage
-                yield self._build_passage()
+                passage = self._build_passage()
+                yield (passage, self.lines_read, passage.ID) if return_original else passage
                 self.node_by_id = None
+                self.lines_read = []
             else:  # read input line
                 self._read_line(line)
 

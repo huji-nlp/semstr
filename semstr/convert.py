@@ -19,18 +19,19 @@ description = """Parses files in the specified format, and writes as the specifi
 Each passage is written to the file: <outdir>/<prefix><passage_id>.<extension> """
 
 
-def from_conll(lines, passage_id, split=True, *args, **kwargs):
+def from_conll(lines, passage_id, split=True, return_original=False, *args, **kwargs):
     """Converts from parsed text in CoNLL format to a Passage object.
 
     :param lines: iterable of lines in CoNLL format, describing a single passage.
     :param passage_id: ID to set for passage
     :param split: split each sentence to its own passage?
+    :param return_original: return triple of (UCCA passage, CoNLL string, sentence ID)
 
     :return generator of Passage objects
     """
     del args, kwargs
     from semstr.conversion.conll import ConllConverter
-    return ConllConverter().from_format(lines, passage_id, split)
+    return ConllConverter().from_format(lines, passage_id, split, return_original=return_original)
 
 
 def to_conll(passage, test=False, tree=True, *args, **kwargs):
@@ -47,18 +48,19 @@ def to_conll(passage, test=False, tree=True, *args, **kwargs):
     return ConllConverter().to_format(passage, test, tree)
 
 
-def from_export(lines, passage_id=None, split=True, *args, **kwargs):
+def from_export(lines, passage_id=None, split=True, return_original=False, *args, **kwargs):
     """Converts from parsed text in NeGra export format to a Passage object.
 
     :param lines: iterable of lines in NeGra export format, describing a single passage.
     :param passage_id: ID to set for passage, overriding the ID from the file
     :param split: split each sentence to its own passage?
+    :param return_original: return triple of (UCCA passage, Export string, sentence ID)
 
     :return generator of Passage objects
     """
     del args, kwargs
     from semstr.conversion.export import ExportConverter
-    return ExportConverter().from_format(lines, passage_id, split)
+    return ExportConverter().from_format(lines, passage_id, split, return_original=return_original)
 
 
 def to_export(passage, test=False, tree=False, *args, **kwargs):
