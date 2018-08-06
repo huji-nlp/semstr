@@ -12,7 +12,7 @@ class ConversionTests(unittest.TestCase):
     """Tests conversion module correctness and API."""
 
     def test_convert(self):
-        """Test that converting an SDP graph to UCCA and back retains perfect Smatch F1"""
+        """Test that converting an SDP graph to UCCA and back retains perfect F1"""
         for passage, ref, _ in read_test_sdp():
             self.convert_and_evaluate(passage, ref)
 

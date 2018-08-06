@@ -78,11 +78,17 @@ class ConlluConverter(ConllConverter):
         yield ["# text = " + " ".join(dep_node.token.text for dep_node in dep_nodes)]
         yield ["# doc_id = " + passage_id.rpartition(".")[0]]
 
+    def find_headed_unit(self, unit):
+        while unit.incoming and (not unit.outgoing or unit.incoming[0].tag == self.HEAD) and \
+                not (unit.incoming[0].tag == layer1.EdgeTags.Terminal and unit != unit.parents[0].children[0]):
+            unit = unit.parents[0]
+        return unit
+
+    def _label_edge(self, node):
+        return self.HEAD
+
     def add_node(self, dep_node, edge, l1):
-        if self.is_flat(edge):  # Unanalyzable unit
-            dep_node.preterminal = edge.head.preterminal
-            dep_node.node = edge.head.node
-        elif edge.rel == AUX and edge.head.preterminal:  # Attached aux as sibling of main predicate
+        if edge.rel == AUX and edge.head.preterminal:  # Attached aux as sibling of main predicate
             # TODO update to UCCA guidelines v1.0.6
             dep_node.preterminal = dep_node.node = l1.add_fnode(edge.head.preterminal, edge.rel)
             edge.head.preterminal = l1.add_fnode(edge.head.preterminal, self.HEAD)

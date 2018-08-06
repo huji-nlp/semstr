@@ -60,6 +60,7 @@ class DependencyConverter(FormatConverter):
             self.rel = rel
             self.remote = remote
             self._head = self._dependent = None
+            self.head = self.dependent = None
 
         @property
         def head(self):
@@ -93,10 +94,10 @@ class DependencyConverter(FormatConverter):
         def link_head(self, heads, copy_of=None):
             if isinstance(self.head_index, str):
                 self.head_index = int((copy_of or {}).get(self.head_index, re.sub(r"\..*", "", self.head_index)))
-            self._head = heads[self.head_index]
+            self.head = heads[self.head_index]
 
         def remove(self):
-            self._head = self._dependent = None
+            self.head = self.dependent = None
 
         def __repr__(self):
             return (str(self.head_index) if self.head is None else repr(self.head)) + \
@@ -180,10 +181,10 @@ class DependencyConverter(FormatConverter):
         dependent_rels = {e.rel for e in node.outgoing}
         if layer0.is_punct(node.terminal):
             return EdgeTags.Punctuation
-        elif EdgeTags.ParallelScene in dependent_rels:
-            return EdgeTags.ParallelScene
         elif EdgeTags.Participant in dependent_rels:
             return EdgeTags.Process
+        elif EdgeTags.ParallelScene in dependent_rels:
+            return EdgeTags.ParallelScene
         else:
             return EdgeTags.Center
 
@@ -233,11 +234,11 @@ class DependencyConverter(FormatConverter):
         return p
 
     def create_non_terminals(self, dep_nodes, l1):
+        forest = any(n.is_top for n in dep_nodes)
         for dep_node in dep_nodes:
             if dep_node.outgoing:
-                if not self.tree and dep_node.position and not dep_node.incoming:  # Create top node
-                    dep_node.node = dep_node.preterminal = l1.add_fnode(None,
-                                                                        (self.ROOT, self.TOP)[dep_node.is_top])
+                if forest and not self.tree and dep_node.position and not dep_node.incoming:  # Create top node
+                    dep_node.node = dep_node.preterminal = l1.add_fnode(None, (self.ROOT, self.TOP)[dep_node.is_top])
                 if self.is_punct(dep_node):  # Avoid outgoing edges from punctuation by flipping edges
                     head = dep_node.incoming[0].head if dep_node.incoming else dep_nodes[0]
                     outgoing = list(dep_node.outgoing)
@@ -248,18 +249,21 @@ class DependencyConverter(FormatConverter):
         remote_edges = []
         sorted_dep_nodes = self._topological_sort(dep_nodes)
         self.preprocess(sorted_dep_nodes, to_dep=False)
-        for dep_node in sorted_dep_nodes:  # Create all other nodes
+        if not forest:
+            sorted_dep_nodes = [n for n in dep_nodes[1:] if not n.incoming and not n.is_top] + sorted_dep_nodes
+        for dep_node in sorted_dep_nodes:  # Other nodes
             incoming = list(dep_node.incoming)
-            if dep_node.is_top and incoming[0].head_index != 0:
-                top_edge = self.Edge(head_index=0, rel=self.TOP, remote=False)
-                top_edge.head = dep_nodes[0]
-                incoming[:0] = [top_edge]
-            edge, *remotes = incoming
-            self.add_node(dep_node, edge, l1)
+            if incoming:
+                if dep_node.is_top and incoming[0].head_index != 0:
+                    top_edge = self.Edge(head_index=0, rel=self.TOP, remote=False)
+                    top_edge.head = dep_nodes[0]
+                    incoming[:0] = [top_edge]
+                edge, *remotes = incoming
+                self.add_node(dep_node, edge, l1)
+                remote_edges += remotes
             if dep_node.outgoing and not any(map(self.is_flat, dep_node.incoming)):
-                dep_node.preterminal = l1.add_fnode(dep_node.preterminal,
-                                                    self.HEAD)  # Intermediate head for hierarchy
-            remote_edges += remotes
+                dep_node.preterminal = l1.add_fnode(dep_node.preterminal,  # Intermediate head for hierarchy
+                                                    self._label_edge(dep_node))
         for edge in remote_edges:
             parent = edge.head.node or l1.heads[0]
             child = edge.dependent.node or l1.heads[0]
@@ -540,10 +544,13 @@ class DependencyConverter(FormatConverter):
         return line.split("\t")
 
     def add_node(self, dep_node, edge, l1):
-        # Add top-level edge (like UCCA H) if top-level, otherwise add child to head's node
-        dep_node.preterminal = dep_node.node = \
-            l1.add_fnode(dep_node.preterminal, self.HEAD) if edge.rel.upper() == self.ROOT else (
-                l1.add_fnode(None if self.is_scene(edge) else edge.head.node, edge.rel))
+        if self.is_flat(edge):  # Unanalyzable unit
+            dep_node.preterminal = edge.head.preterminal
+            dep_node.node = edge.head.node
+        else:  # Add top-level edge (like UCCA H) if top-level, otherwise add child to head's node
+            dep_node.preterminal = dep_node.node = \
+                l1.add_fnode(dep_node.preterminal, self.HEAD) if edge.rel.upper() == self.ROOT else (
+                    l1.add_fnode(None if self.is_scene(edge) else edge.head.node, edge.rel))
 
     @staticmethod
     def primary_edges(unit, tag=None):
@@ -561,8 +568,7 @@ class DependencyConverter(FormatConverter):
         return [n for n in dep_nodes if any(e.rel == self.ROOT.lower() for e in n.incoming)]
 
     def find_headed_unit(self, unit):
-        while unit.incoming and (not unit.outgoing or unit.incoming[0].tag == self.HEAD) and \
-                not (unit.incoming[0].tag == layer1.EdgeTags.Terminal and unit != unit.parents[0].children[0]):
+        while unit.incoming and unit == self.find_head_child(unit.parents[0]):
             unit = unit.parents[0]
         return unit
 
@@ -573,7 +579,7 @@ class DependencyConverter(FormatConverter):
         return dep_node.token and {dep_node.token.tag, dep_node.token.pos} & {layer0.NodeTags.Punct, self.punct_tag}
 
     def is_flat(self, edge):
-        return False
+        return edge.rel == EdgeTags.Terminal
 
     def is_scene(self, edge):
         return False
