@@ -67,7 +67,7 @@ class DependencyConverter(FormatConverter):
 
         @head.setter
         def head(self, head):
-            if self._head is not None:
+            if self._head is not None and self in self._head.outgoing:
                 self._head.outgoing.remove(self)
             self._head = head
             if head is not None:
