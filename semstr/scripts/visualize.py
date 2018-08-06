@@ -8,6 +8,8 @@ from ucca.normalization import normalize
 
 from semstr.convert import FROM_FORMAT, map_labels
 
+FROM_FORMAT["txt"] = FROM_FORMAT["amr"]
+
 if __name__ == "__main__":
     argparser = ArgumentParser(description="Visualize the given passages as graphs.")
     argparser.add_argument("passages", nargs="+", help="Passages in any format")
@@ -36,6 +38,7 @@ if __name__ == "__main__":
                     print(tikz)
         else:
             plt.figure(figsize=(19, 10))
+            plt.title(" ".join(filter(None, (passage.extra.get("format"), passage.ID))))
             visualization.draw(passage, node_ids=args.node_ids)
             if args.out_dir:
                 plt.savefig(os.path.join(args.out_dir, passage.ID + ".png"))
