@@ -9,6 +9,9 @@ class ConllConverter(DependencyConverter):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+    def modify_passage(self, passage):
+        passage.extra["format"] = "conll"
+
     def read_line(self, line, previous_node, copy_of):
         fields = self.split_line(line)
         # id, form, lemma, coarse pos, fine pos, features, head, relation, [enhanced], [misc]

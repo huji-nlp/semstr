@@ -59,8 +59,7 @@ class DependencyConverter(FormatConverter):
             self.head_index = head_index
             self.rel = rel
             self.remote = remote
-            self._head = None
-            self._dependent = None
+            self._head = self._dependent = None
 
         @property
         def head(self):
@@ -94,10 +93,10 @@ class DependencyConverter(FormatConverter):
         def link_head(self, heads, copy_of=None):
             if isinstance(self.head_index, str):
                 self.head_index = int((copy_of or {}).get(self.head_index, re.sub(r"\..*", "", self.head_index)))
-            self.head = heads[self.head_index]
+            self._head = heads[self.head_index]
 
         def remove(self):
-            self.head = self.dependent = None
+            self._head = self._dependent = None
 
         def __repr__(self):
             return (str(self.head_index) if self.head is None else repr(self.head)) + \

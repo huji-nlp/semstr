@@ -7,8 +7,8 @@ EVAL_TYPES = (evaluation.LABELED, evaluation.UNLABELED)
 
 
 def create_top_edge(converter):
-    edge = converter.Edge(0, converter.TOP, False)
-    edge.head = converter.Node()
+    edge = SdpConverter.Edge(0, converter.TOP, False)
+    edge.head = SdpConverter.Node()
     return edge
 
 

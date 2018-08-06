@@ -23,9 +23,7 @@ class ExportConverter(FormatConverter):
             return str(self._id)
 
     def __init__(self):
-        self.passage_id = None
-        self.sentence_id = None
-        self.node_by_id = None
+        self.passage_id = self.sentence_id = self.node_by_id = self.lines_read = None
 
     def _init_nodes(self, line):
         m = re.match("#BOS\s+(\d+).*", line)
@@ -127,6 +125,7 @@ class ExportConverter(FormatConverter):
                 self._init_nodes(line)
             elif line.startswith("#EOS"):  # finished reading input for a passage
                 passage = self._build_passage()
+                passage.extra["format"] = "export"
                 yield (passage, self.lines_read, passage.ID) if return_original else passage
                 self.node_by_id = None
                 self.lines_read = []
