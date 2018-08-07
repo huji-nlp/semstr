@@ -130,11 +130,11 @@ def test_to_conll():
     converted_passage = next(convert.from_conll(converted, passage.ID))
     # ioutil.passage2file(converted_passage, "test_files/conversion/120.conll.xml")
     ref = loaded("test_files/conversion/120.conll.xml")
-    assert converted_passage.equals(ref)
+    assert converted_passage.equals(ref), "Passage does not match expected: \n%s\n%s" % (converted_passage, ref)
     # Put the same sentence twice and try converting again
     for converted_passage in convert.from_conll(converted * 2, passage.ID):
         ref = loaded("test_files/conversion/120.conll.xml")
-    assert converted_passage.equals(ref), "Passage does not match expected"
+        assert converted_passage.equals(ref), "Passage does not match expected: \n%s\n%s" % (converted_passage, ref)
 
 
 def test_to_sdp():
@@ -146,7 +146,7 @@ def test_to_sdp():
     converted_passage = next(convert.from_sdp(converted, passage.ID))
     # ioutil.passage2file(converted_passage, "test_files/conversion/120.sdp.xml")
     ref = loaded("test_files/conversion/120.sdp.xml")
-    assert converted_passage.equals(ref), "Passage does not match expected"
+    assert converted_passage.equals(ref), "Passage does not match expected: \n%s\n%s" % (converted_passage, ref)
 
 
 def test_to_export():
@@ -158,4 +158,4 @@ def test_to_export():
     converted_passage = next(convert.from_export(converted, passage.ID))
     # ioutil.passage2file(converted_passage, "test_files/conversion/120.export.xml")
     ref = loaded("test_files/conversion/120.export.xml")
-    assert converted_passage.equals(ref), "Passage does not match expected"
+    assert converted_passage.equals(ref), "Passage does not match expected: \n%s\n%s" % (converted_passage, ref)
