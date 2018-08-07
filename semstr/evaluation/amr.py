@@ -1,7 +1,9 @@
-from importlib import util
+# noinspection PyUnresolvedReferences
+import importlib
 import os
 import re
 import sys
+from importlib import util
 
 from ucca import evaluation
 from ucca.constructions import PRIMARY

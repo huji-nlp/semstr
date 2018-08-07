@@ -1,9 +1,11 @@
 import csv
-import importlib.util  # needed for amr.peg
+# noinspection PyUnresolvedReferences
+import importlib
 import os
 import re
 import string
 from collections import defaultdict
+from importlib import util  # needed for amr.peg
 
 import spotlight
 from requests.exceptions import ConnectionError
@@ -17,7 +19,7 @@ from ..constraints import Valid
 
 prev_dir = os.getcwd()
 try:
-    os.chdir(os.path.dirname(importlib.util.find_spec("src.amr").origin))  # to find amr.peg
+    os.chdir(os.path.dirname(util.find_spec("src.amr").origin))  # to find amr.peg
     from src import amr as amr_lib
 finally:
     os.chdir(prev_dir)
