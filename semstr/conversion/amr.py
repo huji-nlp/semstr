@@ -8,11 +8,13 @@ import penman
 from ucca import layer0, layer1, convert, textutil
 
 from .format import FormatConverter
-from ..util.amr import parse, amr_lib, resolve_label, EXTENSIONS, COMMENT_PREFIX, DEP_PREFIX, \
-    TOP_DEP, PREFIXED_RELATION_PATTERN, PREFIXED_RELATION_SUBSTITUTION, LABEL_ATTRIB, NAME, OP, PUNCTUATION_DEP, \
-    PUNCTUATION_LABEL, TERMINAL_DEP, ALIGNMENT_PREFIX, ALIGNMENT_SEP, SKIP_TOKEN_PATTERN, CONCEPT, NUM, WIKI, CONST, \
-    NUM_PATTERN, MINUS, WIKIFIER, TERMINAL_TAGS, is_concept, INSTANCE, PREFIXED_RELATION_ENUM, PREFIXED_RELATION_PREP
+from ..util.amr import resolve_label, EXTENSIONS, COMMENT_PREFIX, \
+    PREFIXED_RELATION_PATTERN, PREFIXED_RELATION_SUBSTITUTION, LABEL_ATTRIB, NAME, OP, PUNCTUATION_DEP, \
+    PUNCTUATION_LABEL, TERMINAL_DEP, SKIP_TOKEN_PATTERN, WIKI, INSTANCE, PREFIXED_RELATION_ENUM, PREFIXED_RELATION_PREP, \
+    NUM_PATTERN, MINUS, WIKIFIER, TERMINAL_TAGS, is_concept, is_numeric
 
+AMR_CODEC = penman.AMRCodec()
+EMPTY_ALIGNED_TRIPLES = {("y", INSTANCE, "yes"): []}
 DELETE_PATTERN = re.compile("\\\\|(?<=(?<!<)<)[^<>]+(?=>(?!>))")  # Delete text inside single angle brackets
 ID_PATTERN = re.compile("#\s*::id\s+(\S+)")
 TOK_PATTERN = re.compile("#\s*::(?:tok|snt)\s+(.*)")
@@ -26,8 +28,8 @@ class AmrConverter(FormatConverter):
             self.id = amr_id
             self.tokens = tokens
             self.format = original_format
-            assert self.tokens is not None, "Cannot convert AMR without input tokens: %s" % self.lines
-            self.amr = parse(" ".join(self.lines), tokens=self.tokens)
+            assert tokens is not None, "Cannot convert AMR without input tokens: %s" % text
+            self.amr = AMR_CODEC.decode(" ".join(self.lines))
 
     def __init__(self):
         self.passage_id = self.nodes = self.return_original = self.save_original = self.remove_cycles = \
@@ -43,22 +45,22 @@ class AmrConverter(FormatConverter):
         self.wikification = wikification
         self.extensions = [l for l in EXTENSIONS if kwargs.get(l)]
         self.excluded = {i for l, r in EXTENSIONS.items() if l not in self.extensions for i in r}
-        for passage, graph in textutil.annotate_all(self._init_passages(self._amr_generator(lines), **kwargs),
+        for passage, graph in textutil.annotate_all(self._init_passages(self._generate_graphs(lines), **kwargs),
                                                     as_array=True, as_tuples=True):
             yield self._build_passage(passage, graph)
 
-    def _amr_generator(self, lines):
-        amr_lines = []
+    def _generate_graphs(self, lines):
+        text = []
         amr_id = tokens = original_format = None
 
         def _graph():
-            return self.Graph(amr_lines, amr_id, tokens, original_format)
+            return self.Graph(text, amr_id, tokens, original_format)
 
         for line in lines:
             line = line.lstrip()
             if line:
                 if line[0] != COMMENT_PREFIX:
-                    amr_lines.append(line)
+                    text.append(line)
                     continue
                 m = ID_PATTERN.match(line)
                 if m:
@@ -71,11 +73,11 @@ class AmrConverter(FormatConverter):
                         m = FORMAT_PATTERN.match(line)
                         if m:
                             original_format = m.group(1)
-            if amr_lines:
+            if text:
                 yield _graph()
-                amr_lines = []
+                text = []
                 amr_id = tokens = None
-        if amr_lines:
+        if text:
             yield _graph()
 
     def _init_passages(self, graphs, **kwargs):
@@ -92,10 +94,10 @@ class AmrConverter(FormatConverter):
         l0 = passage.layer(layer0.LAYER_ID)
         l1 = passage.layer(layer1.LAYER_ID)
         self._build_layer1(graph.amr, l1)
-        self._build_layer0(self.align_nodes(graph.amr), l1, l0)
+        self._build_layer0(self.align_nodes(graph), l1, l0)
         self._update_implicit(l1)
         self._update_labels(l1)
-        original = self.header(passage) + graph.amr(alignments=False).split("\n") if \
+        original = self.header(passage) + penman.encode(penman.Graph(graph.amr.triples())).split("\n") if \
             self.save_original or self.return_original else None
         if self.save_original:
             passage.extra["original"] = original
@@ -112,15 +114,12 @@ class AmrConverter(FormatConverter):
                 v.add(x)
                 if x == y:
                     return True
-                q += [d for _, _, d in amr.triples(head=x)]
+                q += [d for _, _, d in amr.triples(source=x)]
             return False
 
-        top = amr.triples(rel=TOP_DEP)  # start breadth-first search from :top relation
-        assert len(top) == 1, "There must be exactly one %s edge, but %d are found" % (TOP_DEP, len(top))
-        _, _, root = top[0]  # init with child of TOP
-        pending = amr.triples(head=root)
+        pending = amr.triples(source=amr.top)
         self.nodes = OrderedDict()  # map triples to UCCA nodes: dep gets a new node each time unless it's a variable
-        variables = {root: l1.heads[0]}  # map AMR variables to UCCA nodes
+        variables = {amr.top: l1.heads[0]}  # map AMR variables to UCCA nodes
         names = set()  # to collapse :name (... / name) :op "..." into one string node
         excluded = set()  # nodes whose outgoing edges (except for instance-of edges) will be ignored
         visited = set()  # to avoid cycles
@@ -129,36 +128,32 @@ class AmrConverter(FormatConverter):
             if triple in visited:
                 continue
             visited.add(triple)
-            head, rel, dep = triple
-            if rel in self.excluded or head in excluded:
+            if triple.relation in self.excluded or triple.source in excluded:
                 continue  # skip edges whose relation belongs to excluded layers
-            if dep in self.excluded:
-                excluded.add(head)  # skip outgoing edges from variables with excluded concepts
-            rel = rel.lstrip(DEP_PREFIX)  # remove : prefix
-            rel = PREFIXED_RELATION_PATTERN.sub(PREFIXED_RELATION_SUBSTITUTION, rel)  # remove numeric/prep suffix
+            if triple.target in self.excluded:
+                excluded.add(triple.source)  # skip outgoing edges from variables with excluded concepts
+            rel = PREFIXED_RELATION_PATTERN.sub(
+                PREFIXED_RELATION_SUBSTITUTION, triple.relation)  # remove numeric/prep suffix
             if rel == NAME:
-                names.add(dep)
+                names.add(triple.target)
             # noinspection PyUnresolvedReferences
-            parent = variables.get(head)
+            parent = variables.get(triple.source)
             assert parent is not None, "Outgoing edge from a non-variable: " + str(triple)
-            node = variables.get(dep)
-            if node is None:  # first occurrence of dep, or dep is not a variable
-                pending += amr.triples(head=dep)  # to continue breadth-first search
-                dep_is_concept = isinstance(dep, amr_lib.Concept)
-                head_is_name = head in names
-                node = parent if dep_is_concept or head_is_name else l1.add_fnode(parent, rel)
-                dep_str = repr(dep)
-                if isinstance(dep, amr_lib.Var):
-                    variables[dep] = node
-                elif head_is_name and (dep_is_concept or rel == OP):  # collapse name ops to one string node
-                    if not dep_is_concept:  # the instance-of relation is dropped
+            node = variables.get(triple.target)
+            if node is None:  # first occurrence of target, or target is not a variable
+                pending += amr.triples(source=triple.target)  # to continue breadth-first search
+                node = parent if rel == INSTANCE or triple.source in names else l1.add_fnode(parent, rel)
+                if triple.target in amr.variables():
+                    variables[triple.target] = node
+                elif triple.source in names and rel in {INSTANCE, OP}:  # collapse name ops to one string node
+                    if rel == OP:  # the instance relation is dropped for names
                         label = node.attrib.get(LABEL_ATTRIB)
                         node.attrib[LABEL_ATTRIB] = '"%s"' % "_".join(
-                            AmrConverter.strip(l, strip_quotes=True) for l in (label, dep_str) if l)
+                            AmrConverter.strip_quotes(l) for l in (label, triple.target) if l)
                 else:  # concept or constant: save value in node attributes
-                    node.attrib[LABEL_ATTRIB] = dep_str  # concepts are saved as variable labels, not as actual nodes
-            elif not self.remove_cycles or not _reachable(dep, head):  # reentrancy; do not add if results in a cycle
-                l1.add_remote(parent, rel, node)
+                    node.attrib[LABEL_ATTRIB] = str(triple.target)  # concepts are saved as variable labels
+            elif not self.remove_cycles or not _reachable(triple.target, triple.source):  # reentrancy
+                l1.add_remote(parent, rel, node)  # add only if no cycle
             self.nodes[triple] = node
 
     @staticmethod
@@ -176,20 +171,16 @@ class AmrConverter(FormatConverter):
                 if parent not in terminal.parents:  # avoid multiple identical edges (e.g. :polarity~e.68 -~e.68)
                     parent.add(tag, terminal)
 
-    def align_nodes(self, amr):
+    def align_nodes(self, graph):
         preterminals = {}
-        alignments = amr.alignments()
-        tokens = amr.tokens()
-        lower = list(map(str.lower, tokens))
+        alignments = graph.amr.alignments()
+        lower = list(map(str.lower, graph.tokens))
         for triple, node in self.nodes.items():
-            indices = []
-            align = alignments.get(triple)
-            if align is not None:
-                indices += list(map(int, align.lstrip(ALIGNMENT_PREFIX).split(ALIGNMENT_SEP)))  # split numeric
-                assert set(indices) <= set(range(len(tokens))), "%d tokens, invalid alignment: %s" % (len(lower), align)
-            dep = triple[2]
-            if not isinstance(dep, amr_lib.Var):
-                indices = self._expand_alignments(str(dep), indices, lower)
+            indices = alignments.get(triple, [])
+            assert set(indices) <= set(range(len(graph.tokens))), \
+                "%d tokens, invalid alignment: %s" % (len(lower), indices)
+            if triple.target not in graph.amr.variables():
+                indices = self._expand_alignments(triple.target, indices, lower)
             for i in indices:
                 preterminals.setdefault(i, []).append(node)
         return preterminals
@@ -198,7 +189,7 @@ class AmrConverter(FormatConverter):
     def _expand_alignments(label, orig_indices, tokens):
         # correct missing alignment by expanding to neighboring terminals contained in label
         indices = sorted(orig_indices)
-        stripped = AmrConverter.strip(label, strip_sense=True, strip_quotes=True).lower()
+        stripped = AmrConverter.strip_sense(AmrConverter.strip_quotes(str(label))).lower()
         if indices:
             for start, offset in ((indices[0], -1), (indices[-1], 1)):  # try adding tokens around existing
                 i = start + offset
@@ -251,8 +242,8 @@ class AmrConverter(FormatConverter):
                 if edge.tag == NAME:
                     name = edge.child
                     label = resolve_label(name, wikification=self.wikification)
-                    if label and label != CONCEPT + "(" + NAME + ")":
-                        name.attrib[LABEL_ATTRIB] = CONCEPT + "(" + NAME + ")"
+                    if label and label != NAME:
+                        name.attrib[LABEL_ATTRIB] = NAME
                         for l in AmrConverter.strip_quotes(label).split("_"):
                             l1.add_fnode(name, OP).attrib[LABEL_ATTRIB] = l if NUM_PATTERN.match(l) else '"%s"' % l
 
@@ -260,10 +251,10 @@ class AmrConverter(FormatConverter):
         for node in l1.all:
             label = resolve_label(node, reverse=True, wikification=self.wikification)
             if label:
-                if "numbers" not in self.extensions and label.startswith(NUM + "("):
-                    label = NUM + "(1)"  # replace all unresolved numbers with "1"
+                if "numbers" not in self.extensions and is_numeric(label):
+                    label = "1"  # replace all unresolved numbers with "1"
                 elif WIKI not in self.extensions and any(e.tag == WIKI for e in node.incoming):
-                    label = CONST + "(" + MINUS + ")"
+                    label = MINUS
             node.attrib[LABEL_ATTRIB] = label
 
     def to_format(self, passage, metadata=True, wikification=True, verbose=False, use_original=True,
@@ -281,10 +272,11 @@ class AmrConverter(FormatConverter):
         if verbose:
             print("Expanding names...")
         self._expand_names(passage.layer(layer1.LAYER_ID))
-        triples = list(self._to_triples(passage, default_label=default_label)) or [("y", INSTANCE, "yes")]
-        return (self.header(passage, **kwargs) if metadata else []) + (penman.encode(penman.Graph(triples)).split("\n"))
+        alignments = dict(self._generate_aligned_triples(passage, default_label=default_label)) or EMPTY_ALIGNED_TRIPLES
+        graph = penman.Graph(alignments, alignments=alignments)
+        return (self.header(passage, **kwargs) if metadata else []) + (AMR_CODEC.encode(graph).split("\n"))
 
-    def _to_triples(self, passage, default_label=None):
+    def _generate_aligned_triples(self, passage, default_label=None):
         class PathElement:
             # noinspection PyShadowingNames
             def __init__(self, edge, path):
@@ -322,22 +314,23 @@ class AmrConverter(FormatConverter):
                         nodes.append(elem.edge.child)
                         pending += [PathElement(edge=e, path=elem.path + [i])
                                     for i, e in enumerate(sorted(elem.edge.child, key=attrgetter("ID")), start=1)]
-                head_dep = []  # will be pair of (parent label, child label)
+                pair = []  # will be pair of (source, target)
+                alignment = []
                 for node in nodes:
                     label = resolve_label(node, wikification=self.wikification)
                     if label is None:
                         if default_label is None:
                             raise ValueError("Missing label for node '%s' (%s) in '%s'" % (node, node.ID, passage.ID))
-                        label = CONCEPT + "(" + default_label + ")"
-                    if is_concept(label):  # collapsed variable + concept: create both AMR nodes and the instance-of
-                        concept = None if node.ID in labels else AmrConverter.strip(label)
+                        label = default_label
+                    if is_concept(label):  # collapsed variable + concept: create both AMR nodes and the instance rel
+                        concept = None if node.ID in labels else label
                         label = labels[node.ID]  # generate variable label
                         if concept is not None:  # first time we encounter the variable
-                            yield label, INSTANCE, concept + self.alignment_str(node)  # add instance-of edge
+                            yield (label, INSTANCE, concept), self.alignment(node)  # add instance-of edge
                     else:  # constant
-                        label = AmrConverter.strip(label) + self.alignment_str(node)
-                    head_dep.append(label)
-                if len(head_dep) > 1:
+                        alignment = self.alignment(node)
+                    pair.append(label)
+                if len(pair) > 1:
                     rel = elem.edge.tag or "label"
                     if rel in PREFIXED_RELATION_ENUM:  # e.g. :op
                         key = (rel, elem.edge.parent.ID)
@@ -347,24 +340,19 @@ class AmrConverter(FormatConverter):
                         # noinspection PyTypeChecker
                         rel = "-".join([rel] + list(OrderedDict.fromkeys(
                             t.text for t in elem.edge.child.get_terminals())))
-                    yield head_dep[0], rel, head_dep[1]
+                    yield (pair[0], rel, pair[1]), alignment
 
     @staticmethod
-    def strip(label, strip_sense=False, strip_quotes=False):  # remove type name
-        label = re.sub("\w+\((.*)\)", r"\1", label)
-        if strip_sense:
-            label = re.sub("-\d\d$", "", label)
-        if strip_quotes:
-            label = AmrConverter.strip_quotes(label)
-        return label
+    def strip_sense(label):
+        return re.sub("-\d\d$", "", label)
 
     @staticmethod
     def strip_quotes(label):
         return label[1:-1] if len(label) > 1 and label.startswith('"') and label.endswith('"') else label
 
     @staticmethod
-    def alignment_str(node):
-        return "~e." + ",".join([str(t.position - 1) for t in node.terminals]) if node.terminals else ""
+    def alignment(node):
+        return [t.position - 1 for t in node.terminals] if node.terminals else []
 
     def header(self, passage, **kwargs):
         ret = ["# ::id " + passage.ID,

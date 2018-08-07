@@ -86,10 +86,7 @@ setup(name="SEMSTR",
       setup_requires=["pypandoc"],
       install_requires=install_requires,
       extras_require=extras_require,
-      packages=find_packages() + ["src"],
-      package_dir={
-          "src": os.path.join("semstr", "amr", "src"),
-      },
-      package_data={"src": ["amr.peg"], "semstr.util": ["resources/*.txt"]},
+      packages=find_packages(),
+      package_data={"semstr.util": ["resources/*.txt"]},
       cmdclass={"install": install},
       )

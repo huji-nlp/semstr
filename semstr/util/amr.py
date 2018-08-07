@@ -1,11 +1,8 @@
 import csv
-# noinspection PyUnresolvedReferences
-import importlib
 import os
 import re
 import string
 from collections import defaultdict
-from importlib import util  # needed for amr.peg
 
 import spotlight
 from requests.exceptions import ConnectionError
@@ -17,22 +14,11 @@ from word2number import w2n
 
 from ..constraints import Valid
 
-prev_dir = os.getcwd()
-try:
-    os.chdir(os.path.dirname(util.find_spec("src.amr").origin))  # to find amr.peg
-    from src import amr as amr_lib
-finally:
-    os.chdir(prev_dir)
-
 TERMINAL_DEP = layer1.EdgeTags.Terminal
 PUNCTUATION_DEP = layer1.EdgeTags.Punctuation
 PUNCTUATION_LABEL = layer1.NodeTags.Punctuation
 TERMINAL_TAGS = {TERMINAL_DEP, PUNCTUATION_DEP}
 COMMENT_PREFIX = "#"
-DEP_PREFIX = ":"
-TOP_DEP = ":top"
-ALIGNMENT_PREFIX = "e."
-ALIGNMENT_SEP = ","
 PLACEHOLDER_PATTERN = re.compile(r"<[^>]*>")
 SKIP_TOKEN_PATTERN = re.compile(r"[<>@]+")
 NUM_PATTERN = re.compile(r"[+-]?\d+(\.\d+)?")
@@ -70,11 +56,9 @@ SEASON = "season"
 TIMEZONE = "timezone"
 
 # Specific node labels
-CONST = "Const"
-CONCEPT = "Concept"
-NUM = "Num"
+CONCEPT_PATTERN = re.compile(r"[A-Za-z'][A-Za-z0-9.'-]*")
 MINUS = "-"
-UNKNOWN_LABEL = CONCEPT + "(name)"
+UNKNOWN_LABEL = "name"
 MODES = ("expressive", "imperative", "interrogative")
 DATE_ENTITY = "date-entity"
 MONTHS = ("january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november",
@@ -86,7 +70,7 @@ SEASONS = ("winter", "fall", "spring", "summer")
 EXTENSIONS = {
     WIKI: (),
     "numbers": (),
-    "urls": (amr_lib.Concept("url-entity"),),
+    "urls": ("url-entity",),
 }
 
 NEGATIONS = {}
@@ -98,6 +82,7 @@ CATEGORIES = {}
 def read_resources():
     if read_resources.done:
         return
+    prev_dir = os.getcwd()
     try:
         os.chdir(os.path.join(os.path.dirname(os.path.realpath(__file__)), "resources"))
         with open("negations.txt", encoding="utf-8") as f:
@@ -119,6 +104,7 @@ def read_resources():
                 if category or suffix:
                     CATEGORIES[word] = category.replace(" ", "") + suffix
         with open("have-org-role-91-roles-v1.06.txt", encoding="utf-8") as f:
+            # noinspection PyTypeChecker
             CATEGORIES.update(l.split()[::-1] for l in f if l and l[0] not in "#")
         with open("have-rel-role-91-roles-v1.06.txt", encoding="utf-8") as f:
             CATEGORIES.update(re.findall(r"(\S+) (\S+(?: [^:#]\S)*)", l)[0][::-1] for l in f if l and l[0] not in "#")
@@ -130,19 +116,15 @@ def read_resources():
 read_resources.done = False
 
 
-def parse(*args, **kwargs):
-    return amr_lib.AMR(*args, **kwargs)
-
-
 def is_concept(label):
-    return label is not None and label.startswith(CONCEPT)
+    return label is not None and CONCEPT_PATTERN.match(label)
 
 
 def is_int_in_range(label, s=None, e=None):
-    m = re.match(NUM + "\(-?(\d+)\)", label)
-    if not m:
+    try:
+        num = int(label)
+    except ValueError:
         return Valid(False, "%s is not numeric" % label)
-    num = int(m.group(1))
     return Valid(s is None or num >= s, "%s < %s" % (num, s)) and Valid(e is None or num <= e, "%s > %s" % (num, e))
 
 
@@ -151,24 +133,22 @@ def is_valid_arg(node, label, *tags, is_parent=True):
     if label is None or (tags and TERMINAL_TAGS.issuperset(filter(None, tags))):  # Not labeled yet or unlabeled parsing
         return True
     label = resolve_label(node, label, conservative=True, wikification=False)
-    concept = label[len(CONCEPT) + 1:-1] if label.startswith(CONCEPT) else None
-    const = label[len(CONST) + 1:-1] if label.startswith(CONST) else None
     if PLACEHOLDER_PATTERN.search(label):
         return True
     valid = Valid(message="%s incompatible as %s of %s" % (label, "parent" if is_parent else "child", ", ".join(tags)))
     if is_parent:  # node is a parent of the edge
         if {DAY, MONTH, YEAR, YEAR2, DECADE, WEEKDAY, QUARTER, CENTURY, SEASON, TIMEZONE}.intersection(tags):
-            return valid(concept == DATE_ENTITY)
-    elif const == MINUS:  # :polarity excl,b_isconst,b_const=-
+            return valid(label == DATE_ENTITY)
+    elif label == MINUS:  # :polarity excl,b_isconst,b_const=-
         return valid({POLARITY, ARG2, VALUE, WIKI}.issuperset(tags))
     elif POLARITY in tags:
-        return valid(const == MINUS)
+        return valid(label == MINUS)
     elif MODE in tags:  # :mode excl,b_isconst,b_const=[interrogative|expressive|imperative]
-        return valid(const in MODES)
-    elif const in MODES:
+        return valid(label in MODES)
+    elif label in MODES:
         return valid(MODE in tags)
     elif WIKI in tags:  # :wiki b_isconst (:value and :timezone are not really always const)
-        return valid(const == MINUS)
+        return valid(label == MINUS)
     elif DAY in tags:  # :day  a=date-entity,b_isconst,b_const=[...]
         return is_int_in_range(label, 1, 31)
     elif MONTH in tags:  # :month  a=date-entity,b_isconst,b_const=[1|2|3|4|5|6|7|8|9|10|11|12]
@@ -178,22 +158,22 @@ def is_valid_arg(node, label, *tags, is_parent=True):
     elif {YEAR, YEAR2, DECADE, CENTURY}.intersection(tags):  # :year a=date-entity,b_isconst,b_const=[0-9]+
         return is_int_in_range(label)
     elif WEEKDAY in tags:  # :weekday  excl,a=date-entity,b=[monday|tuesday|wednesday|thursday|friday|saturday|sunday]
-        return valid(concept in WEEKDAYS)
-    elif concept in WEEKDAYS:
+        return valid(label in WEEKDAYS)
+    elif label in WEEKDAYS:
         return valid(WEEKDAY in tags)
     elif SEASON in tags:  # :season excl,a=date-entity,b=[winter|fall|spring|summer]+
-        return valid(concept in SEASONS)
+        return valid(label in SEASONS)
     elif PUNCTUATION_DEP in tags:
         return valid(label == PUNCTUATION_LABEL)
     elif label == PUNCTUATION_LABEL:
         return valid(tags == {PUNCTUATION_DEP})
 
-    if not concept or "-" not in concept:
+    if "-" not in label:
         return True  # What follows is a check for predicate arguments, only relevant for predicates
     args = [t for t in tags if t.startswith("ARG") and (t.endswith("-of") != is_parent)]
     if not args:
         return True
-    valid_args = ROLESETS.get(concept, ())
+    valid_args = ROLESETS.get(label, ())
     return not valid_args or valid(all(t.replace("-of", "").endswith(valid_args) for t in args),
                                    "valid args: " + ", ".join(valid_args))
 
@@ -236,10 +216,10 @@ def resolve_label(node, label=None, reverse=False, conservative=False, wikificat
         terminals = sorted([c for c in children if getattr(c, "text", None)],
                            key=lambda c: getattr(c, "index", getattr(c, "position", None)))
         if terminals:
-            if not reverse and label.startswith(NUM):  # numeric label (always 1 unless "numbers" layer is on)
+            if not reverse and is_numeric(label):  # numeric label (always 1 unless "numbers" layer is on)
                 number = terminals_to_number(terminals)  # try replacing spelled-out numbers/months with digits
                 if number is not None:
-                    label = NUM + "(%s)" % number
+                    label = str(number)
             else:
                 if len(terminals) > 1:
                     if reverse or label.count(TOKEN_PLACEHOLDER) == 1:
@@ -259,7 +239,7 @@ def resolve_label(node, label=None, reverse=False, conservative=False, wikificat
                     negation = NEGATIONS.get(terminal.text)
                     if negation is not None:
                         label = _replace(NEGATION_PLACEHOLDER, negation)
-                    if label.startswith(CONCEPT):
+                    if CONCEPT_PATTERN.match(label):
                         morph = VERBALIZATION.get(lemma)
                         if morph:
                             for prefix, value in morph.items():  # V: verb, N: noun, A: noun actor
@@ -274,6 +254,14 @@ def resolve_label(node, label=None, reverse=False, conservative=False, wikificat
         if reverse and category:
             label += LABEL_SEPARATOR + category
     return label
+
+
+def is_numeric(s):
+    try:
+        float(s)
+    except ValueError:
+        return False
+    return True
 
 
 def terminals_to_number(terminals):
