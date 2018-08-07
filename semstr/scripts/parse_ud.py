@@ -62,8 +62,8 @@ def main(args):
                 if converter is not None:
                     passage, parsed = map(converter, (passage, parsed))
                 if evaluator is not None:
-                    scores.append(evaluator.evaluate(parsed, passage, constructions=args.constructions,
-                                                     verbose=args.verbose > 1))
+                    scores.append(evaluator(parsed, passage, constructions=args.constructions,
+                                            verbose=args.verbose > 1))
         if scores:
             Scores(scores).print()
 

@@ -8,21 +8,35 @@ from itertools import groupby
 
 import configargparse
 from tqdm import tqdm
-from ucca import evaluation, ioutil, constructions as ucca_constructions
-from ucca.evaluation import LABELED, UNLABELED
+from ucca import ioutil, constructions as ucca_constructions
+from ucca.evaluation import LABELED, UNLABELED, evaluate as evaluate_ucca
 
 from semstr.cfgutil import add_verbose_arg
 from semstr.convert import CONVERTERS, UCCA_EXT
-from semstr.evaluation import amr, sdp, conllu
 
 desc = """Parses files in any format, and evaluates using the proper evaluator."""
 
 
+def evaluate_sdp(*args, **kwargs):
+    from semstr.evaluation import sdp
+    return sdp.evaluate(*args, **kwargs)
+
+
+def evaluate_conllu(*args, **kwargs):
+    from semstr.evaluation import conllu
+    return conllu.evaluate(*args, **kwargs)
+
+
+def evaluate_amr(*args, **kwargs):
+    from semstr.evaluation import amr
+    return amr.evaluate(*args, **kwargs)
+
+
 EVALUATORS = {
-    None: evaluation,
-    "sdp": sdp,
-    "conllu": conllu,
-    "amr": amr,
+    None: evaluate_ucca,
+    "sdp": evaluate_sdp,
+    "conllu": evaluate_conllu,
+    "amr": evaluate_amr,
 }
 
 
@@ -141,7 +155,7 @@ def main(args):
     files = [[os.path.join(d, f) for f in os.listdir(d) if not os.path.isdir(os.path.join(d, f))]
              if os.path.isdir(d) else [d] for d in (args.guessed, args.ref)]
     try:
-        evaluate = EVALUATORS.get(passage_format(files[1][0])[1], EVALUATORS[args.format]).evaluate
+        evaluate = EVALUATORS.get(passage_format(files[1][0])[1], EVALUATORS[args.format])
     except IndexError as e:
         raise ValueError("No reference passages found: %s" % args.ref) from e
     results = list(evaluate_all(evaluate, files, **vars(args)))
