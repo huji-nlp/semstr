@@ -263,7 +263,7 @@ class DependencyConverter(FormatConverter):
                 remote_edges += remotes
             if dep_node.outgoing and not any(map(self.is_flat, dep_node.incoming)):
                 dep_node.preterminal = l1.add_fnode(dep_node.preterminal,  # Intermediate head for hierarchy
-                                                    self._label_edge(dep_node))
+                                                    self.HEAD if forest else self._label_edge(dep_node))
         for edge in remote_edges:
             parent = edge.head.node or l1.heads[0]
             child = edge.dependent.node or l1.heads[0]
