@@ -37,7 +37,7 @@ def parse_spacy(passages, lang, verbose=False):
             dep_node.terminal = None
             edge.link_head(dep_nodes)
             dep_node.add_edges([edge])
-        parsed = ConlluConverter().build_passage(dep_nodes, passage.ID)
+        parsed = ConlluConverter().build_passage(ConlluConverter.Graph(dep_nodes, passage.ID))
         yield passage, parsed
 
 
