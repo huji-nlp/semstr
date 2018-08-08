@@ -14,7 +14,7 @@ def create_top_edge(converter):
 
 def get_scores(s1, s2, eval_type, verbose):
     converter = SdpConverter()
-    edges = [[e for nodes, _ in converter.build_nodes(s) for n in nodes for e in n.outgoing +
+    edges = [[e for g in converter.generate_graphs(s) for n in g.nodes for e in n.outgoing +
               ([create_top_edge(converter)] if n.is_top else [])] for s in (s1, s2)]
     if eval_type == evaluation.UNLABELED:
         for es in edges:

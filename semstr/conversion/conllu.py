@@ -46,23 +46,22 @@ class ConlluConverter(ConllConverter):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, tree=True, punct_tag=PUNCT_TAG, punct_rel=PUNCT,
-                         tag_priority=[self.TOP, PARATAXIS, CONJ, ADVCL, XCOMP], **kwargs)
-
-    def modify_passage(self, passage):
-        passage.extra["format"] = "conllu"
+                         tag_priority=[self.TOP, PARATAXIS, CONJ, ADVCL, XCOMP], format="conllu", **kwargs)
 
     def read_line(self, *args, **kwargs):
         return self.read_line_and_append(super().read_line, *args, **kwargs)
 
     def from_format(self, lines, passage_id, split=False, return_original=False, annotate=False):
-        for dep_nodes, sentence_id in self.build_nodes(lines, split):
+        for graph in self.generate_graphs(lines, split):
+            if not graph.id:
+                graph.id = passage_id
             try:
-                passage = self.build_passage(dep_nodes, sentence_id or passage_id)
+                passage = self.build_passage(graph)
             except (AttributeError, IndexError) as e:
-                raise RuntimeError("Failed converting '%s'" % sentence_id) from e
+                raise RuntimeError("Failed converting '%s'" % graph.id) from e
             if annotate:
                 docs = passage.layer(layer0.LAYER_ID).extra.setdefault("doc", [[]])
-                for dep_node in dep_nodes[1:]:
+                for dep_node in graph.nodes[1:]:
                     paragraph = dep_node.token.paragraph
                     while len(docs) < paragraph:
                         docs.append([])
@@ -73,10 +72,10 @@ class ConlluConverter(ConllConverter):
     def to_format(self, *args, **kwargs):
         return super().to_format(*args, **kwargs)
 
-    def generate_header_lines(self, passage_id, dep_nodes):
-        yield from super().generate_header_lines(passage_id, dep_nodes)
-        yield ["# text = " + " ".join(dep_node.token.text for dep_node in dep_nodes)]
-        yield ["# doc_id = " + passage_id.rpartition(".")[0]]
+    def generate_header_lines(self, graph):
+        yield from super().generate_header_lines(graph)
+        yield ["# text = " + " ".join(dep_node.token.text for dep_node in graph.nodes)]
+        yield ["# doc_id = " + graph.id.rpartition(".")[0]]
 
     def find_headed_unit(self, unit):
         while unit.incoming and (not unit.outgoing or unit.incoming[0].tag == self.HEAD) and \

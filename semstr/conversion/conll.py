@@ -7,10 +7,9 @@ from .dep import DependencyConverter
 
 class ConllConverter(DependencyConverter):
     def __init__(self, *args, **kwargs):
+        if "format" not in kwargs:
+            kwargs["format"] = "conll"
         super().__init__(*args, **kwargs)
-
-    def modify_passage(self, passage):
-        passage.extra["format"] = "conll"
 
     def read_line(self, line, previous_node, copy_of):
         fields = self.split_line(line)
@@ -43,10 +42,10 @@ class ConllConverter(DependencyConverter):
                                             is_multi_word=len(span) > 1, enhanced=enhanced, misc=misc, span=span)
         previous_node.add_edges(edges)
 
-    def generate_lines(self, passage_id, dep_nodes, test, tree):
-        yield from self.generate_header_lines(passage_id, dep_nodes)
+    def generate_lines(self, graph, test, tree):
+        yield from super().generate_lines(graph, test, tree)
         # id, form, lemma, coarse pos, fine pos, features
-        for i, dep_node in enumerate(dep_nodes):
+        for i, dep_node in enumerate(graph.nodes):
             position = i + 1
             assert position == dep_node.position
             if dep_node.parent_multi_word and position == dep_node.parent_multi_word.span[0]:
@@ -64,8 +63,9 @@ class ConllConverter(DependencyConverter):
                 for head in heads:
                     yield fields + list(head) + [dep_node.enhanced, dep_node.misc]
 
-    def generate_header_lines(self, passage_id, dep_nodes):
-        yield ["# sent_id = " + passage_id]
+    def generate_header_lines(self, graph):
+        yield from super().generate_header_lines(graph)
+        yield ["# sent_id = " + graph.id]
 
     def omit_edge(self, edge, tree, linkage=False):
         return (tree or not linkage) and edge.tag == EdgeTags.LinkArgument or tree and edge.attrib.get("remote")

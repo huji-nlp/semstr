@@ -20,6 +20,12 @@ class DependencyConverter(FormatConverter):
     ORPHAN = "orphan"
     MULTI_WORD_TEXT_ATTRIB = "multi_word_text"
 
+    class Graph:
+        def __init__(self, dep_nodes, sentence_id, original_format=None):
+            self.nodes = dep_nodes
+            self.id = sentence_id
+            self.format = original_format
+
     class Node:
         def __init__(self, position=0, incoming=None, token=None, terminal=None, is_head=True, is_top=False,
                      is_multi_word=False, parent_multi_word=None, frame=None, enhanced=None, misc=None, span=None):
@@ -120,7 +126,6 @@ class DependencyConverter(FormatConverter):
             self.paragraph = paragraph
 
     def __init__(self, mark_aux=False, tree=False, punct_tag=None, punct_rel=None, tag_priority=(), **kwargs):
-        del kwargs
         self.mark_aux = mark_aux
         self.tree = tree
         self.punct_tag = punct_tag
@@ -128,12 +133,17 @@ class DependencyConverter(FormatConverter):
         self.lines_read = []
         # noinspection PyTypeChecker
         self.tag_priority = [self.HEAD] + list(tag_priority) + self.TAG_PRIORITY + [None]
+        self.format = kwargs["format"]
 
     def read_line(self, line, previous_node, copy_of):
         return self.Node()
 
-    def generate_lines(self, passage_id, dep_nodes, test, tree):
-        yield ""
+    def generate_lines(self, graph, test, tree):
+        yield from self.generate_header_lines(graph)
+
+    def generate_header_lines(self, graph):
+        if graph.format:
+            yield ["# format = " + graph.format]
 
     @staticmethod
     def _link_heads(dep_nodes, multi_word_nodes=(), copy_of=None):
@@ -149,7 +159,7 @@ class DependencyConverter(FormatConverter):
     def omit_edge(self, edge, tree):
         return False
 
-    def modify_passage(self, passage):
+    def modify_passage(self, passage, graph):
         pass
 
     @staticmethod
@@ -191,17 +201,26 @@ class DependencyConverter(FormatConverter):
     def _label_edge(self, node):
         return ("#" if self.mark_aux else "") + self._label(node)
 
-    def build_nodes(self, lines, split=False):
+    def generate_graphs(self, lines, split=False):
         # read dependencies and terminals from lines and create nodes
-        sentence_id = dep_nodes = multi_word_nodes = previous_node = None
+        sentence_id = dep_nodes = multi_word_nodes = previous_node = original_format = None
         copy_of = {}
         paragraph = 1
+
+        def _graph():
+            self._link_heads(dep_nodes, multi_word_nodes, copy_of)
+            return self.Graph(dep_nodes, sentence_id, original_format=original_format)
+
         for line in lines:
             line = line.strip()
             if line.startswith("#"):  # comment
                 m = re.match("#\s*(\d+).*", line) or re.match("#\s*sent_id\s*=\s*(\S+)", line)
                 if m:  # comment may optionally contain the sentence ID
                     sentence_id = m.group(1)
+                else:
+                    m = re.match("#\s*format\s*=\s*(\S+)", line)
+                    if m:  # comment may alternatively contain the original format
+                        original_format = m.group(1)
             elif line:
                 if dep_nodes is None:
                     dep_nodes = [self.Node()]  # dummy root
@@ -213,8 +232,7 @@ class DependencyConverter(FormatConverter):
                     (multi_word_nodes if dep_node.is_multi_word else dep_nodes).append(dep_node)
             elif split and dep_nodes:
                 try:
-                    self._link_heads(dep_nodes, multi_word_nodes, copy_of)
-                    yield dep_nodes, sentence_id
+                    yield _graph()
                 except Exception as e:
                     print("Skipped passage '%s': %s" % (sentence_id, e), file=sys.stderr)
                 sentence_id = dep_nodes = previous_node = None
@@ -222,16 +240,16 @@ class DependencyConverter(FormatConverter):
             else:
                 paragraph += 1
         if not split or dep_nodes:
-            self._link_heads(dep_nodes, multi_word_nodes, copy_of)
-            yield dep_nodes, sentence_id
+            yield _graph()
 
-    def build_passage(self, dep_nodes, passage_id):
-        p = core.Passage(passage_id)
-        self.create_terminals(dep_nodes, layer0.Layer0(p))
-        self.create_non_terminals(dep_nodes, layer1.Layer1(p))
-        self.link_pre_terminals(dep_nodes)
-        self.modify_passage(p)
-        return p
+    def build_passage(self, graph):
+        passage = core.Passage(graph.id)
+        self.create_terminals(graph.nodes, layer0.Layer0(passage))
+        self.create_non_terminals(graph.nodes, layer1.Layer1(passage))
+        self.link_pre_terminals(graph.nodes)
+        if graph.format is None or graph.format == self.format:
+            passage.extra["format"] = self.format
+        return passage
 
     def create_non_terminals(self, dep_nodes, l1):
         forest = any(n.is_top for n in dep_nodes)
@@ -357,8 +375,10 @@ class DependencyConverter(FormatConverter):
 
         :return generator of Passage objects.
         """
-        for dep_nodes, sentence_id in self.build_nodes(lines, split):
-            passage = self.build_passage(dep_nodes, sentence_id or passage_id)
+        for graph in self.generate_graphs(lines, split):
+            if not graph.id:
+                graph.id = passage_id
+            passage = self.build_passage(graph)
             yield (passage, self.lines_read, passage.ID) if return_original else passage
             self.lines_read = []
 
@@ -508,7 +528,11 @@ class DependencyConverter(FormatConverter):
                      for terminal in sorted(terminals, key=attrgetter("position"))]
         self._link_heads(dep_nodes)
         self.preprocess(dep_nodes)
-        lines += ["\t".join(map(str, entry)) for entry in self.generate_lines(passage.ID, dep_nodes, test, tree)] + [""]
+        original_format = passage.extra.get("format")
+        if original_format == self.format:
+            original_format = None
+        graph = self.Graph(dep_nodes, passage.ID, original_format=original_format)
+        lines += ["\t".join(map(str, entry)) for entry in self.generate_lines(graph, test, tree)] + [""]
         return lines
 
     def incoming_edges(self, terminal, test, tree):

@@ -5,10 +5,7 @@ from .dep import DependencyConverter
 
 class SdpConverter(DependencyConverter):
     def __init__(self, **kwargs):
-        super().__init__(punct_tag="_", punct_rel="_", **kwargs)
-
-    def modify_passage(self, passage):
-        passage.extra["format"] = "sdp"
+        super().__init__(punct_tag="_", punct_rel="_", format="sdp", **kwargs)
 
     def read_line(self, *args, **kwargs):
         return self.read_line_and_append(self._read_line, *args, **kwargs)
@@ -26,10 +23,11 @@ class SdpConverter(DependencyConverter):
     def edges_for_orphan(self, top):
         return [self.Edge(0, self.TOP, False)] if top else []
 
-    def generate_lines(self, passage_id, dep_nodes, test, tree):
+    def generate_lines(self, graph, test, tree):
+        yield from super().generate_lines(graph, test, tree)
         # id, form, lemma, pos, top, pred, frame, arg1, arg2, ...
-        preds = sorted({e.head_index for dep_node in dep_nodes for e in dep_node.incoming})
-        for i, dep_node in enumerate(dep_nodes):
+        preds = sorted({e.head_index for dep_node in graph.nodes for e in dep_node.incoming})
+        for i, dep_node in enumerate(graph.nodes):
             heads = {e.head_index: e.rel + ("*" if e.remote else "") for e in dep_node.incoming}
             position = i + 1
             assert position == dep_node.position
