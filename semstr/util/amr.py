@@ -239,7 +239,7 @@ def resolve_label(node, label=None, reverse=False, conservative=False, wikificat
                     negation = NEGATIONS.get(terminal.text)
                     if negation is not None:
                         label = _replace(NEGATION_PLACEHOLDER, negation)
-                    if CONCEPT_PATTERN.match(label):
+                    if PLACEHOLDER_PATTERN.search(label) or CONCEPT_PATTERN.match(label):
                         morph = VERBALIZATION.get(lemma)
                         if morph:
                             for prefix, value in morph.items():  # V: verb, N: noun, A: noun actor

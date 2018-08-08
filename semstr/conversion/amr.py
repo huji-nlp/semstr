@@ -8,7 +8,7 @@ import penman
 from ucca import layer0, layer1, convert, textutil
 
 from .format import FormatConverter
-from ..util.amr import resolve_label, EXTENSIONS, COMMENT_PREFIX, \
+from ..util.amr import resolve_label, EXTENSIONS, COMMENT_PREFIX, PLACEHOLDER_PATTERN, \
     PREFIXED_RELATION_PATTERN, PREFIXED_RELATION_SUBSTITUTION, LABEL_ATTRIB, NAME, OP, PUNCTUATION_DEP, \
     PUNCTUATION_LABEL, TERMINAL_DEP, SKIP_TOKEN_PATTERN, WIKI, INSTANCE, PREFIXED_RELATION_ENUM, PREFIXED_RELATION_PREP, \
     NUM_PATTERN, MINUS, WIKIFIER, TERMINAL_TAGS, is_concept, is_numeric
@@ -139,21 +139,26 @@ class AmrConverter(FormatConverter):
             # noinspection PyUnresolvedReferences
             parent = variables.get(triple.source)
             assert parent is not None, "Outgoing edge from a non-variable: " + str(triple)
-            node = variables.get(triple.target)
-            if node is None:  # first occurrence of target, or target is not a variable
-                pending += amr.triples(source=triple.target)  # to continue breadth-first search
-                node = parent if rel == INSTANCE or triple.source in names else l1.add_fnode(parent, rel)
-                if triple.target in amr.variables():
-                    variables[triple.target] = node
-                elif triple.source in names and rel in {INSTANCE, OP}:  # collapse name ops to one string node
-                    if rel == OP:  # the instance relation is dropped for names
-                        label = node.attrib.get(LABEL_ATTRIB)
-                        node.attrib[LABEL_ATTRIB] = '"%s"' % "_".join(
-                            AmrConverter.strip_quotes(l) for l in (label, triple.target) if l)
-                else:  # concept or constant: save value in node attributes
-                    node.attrib[LABEL_ATTRIB] = str(triple.target)  # concepts are saved as variable labels
-            elif not self.remove_cycles or not _reachable(triple.target, triple.source):  # reentrancy
-                l1.add_remote(parent, rel, node)  # add only if no cycle
+            if triple.source in names:
+                node = parent
+                if rel == OP:
+                    label = node.attrib.get(LABEL_ATTRIB)
+                    node.attrib[LABEL_ATTRIB] = '"%s"' % "_".join(
+                        AmrConverter.strip_quotes(l) for l in (label, str(triple.target)) if l)
+            elif rel == INSTANCE:
+                node = parent
+                node.attrib[LABEL_ATTRIB] = str(triple.target)  # concepts are saved as variable labels
+            else:
+                node = variables.get(triple.target)
+                if node is not None:  # reentrancy
+                    if not self.remove_cycles or not _reachable(triple.target, triple.source):  # add only if no cycle
+                        l1.add_remote(parent, rel, node)
+                elif triple.target in amr.variables():  # new variable
+                    pending += amr.triples(source=triple.target)  # to continue breadth-first search
+                    variables[triple.target] = node = l1.add_fnode(parent, rel)
+                else:  # constant: save value in node attributes
+                    node = l1.add_fnode(parent, rel)
+                    node.attrib[LABEL_ATTRIB] = str(triple.target)
             self.nodes[triple] = node
 
     @staticmethod
@@ -273,7 +278,7 @@ class AmrConverter(FormatConverter):
             print("Expanding names...")
         self._expand_names(passage.layer(layer1.LAYER_ID))
         triples = dict(self._generate_aligned_triples(passage, default_label=default_label)) or EMPTY_ALIGNED_TRIPLES
-        graph = penman.Graph(triples, alignments=triples if alignments else None)
+        graph = penman.Graph(triples, alignments={k: v for k, v in triples.items() if v} if alignments else None)
         if not alignments:
             self.alignments = None
         return (self.header(passage, **kwargs) if metadata else []) + (AMR_CODEC.encode(graph).split("\n"))
@@ -324,6 +329,8 @@ class AmrConverter(FormatConverter):
                         if default_label is None:
                             raise ValueError("Missing label for node '%s' (%s) in '%s'" % (node, node.ID, passage.ID))
                         label = default_label
+                    if PLACEHOLDER_PATTERN.search(label):
+                        raise ValueError("Unresolved placeholder: " + label)
                     if is_concept(label):  # collapsed variable + concept: create both AMR nodes and the instance rel
                         concept = None if node.ID in labels else label
                         label = labels[node.ID]  # generate variable label
