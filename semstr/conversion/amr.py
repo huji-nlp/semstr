@@ -258,7 +258,7 @@ class AmrConverter(FormatConverter):
             node.attrib[LABEL_ATTRIB] = label
 
     def to_format(self, passage, metadata=True, wikification=True, verbose=False, use_original=True,
-                  default_label=None, **kwargs):
+                  default_label=None, alignments=True, **kwargs):
         self.wikification = wikification
         if use_original:
             original = passage.extra.get("original")
@@ -272,8 +272,10 @@ class AmrConverter(FormatConverter):
         if verbose:
             print("Expanding names...")
         self._expand_names(passage.layer(layer1.LAYER_ID))
-        alignments = dict(self._generate_aligned_triples(passage, default_label=default_label)) or EMPTY_ALIGNED_TRIPLES
-        graph = penman.Graph(alignments, alignments=alignments)
+        triples = dict(self._generate_aligned_triples(passage, default_label=default_label)) or EMPTY_ALIGNED_TRIPLES
+        graph = penman.Graph(triples, alignments=triples if alignments else None)
+        if not alignments:
+            self.alignments = None
         return (self.header(passage, **kwargs) if metadata else []) + (AMR_CODEC.encode(graph).split("\n"))
 
     def _generate_aligned_triples(self, passage, default_label=None):
