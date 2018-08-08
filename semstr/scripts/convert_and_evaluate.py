@@ -45,7 +45,8 @@ def main(args):
                                 print("Writing '%s'..." % outfile, file=sys.stderr, flush=True)
                         ioutil.passage2file(passage, outfile)
                     try:
-                        guessed = out_converter(passage, wikification=args.wikification, use_original=False)
+                        guessed = out_converter(passage, wikification=args.wikification, use_original=False,
+                                                alignments=False)
                     except Exception as e:
                         raise ValueError("Error converting %s back from %s" % (filename, passage_format)) from e
                     if args.out_dir:

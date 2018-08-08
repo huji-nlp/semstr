@@ -93,7 +93,7 @@ def from_amr(lines, passage_id=None, return_original=False, save_original=True, 
 
 
 def to_amr(passage, metadata=True, wikification=True, use_original=True, verbose=False, default_label=None,
-           **kwargs):
+           alignments=True, **kwargs):
     """ Convert from a Passage object to a string in AMR PENMAN format (export)
 
     :param passage: the Passage object to convert
@@ -102,12 +102,13 @@ def to_amr(passage, metadata=True, wikification=True, use_original=True, verbose
     :param use_original: whether to use original AMR text from passage.extra
     :param verbose: whether to print extra information
     :param default_label: label to use in case node has no label attribute
+    :param alignments: annotate alignments to text tokens
 
     :return list of lines representing an AMR in PENMAN format, constructed from the passage
     """
     from semstr.conversion.amr import AmrConverter
     return AmrConverter().to_format(passage, metadata, wikification, verbose, use_original=use_original,
-                                    default_label=default_label, format=kwargs.get("format"))
+                                    default_label=default_label, alignments=alignments, format=kwargs.get("format"))
 
 
 def from_conllu(lines, passage_id=None, split=True, return_original=False, annotate=False, terminals_only=False,
