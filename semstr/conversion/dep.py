@@ -26,6 +26,16 @@ class DependencyConverter(FormatConverter):
             self.id = sentence_id
             self.format = original_format
 
+        def link_pre_terminals(self):
+            preterminals = []
+            for dep_node in self.nodes:
+                if dep_node.preterminal is not None:  # link pre-terminal to terminal
+                    dep_node.preterminal.add(EdgeTags.Terminal, dep_node.terminal)
+                    preterminals.append(dep_node.preterminal)
+            for preterminal in preterminals:  # update tag to PNCT when necessary
+                if all(map(layer0.is_punct, preterminal.children)):
+                    preterminal.tag = layer1.NodeTags.Punctuation
+
     class Node:
         def __init__(self, position=0, incoming=None, token=None, terminal=None, is_head=True, is_top=False,
                      is_multi_word=False, parent_multi_word=None, frame=None, enhanced=None, misc=None, span=None):
@@ -244,44 +254,44 @@ class DependencyConverter(FormatConverter):
 
     def build_passage(self, graph):
         passage = core.Passage(graph.id)
-        self.create_terminals(graph.nodes, layer0.Layer0(passage))
-        self.create_non_terminals(graph.nodes, layer1.Layer1(passage))
-        self.link_pre_terminals(graph.nodes)
+        self.create_terminals(graph, layer0.Layer0(passage))
+        self.create_non_terminals(graph, layer1.Layer1(passage))
+        graph.link_pre_terminals()
         if graph.format is None or graph.format == self.format:
             passage.extra["format"] = self.format
         return passage
 
-    def create_non_terminals(self, dep_nodes, l1):
-        forest = any(n.is_top for n in dep_nodes)
-        for dep_node in dep_nodes:
+    def create_non_terminals(self, graph, l1):
+        is_ucca = (graph.format == "ucca")
+        for dep_node in graph.nodes:
             if dep_node.outgoing:
-                if forest and not self.tree and dep_node.position and not dep_node.incoming:  # Create top node
+                if not is_ucca and not self.tree and dep_node.position and not dep_node.incoming:  # Create top node
                     dep_node.node = dep_node.preterminal = l1.add_fnode(None, (self.ROOT, self.TOP)[dep_node.is_top])
                 if self.is_punct(dep_node):  # Avoid outgoing edges from punctuation by flipping edges
-                    head = dep_node.incoming[0].head if dep_node.incoming else dep_nodes[0]
+                    head = dep_node.incoming[0].head if dep_node.incoming else graph.nodes[0]
                     outgoing = list(dep_node.outgoing)
                     for edge in outgoing:
                         edge.head = head
                     for edge in dep_node.incoming:
                         edge.head = outgoing[0].head
         remote_edges = []
-        sorted_dep_nodes = self._topological_sort(dep_nodes)
+        sorted_dep_nodes = self._topological_sort(graph.nodes)
         self.preprocess(sorted_dep_nodes, to_dep=False)
-        if not forest:
-            sorted_dep_nodes = [n for n in dep_nodes[1:] if not n.incoming and not n.is_top] + sorted_dep_nodes
+        if is_ucca:
+            sorted_dep_nodes = [n for n in graph.nodes[1:] if not n.incoming and not n.is_top] + sorted_dep_nodes
         for dep_node in sorted_dep_nodes:  # Other nodes
             incoming = list(dep_node.incoming)
             if incoming:
                 if dep_node.is_top and incoming[0].head_index != 0:
                     top_edge = self.Edge(head_index=0, rel=self.TOP, remote=False)
-                    top_edge.head = dep_nodes[0]
+                    top_edge.head = graph.nodes[0]
                     incoming[:0] = [top_edge]
                 edge, *remotes = incoming
                 self.add_node(dep_node, edge, l1)
                 remote_edges += remotes
             if dep_node.outgoing and not any(map(self.is_flat, dep_node.incoming)):
                 dep_node.preterminal = l1.add_fnode(dep_node.preterminal,  # Intermediate head for hierarchy
-                                                    self.HEAD if forest else self._label_edge(dep_node))
+                                                    self._label_edge(dep_node) if is_ucca else self.HEAD)
         for edge in remote_edges:
             parent = edge.head.node or l1.heads[0]
             child = edge.dependent.node or l1.heads[0]
@@ -341,8 +351,8 @@ class DependencyConverter(FormatConverter):
         #         link_relation.node = link_relation.preterminal = l1.add_fnode(None, EdgeTags.Linker)
         #     l1.add_linkage(link_relation.node, *args)
 
-    def create_terminals(self, dep_nodes, l0):
-        for dep_node in dep_nodes:
+    def create_terminals(self, graph, l0):
+        for dep_node in graph.nodes:
             if dep_node.token and not dep_node.terminal:  # not the root
                 dep_node.terminal = l0.add_terminal(
                     text=dep_node.token.text,
@@ -353,17 +363,6 @@ class DependencyConverter(FormatConverter):
                                                enhanced=dep_node.enhanced, frame=dep_node.frame)
                 if dep_node.parent_multi_word:  # part of a multi-word token (e.g. zum = zu + dem)
                     dep_node.terminal.extra[self.MULTI_WORD_TEXT_ATTRIB] = dep_node.parent_multi_word.token.text
-
-    @staticmethod
-    def link_pre_terminals(dep_nodes):
-        preterminals = []
-        for dep_node in dep_nodes:
-            if dep_node.preterminal is not None:  # link pre-terminal to terminal
-                dep_node.preterminal.add(EdgeTags.Terminal, dep_node.terminal)
-                preterminals.append(dep_node.preterminal)
-        for preterminal in preterminals:  # update tag to PNCT when necessary
-            if all(map(layer0.is_punct, preterminal.children)):
-                preterminal.tag = layer1.NodeTags.Punctuation
 
     def from_format(self, lines, passage_id, split=False, return_original=False):
         """Converts from parsed text in dependency format to a Passage object.
@@ -528,7 +527,7 @@ class DependencyConverter(FormatConverter):
                      for terminal in sorted(terminals, key=attrgetter("position"))]
         self._link_heads(dep_nodes)
         self.preprocess(dep_nodes)
-        original_format = passage.extra.get("format")
+        original_format = passage.extra.get("format", "ucca")
         if original_format == self.format:
             original_format = None
         graph = self.Graph(dep_nodes, passage.ID, original_format=original_format)
