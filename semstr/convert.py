@@ -77,19 +77,21 @@ def to_export(passage, test=False, tree=False, *args, **kwargs):
     return ExportConverter().to_format(passage, test, tree)
 
 
-def from_amr(lines, passage_id=None, return_original=False, save_original=True, *args, **kwargs):
+def from_amr(lines, passage_id=None, return_original=False, save_original=True, wikification=False, *args, **kwargs):
     """Converts from parsed text in AMR PENMAN format to a Passage object.
 
     :param lines: iterable of lines in AMR PENMAN format, describing a single passage.
     :param passage_id: ID to set for passage, overriding the ID from the file
     :param save_original: whether to save original AMR text in passage.extra
     :param return_original: return triple of (UCCA passage, AMR string, AMR ID)
+    :param wikification: whether to use wikification for replacing node labels with placeholders based on tokens
 
     :return generator of Passage objects
     """
     del args, kwargs
     from semstr.conversion.amr import AmrConverter
-    return AmrConverter().from_format(lines, passage_id, return_original=return_original, save_original=save_original)
+    return AmrConverter().from_format(lines, passage_id, return_original=return_original, save_original=save_original,
+                                      wikification=wikification)
 
 
 def to_amr(passage, metadata=True, wikification=True, use_original=True, verbose=False, default_label=None,
@@ -195,7 +197,8 @@ def iter_files(patterns):
         yield from filenames
 
 
-def iter_passages(patterns, desc=None, input_format=None, prefix="", split=False, mark_aux=False, annotate=False):
+def iter_passages(patterns, desc=None, input_format=None, prefix="", split=False, mark_aux=False, annotate=False,
+                  wikification=False):
     t = tqdm(list(iter_files(patterns)), unit="file", desc=desc)
     for filename in t:
         t.set_postfix(file=filename)
@@ -212,7 +215,8 @@ def iter_passages(patterns, desc=None, input_format=None, prefix="", split=False
                 passage_id = basename
             converter, _ = CONVERTERS.get(input_format or ext.lstrip("."), (from_text,))
             with open(filename, encoding="utf-8") as f:
-                yield from converter(f, prefix + passage_id, split=split, mark_aux=mark_aux, annotate=annotate)
+                yield from converter(f, prefix + passage_id, split=split, mark_aux=mark_aux, annotate=annotate,
+                                     wikification=wikification)
 
 
 def map_labels(passage, label_map_file):
@@ -251,7 +255,8 @@ def write_passage(passage, args):
 def main(args):
     os.makedirs(args.out_dir, exist_ok=True)
     for passage in iter_passages(args.filenames, desc="Converting", input_format=args.input_format, prefix=args.prefix,
-                                 split=args.split, mark_aux=args.mark_aux, annotate=args.annotate):
+                                 split=args.split, mark_aux=args.mark_aux, annotate=args.annotate,
+                                 wikification=args.wikification):
         map_labels(passage, args.label_map)
         if args.normalize:
             normalize(passage, extra=args.extra_normalization)

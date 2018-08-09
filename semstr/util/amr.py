@@ -152,7 +152,7 @@ def is_valid_arg(node, label, *tags, is_parent=True):
     read_resources()
     if label is None or (tags and TERMINAL_TAGS.issuperset(filter(None, tags))):  # Not labeled yet or unlabeled parsing
         return True
-    label = resolve_label(node, label, conservative=True)
+    label = resolve_label(node, label, conservative=True, wikification=False)
     concept = label[len(CONCEPT) + 1:-1] if label.startswith(CONCEPT) else None
     const = label[len(CONST) + 1:-1] if label.startswith(CONST) else None
     if PLACEHOLDER_PATTERN.search(label):
@@ -207,13 +207,14 @@ def get_node_attr(node, attr):
         return node.attrib.get(attr)
 
 
-def resolve_label(node, label=None, reverse=False, conservative=False):
+def resolve_label(node, label=None, reverse=False, conservative=False, wikification=True):
     """
     Replace any placeholder in the node's label with the corresponding terminals' text, and remove label category suffix
     :param node: node whose label is to be resolved
     :param label: the label if not taken from the node directly
     :param reverse: if True, *introduce* placeholders and categories into the label rather than removing them
     :param conservative: avoid replacement when risky due to multiple terminal children that could match
+    :param wikification: try replacing by wikified concept
     :return: the resolved label, with or without placeholders and categories (depending on the value of reverse)
     """
     def _replace(old, new):  # replace only inside the label value/name
@@ -265,8 +266,9 @@ def resolve_label(node, label=None, reverse=False, conservative=False):
                         if morph:
                             for prefix, value in morph.items():  # V: verb, N: noun, A: noun actor
                                 label = _replace("<%s>" % prefix, value)
-                    elif label.startswith('"') and (reverse and not PLACEHOLDER_PATTERN.search(label) or
-                                                    not reverse and WIKIFICATION_PLACEHOLDER in label):
+                    elif wikification and label.startswith('"') and (
+                            reverse and not PLACEHOLDER_PATTERN.search(label) or
+                            not reverse and WIKIFICATION_PLACEHOLDER in label):
                         try:
                             label = _replace(WIKIFICATION_PLACEHOLDER, WIKIFIER.wikify_terminal(terminal))
                         except (ValueError, IOError):

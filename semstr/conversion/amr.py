@@ -18,13 +18,15 @@ DELETE_PATTERN = re.compile("\\\\|(?<=(?<!<)<)[^<>]+(?=>(?!>))")  # Delete text 
 class AmrConverter(FormatConverter):
     def __init__(self):
         self.passage_id = self.nodes = self.return_original = self.save_original = self.remove_cycles = \
-            self.extensions = self.excluded = self.alignments = None
+            self.extensions = self.excluded = self.alignments = self.wikification = None
 
-    def from_format(self, lines, passage_id, return_original=False, save_original=True, remove_cycles=True, **kwargs):
+    def from_format(self, lines, passage_id, return_original=False, save_original=True, remove_cycles=True,
+                    wikification=True, **kwargs):
         self.passage_id = passage_id
         self.return_original = return_original
         self.save_original = save_original
         self.remove_cycles = remove_cycles
+        self.wikification = wikification
         self.extensions = [l for l in EXTENSIONS if kwargs.get(l)]
         self.excluded = {i for l, r in EXTENSIONS.items() if l not in self.extensions for i in r}
         for passage, amr, amr_id in textutil.annotate_all(self._init_passages(self._amr_generator(lines)),
@@ -221,13 +223,12 @@ class AmrConverter(FormatConverter):
                 node.attrib["implicit"] = True
                 pending += node.parents
 
-    @staticmethod
-    def _expand_names(l1):
+    def _expand_names(self, l1):
         for node in list(l1.all):
             for edge in node:
                 if edge.tag == NAME:
                     name = edge.child
-                    label = resolve_label(name)
+                    label = resolve_label(name, wikification=self.wikification)
                     if label and label != CONCEPT + "(" + NAME + ")":
                         name.attrib[LABEL_ATTRIB] = CONCEPT + "(" + NAME + ")"
                         for l in AmrConverter.strip_quotes(label).split("_"):
@@ -235,7 +236,7 @@ class AmrConverter(FormatConverter):
 
     def _update_labels(self, l1):
         for node in l1.all:
-            label = resolve_label(node, reverse=True)
+            label = resolve_label(node, reverse=True, wikification=self.wikification)
             if label:
                 if "numbers" not in self.extensions and label.startswith(NUM + "("):
                     label = NUM + "(1)"  # replace all unresolved numbers with "1"
@@ -245,12 +246,13 @@ class AmrConverter(FormatConverter):
 
     def to_format(self, passage, metadata=True, wikification=True, verbose=False, use_original=True,
                   default_label=None):
+        self.wikification = wikification
         if use_original:
             original = passage.extra.get("original")
             if original:
                 return original
         textutil.annotate(passage, as_array=True)
-        if wikification:
+        if self.wikification:
             if verbose:
                 print("Wikifying passage...")
             WIKIFIER.wikify_passage(passage)
@@ -300,7 +302,7 @@ class AmrConverter(FormatConverter):
                                     for i, e in enumerate(elem.edge.child, start=1)]
                 head_dep = []  # will be pair of (parent label, child label)
                 for node in nodes:
-                    label = resolve_label(node)
+                    label = resolve_label(node, wikification=self.wikification)
                     if label is None:
                         if default_label is None:
                             raise ValueError("Missing label for node '%s' (%s) in '%s'" % (node, node.ID, passage.ID))
