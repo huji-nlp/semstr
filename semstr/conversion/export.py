@@ -1,4 +1,5 @@
 import re
+import sys
 from collections import defaultdict
 from itertools import islice
 
@@ -107,7 +108,10 @@ class ExportConverter(FormatConverter):
         for text, tag, edge_tag, parent_id in self.terminals:
             punctuation = (tag == layer0.NodeTags.Punct)
             terminal = l0.add_terminal(text=text, punct=punctuation, paragraph=paragraph)
-            parent = self.node_by_id[parent_id]
+            try:
+                parent = self.node_by_id[parent_id]
+            except KeyError as e:
+                raise ValueError("Terminal ('%s') with bad parent (%s) in passage %s" % (text, parent_id, p.ID)) from e
             if parent is None:
                 print("Terminal is a child of the root: '%s'" % text, file=sys.stderr)
                 parent = l1.add_fnode(parent, edge_tag)
