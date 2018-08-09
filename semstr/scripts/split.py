@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-import glob
 import os
 import re
+from glob import glob
 
 import configargparse
 
@@ -11,42 +11,36 @@ desc = """Split sentences/passages to separate files (important for shuffling be
 
 
 def main(args):
-    try:
-        os.mkdir(args.out_dir)
-        print("Created " + args.out_dir)
-    except FileExistsError:
-        pass
+    os.makedirs(args.out_dir, exist_ok=True)
     lines = []
     passage_id = 0
     doc_id = None
-    filenames = glob.glob(args.filename)
-    if not filenames:
-        raise IOError("Not found: " + args.filename)
-    for filename in filenames:
-        _, ext = os.path.splitext(filename)
-        with open(filename, encoding="utf-8") as f:
-            for line in f:
-                clean = line.lstrip()
-                m_id = ID_PATTERN.match(clean) or \
-                    re.match("#\s*(\d+).*", line) or re.match("#\s*sent_id\s*=\s*(\S+)", line)
-                m_docid = re.match("#\s*doc_id\s*=\s*(\S+)", line)
-                if m_id or m_docid or not clean or clean[0] != COMMENT_PREFIX or re.match("#\s*::", clean):
-                    lines.append(line)
-                    if m_docid:
-                        doc_id = m_docid.group(1)
-                        passage_id = 1
-                    if m_id:
-                        passage_id = m_id.group(1)
-                if not clean and any(map(str.strip, lines)):
-                    if not args.doc_ids or doc_id in args.doc_ids:
-                        write_file(args.out_dir, doc_id, passage_id, ext, lines, quiet=args.quiet)
-                    lines.clear()
-                    if isinstance(passage_id, str):
-                        passage_id = None
-                    else:
-                        passage_id += 1
-            if lines and (not args.doc_ids or doc_id in args.doc_ids):
-                write_file(args.out_dir, doc_id, passage_id, ext, lines, quiet=args.quiet)
+    for pattern in args.filenames:
+        for filename in glob(pattern) or [pattern]:
+            _, ext = os.path.splitext(filename)
+            with open(filename, encoding="utf-8") as f:
+                for line in f:
+                    clean = line.lstrip()
+                    m_id = ID_PATTERN.match(clean) or \
+                        re.match("#\s*(\d+).*", line) or re.match("#\s*sent_id\s*=\s*(\S+)", line)
+                    m_docid = re.match("#\s*(?:new)doc[ _]id\s*=\s*(\S+)", line)
+                    if m_id or m_docid or not clean or clean[0] != COMMENT_PREFIX or re.match("#\s*::", clean):
+                        lines.append(line)
+                        if m_docid:
+                            doc_id = m_docid.group(1)
+                            passage_id = 1
+                        if m_id:
+                            passage_id = m_id.group(1)
+                    if not clean and any(map(str.strip, lines)):
+                        if not args.doc_ids or doc_id in args.doc_ids:
+                            write_file(args.out_dir, doc_id, passage_id, ext, lines, quiet=args.quiet)
+                        lines.clear()
+                        if isinstance(passage_id, str):
+                            passage_id = None
+                        else:
+                            passage_id += 1
+                if lines and (not args.doc_ids or doc_id in args.doc_ids):
+                    write_file(args.out_dir, doc_id, passage_id, ext, lines, quiet=args.quiet)
     if not args.quiet:
         print()
 
@@ -63,8 +57,8 @@ def write_file(out_dir, doc_id, passage_id, ext, lines, quiet=False):
 
 if __name__ == '__main__':
     argparser = configargparse.ArgParser(description=desc)
-    argparser.add_argument("filename", help="file name to split")
-    argparser.add_argument("out_dir", help="output directory")
+    argparser.add_argument("filenames", nargs="+", help="file name(s) to split")
+    argparser.add_argument("-o", "--out-dir", default=".", help="output directory")
     argparser.add_argument("-q", "--quiet", action="store_true", help="less output")
     argparser.add_argument("--doc-ids", nargs="+", help="document IDs to keep from the input file (by '# doc_id')")
     main(argparser.parse_args())
