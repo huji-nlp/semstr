@@ -56,11 +56,18 @@ def parse_udpipe(passages, model_name, verbose=False, annotate=False):
     return zip(passages2, from_conllu(processed, passage_id=None, annotate=annotate))
 
 
+def split(passage):
+    try:
+        return split2paragraphs(passage)
+    except KeyError as e:
+        raise RuntimeError("Failed splitting passage " + passage.ID) from e
+
+
 def annotate_udpipe(passages, model_name, as_array=True, verbose=False):
     if model_name:
         if not as_array:
             raise ValueError("Annotating with UDPipe and as_array=False are currently not supported; use --as-array")
-        t1, t2 = tee((paragraph, passage) for passage in passages for paragraph in split2paragraphs(passage))
+        t1, t2 = tee((paragraph, passage) for passage in passages for paragraph in split(passage))
         paragraphs = map(itemgetter(0), t1)
         passages = map(itemgetter(1), t2)
         for key, group in groupby(zip(passages, parse_udpipe(paragraphs, model_name, verbose, annotate=True)),
