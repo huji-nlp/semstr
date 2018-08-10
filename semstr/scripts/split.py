@@ -5,9 +5,10 @@ from glob import glob
 
 import configargparse
 
-from semstr.util.amr import ID_PATTERN, COMMENT_PREFIX
-
 desc = """Split sentences/passages to separate files (important for shuffling before training the parser)"""
+
+ID_PATTERN = re.compile("#\s*::id\s+(\S+)")
+COMMENT_PREFIX = "#"
 
 
 def main(args):
