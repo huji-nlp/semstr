@@ -2,11 +2,13 @@ A,nsubj
 C,head
 D,advmod
 E,det
-F,aux
-G,cc
+F,cop
+G,advmod
 H,head
-L,mark
+L,cc
 N,cc
 P,head
+Q,nummod
 R,case
 S,head
+T,advmod
