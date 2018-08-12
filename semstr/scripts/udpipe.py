@@ -9,6 +9,7 @@ from time import time
 from tqdm import tqdm
 from ucca import layer0, ioutil
 from ucca.convert import split2paragraphs
+from ucca.textutil import Attr, get_vocab
 
 from semstr.cfgutil import add_verbose_arg, read_specs, add_specs_args
 from semstr.convert import FROM_FORMAT, to_conllu, from_conllu
@@ -63,10 +64,8 @@ def split(passage):
         raise RuntimeError("Failed splitting passage " + passage.ID) from e
 
 
-def annotate_udpipe(passages, model_name, as_array=True, verbose=False):
+def annotate_udpipe(passages, model_name, as_array=True, verbose=False, lang=None):
     if model_name:
-        if not as_array:
-            raise ValueError("Annotating with UDPipe and as_array=False are currently not supported; use --as-array")
         t1, t2 = tee((paragraph, passage) for passage in passages for paragraph in split(passage))
         paragraphs = map(itemgetter(0), t1)
         passages = map(itemgetter(1), t2)
@@ -78,7 +77,15 @@ def annotate_udpipe(passages, model_name, as_array=True, verbose=False):
                 l0 = annotated.layer(layer0.LAYER_ID)
                 if l0.all:
                     i = next(iter(t.extra["orig_paragraph"] for t in paragraph.layer(layer0.LAYER_ID).all))
-                    passage.layer(layer0.LAYER_ID).doc(i)[:] = l0.doc(1)
+                    if as_array:
+                        passage.layer(layer0.LAYER_ID).doc(i)[:] = l0.doc(1)
+                    else:
+                        for terminal in passage.layer(layer0.LAYER_ID).all:
+                            if terminal.paragraph == i:
+                                annotated_terminal = l0.by_position(terminal.para_pos)
+                                # noinspection PyTypeChecker
+                                for attr, value in zip(Attr, annotated_terminal.tok):
+                                    terminal.extra[attr.key] = attr(value, get_vocab(lang=lang))
             yield passage
     else:
         yield from passages
