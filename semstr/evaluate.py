@@ -185,7 +185,8 @@ if __name__ == '__main__':
     argparser = configargparse.ArgParser(description=desc)
     argparser.add_argument("guessed", help="filename/directory for the guessed annotation(s)")
     argparser.add_argument("ref", help="filename/directory for the reference annotation(s)")
-    argparser.add_argument("-f", "--format", default="amr", help="default format (if cannot determine by suffix)")
+    argparser.add_argument("-f", "--format", default="amr", choices=CONVERTERS,
+                           help="default format (if cannot determine by suffix)")
     argparser.add_argument("-o", "--out-file", help="file to write results for each evaluated passage to in CSV format")
     argparser.add_argument("-s", "--summary-file", help="file to write aggregated results to, in CSV format")
     argparser.add_argument("-u", "--unlabeled", action="store_true", help="print unlabeled F1 for individual passages")

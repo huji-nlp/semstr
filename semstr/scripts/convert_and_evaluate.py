@@ -28,8 +28,10 @@ def main(args):
                 print(flush=True)
             basename, ext = os.path.splitext(os.path.basename(filename))
             passage_format = ext.lstrip(".")
-            converters = CONVERTERS.get(passage_format, CONVERTERS["amr"])
-            evaluator = EVALUATORS.get(passage_format, EVALUATORS["amr"])
+            if passage_format == "txt":
+                passage_format = args.format
+            converters = CONVERTERS.get(passage_format, CONVERTERS[args.format])
+            evaluator = EVALUATORS.get(passage_format, EVALUATORS[args.format])
             with open(filename, encoding="utf-8") as f:
                 for passage, ref, passage_id in converters[0](f, passage_id=basename, return_original=True):
                     if args.normalize:
@@ -71,6 +73,8 @@ def check_args(parser, args):
 if __name__ == '__main__':
     argparser = configargparse.ArgParser(description=desc)
     argparser.add_argument("filenames", nargs="+", help="file names to convert and evaluate")
+    argparser.add_argument("-f", "--format", choices=CONVERTERS, default="amr",
+                           help="default format (if cannot determine by suffix)")
     add_verbose_arg(argparser, help="detailed evaluation output")
     add_boolean_option(argparser, "wikification", "Spotlight to wikify any named node (for AMR)")
     argparser.add_argument("-o", "--out-dir", help="output directory (if unspecified, files are not written)")
