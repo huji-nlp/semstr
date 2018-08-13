@@ -79,7 +79,8 @@ class ConlluConverter(ConllConverter):
     def generate_header_lines(self, graph):
         yield from super().generate_header_lines(graph)
         yield ["# text = " + " ".join(dep_node.token.text for dep_node in graph.nodes)]
-        yield ["# doc_id = " + graph.id.rpartition(".")[0]]
+        if "." in graph.id:
+            yield ["# doc_id = " + graph.id.rpartition(".")[0]]
 
     def find_headed_unit(self, unit):
         while unit.incoming and (not unit.outgoing or unit.incoming[0].tag == self.HEAD) and \
