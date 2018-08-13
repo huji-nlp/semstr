@@ -10,14 +10,16 @@ import configargparse
 from tqdm import tqdm
 from ucca.ioutil import gen_files
 
-from semstr.util.amr import ID_PATTERN
-
 desc = """Concatenate files according to order in reference"""
+
+AMR_ID_PATTERN = re.compile("#\s*::id\s+(\S+)")
+CONLLU_ID_PATTERN = re.compile("#\s*sent_id\s*=\s*(\S+)")
+SDP_ID_PATTERN = re.compile("#\s*(\d+).*")
 
 
 def find_ids(lines):
     for line in lines:
-        m = ID_PATTERN.match(line) or re.match("#\s*(\d+).*", line) or re.match("#\s*sent_id\s*=\s*(\S+)", line)
+        m = AMR_ID_PATTERN.match(line) or SDP_ID_PATTERN.match(line) or CONLLU_ID_PATTERN.match(line)
         if m:
             yield m.group(1)
 
