@@ -329,8 +329,10 @@ class AmrConverter(FormatConverter):
                         if default_label is None:
                             raise ValueError("Missing label for node '%s' (%s) in '%s'" % (node, node.ID, passage.ID))
                         label = default_label
-                    if PLACEHOLDER_PATTERN.search(label):
-                        raise ValueError("Unresolved placeholder: " + label)
+                    m = PLACEHOLDER_PATTERN.search(label)
+                    if m:
+                        # raise ValueError("Unresolved placeholder: " + label)
+                        label = re.sub(re.escape(m.group(0)), "be", label)
                     if is_concept(label):  # collapsed variable + concept: create both AMR nodes and the instance rel
                         concept = None if node.ID in labels else label
                         label = labels[node.ID]  # generate variable label
