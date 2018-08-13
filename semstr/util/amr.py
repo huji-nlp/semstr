@@ -56,7 +56,7 @@ SEASON = "season"
 TIMEZONE = "timezone"
 
 # Specific node labels
-CONCEPT_PATTERN = re.compile(r"[A-Za-z'][A-Za-z0-9.'-]*")
+CONCEPT_PATTERN = re.compile(r"[A-Za-z<>'][A-Za-z0-9.'<>-]*")
 MINUS = "-"
 UNKNOWN_LABEL = "name"
 MODES = ("expressive", "imperative", "interrogative")
