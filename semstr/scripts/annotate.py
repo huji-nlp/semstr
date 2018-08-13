@@ -6,11 +6,11 @@ from functools import partial
 from tqdm import tqdm
 from ucca import layer0
 from ucca.ioutil import write_passage, read_files_and_dirs, external_write_mode
-from ucca.textutil import annotate_all, Attr, get_vocab
+from ucca.textutil import annotate_all
 
 from semstr.cfgutil import read_specs, add_specs_args
 from semstr.convert import FROM_FORMAT, from_conllu
-from semstr.scripts.udpipe import annotate_udpipe
+from semstr.scripts.udpipe import annotate_udpipe, copy_tok_to_extra
 
 desc = """Read passages in any format, and write back with spaCy/UDPipe annotations."""
 
@@ -28,24 +28,21 @@ def copy_annotation(passages, conllu, as_array=True, verbose=False, lang=None):
         else:
             for terminal, annotated_terminal in zip(passage.layer(layer0.LAYER_ID).all,
                                                     annotated.layer(layer0.LAYER_ID).all):
-                # noinspection PyTypeChecker
-                for attr, value in zip(Attr, annotated_terminal.tok):
-                    terminal.extra[attr.key] = attr(value, get_vocab(lang=lang))
+                copy_tok_to_extra(annotated_terminal, terminal, lang=lang)
         yield passage
 
 
 def main(args):
     for spec in read_specs(args, converters=FROM_FORMAT):
+        kwargs = dict(as_array=args.as_array, verbose=args.verbose, lang=spec.lang)
+        passages = spec.passages
         if spec.udpipe:
-            spec.passages = annotate_udpipe(spec.passages, spec.udpipe, as_array=args.as_array, verbose=args.verbose,
-                                            lang=spec.lang)
+            passages = annotate_udpipe(passages, spec.udpipe, **kwargs)
         elif spec.conllu:
-            spec.passages = copy_annotation(spec.passages, spec.conllu, as_array=args.as_array, verbose=args.verbose,
-                                            lang=spec.lang)
-        for passage in annotate_all(spec.passages if args.verbose else
-                                    tqdm(spec.passages, unit=" passages", desc="Annotating " + spec.out_dir),
-                                    as_array=args.as_array, replace=not spec.udpipe, lang=spec.lang,
-                                    verbose=args.verbose):
+            passages = copy_annotation(passages, spec.conllu, **kwargs)
+        for passage in annotate_all(passages if args.verbose else
+                                    tqdm(passages, unit=" passages", desc="Annotating " + spec.out_dir),
+                                    replace=not spec.udpipe, **kwargs):
             write_passage(passage, outdir=spec.out_dir, verbose=args.verbose, binary=args.binary)
 
 

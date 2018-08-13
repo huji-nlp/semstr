@@ -83,12 +83,17 @@ def annotate_udpipe(passages, model_name, as_array=True, verbose=False, lang=Non
                         for terminal in passage.layer(layer0.LAYER_ID).all:
                             if terminal.paragraph == i:
                                 annotated_terminal = l0.by_position(terminal.para_pos)
-                                # noinspection PyTypeChecker
-                                for attr, value in zip(Attr, annotated_terminal.tok):
-                                    terminal.extra[attr.key] = attr(value, get_vocab(lang=lang))
+                                copy_tok_to_extra(annotated_terminal, terminal, lang=lang)
             yield passage
     else:
         yield from passages
+
+
+def copy_tok_to_extra(annotated_terminal, terminal, lang=None):
+    # noinspection PyTypeChecker
+    for attr, value in zip(Attr, annotated_terminal.tok):
+        if value:
+            terminal.extra[attr.key] = attr(value, get_vocab(lang=lang))
 
 
 def split_by_empty_lines(lines, *args, **kwargs):
