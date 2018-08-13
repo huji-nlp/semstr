@@ -7,18 +7,31 @@ import penman
 from ucca import layer0, layer1, convert, textutil
 
 from .format import FormatConverter
-from ..util.amr import parse, amr_lib, resolve_label, EXTENSIONS, COMMENT_PREFIX, ID_PATTERN, TOK_PATTERN, DEP_PREFIX, \
+from ..util.amr import parse, amr_lib, resolve_label, EXTENSIONS, COMMENT_PREFIX, DEP_PREFIX, \
     TOP_DEP, PREFIXED_RELATION_PATTERN, PREFIXED_RELATION_SUBSTITUTION, LABEL_ATTRIB, NAME, OP, PUNCTUATION_DEP, \
     PUNCTUATION_LABEL, TERMINAL_DEP, ALIGNMENT_PREFIX, ALIGNMENT_SEP, SKIP_TOKEN_PATTERN, CONCEPT, NUM, WIKI, CONST, \
     NUM_PATTERN, MINUS, WIKIFIER, TERMINAL_TAGS, is_concept, INSTANCE, PREFIXED_RELATION_ENUM, PREFIXED_RELATION_PREP
 
 DELETE_PATTERN = re.compile("\\\\|(?<=(?<!<)<)[^<>]+(?=>(?!>))")  # Delete text inside single angle brackets
+ID_PATTERN = re.compile("#\s*::id\s+(\S+)")
+TOK_PATTERN = re.compile("#\s*::(?:tok|snt)\s+(.*)")
+FORMAT_PATTERN = re.compile("#\s*::(?:format)\s+(.*)")
 
 
 class AmrConverter(FormatConverter):
+    class Graph:
+        def __init__(self, amr_lines, amr_id, tokens, original_format=None):
+            self.lines = amr_lines
+            self.id = amr_id
+            self.tokens = tokens
+            self.format = original_format
+            assert self.tokens is not None, "Cannot convert AMR without input tokens: %s" % self.lines
+            self.amr = parse(" ".join(self.lines), tokens=self.tokens)
+
     def __init__(self):
         self.passage_id = self.nodes = self.return_original = self.save_original = self.remove_cycles = \
             self.extensions = self.excluded = self.alignments = self.wikification = None
+        self.format = "amr"
 
     def from_format(self, lines, passage_id, return_original=False, save_original=True, remove_cycles=True,
                     wikification=True, **kwargs):
@@ -29,14 +42,17 @@ class AmrConverter(FormatConverter):
         self.wikification = wikification
         self.extensions = [l for l in EXTENSIONS if kwargs.get(l)]
         self.excluded = {i for l, r in EXTENSIONS.items() if l not in self.extensions for i in r}
-        for passage, amr, amr_id in textutil.annotate_all(self._init_passages(self._amr_generator(lines)),
-                                                          as_array=True, as_tuples=True):
-            yield self._build_passage(passage, amr, amr_id)
+        for passage, graph in textutil.annotate_all(self._init_passages(self._amr_generator(lines)),
+                                                    as_array=True, as_tuples=True):
+            yield self._build_passage(passage, graph)
 
-    @staticmethod
-    def _amr_generator(lines):
+    def _amr_generator(self, lines):
         amr_lines = []
-        amr_id = tokens = None
+        amr_id = tokens = original_format = None
+
+        def _graph():
+            return self.Graph(amr_lines, amr_id, tokens, original_format)
+
         for line in lines:
             line = line.lstrip()
             if line:
@@ -50,34 +66,38 @@ class AmrConverter(FormatConverter):
                     m = TOK_PATTERN.match(line)
                     if m:
                         tokens = [t.strip("@") or "@" for t in DELETE_PATTERN.sub("", m.group(1)).split()]
+                    else:
+                        m = FORMAT_PATTERN.match(line)
+                        if m:
+                            original_format = m.group(1)
             if amr_lines:
-                yield amr_lines, amr_id, tokens
+                yield _graph()
                 amr_lines = []
                 amr_id = tokens = None
         if amr_lines:
-            yield amr_lines, amr_id, tokens
+            yield _graph()
 
-    def _init_passages(self, amrs):
-        for lines, amr_id, tokens in amrs:
-            assert tokens is not None, "Cannot convert AMR without input tokens: %s" % lines
-            amr = parse(" ".join(lines), tokens=tokens)
-            amr_id = amr_id or self.passage_id
-            passage = next(convert.from_text(tokens, amr_id, tokenized=True))
-            passage.extra["format"] = "amr"
-            yield passage, amr, amr_id
+    def _init_passages(self, graphs):
+        for graph in graphs:
+            if not graph.id:
+                graph.id = graph.id or self.passage_id
+            passage = next(convert.from_text(graph.tokens, graph.id, tokenized=True))
+            if graph.format is None or graph.format == self.format:
+                passage.extra["format"] = self.format
+            yield passage, graph
 
-    def _build_passage(self, passage, amr, amr_id):
+    def _build_passage(self, passage, graph):
         l0 = passage.layer(layer0.LAYER_ID)
         l1 = passage.layer(layer1.LAYER_ID)
-        self._build_layer1(amr, l1)
-        self._build_layer0(self.align_nodes(amr), l1, l0)
+        self._build_layer1(graph.amr, l1)
+        self._build_layer0(self.align_nodes(graph.amr), l1, l0)
         self._update_implicit(l1)
         self._update_labels(l1)
-        original = self.header(passage) + amr(alignments=False).split("\n") if \
+        original = self.header(passage) + graph.amr(alignments=False).split("\n") if \
             self.save_original or self.return_original else None
         if self.save_original:
             passage.extra["original"] = original
-        return (passage, original, amr_id) if self.return_original else passage
+        return (passage, original, graph.id) if self.return_original else passage
 
     def _build_layer1(self, amr, l1):
         def _reachable(x, y):  # is there a path from x to y? used to detect cycles
@@ -349,4 +369,7 @@ class AmrConverter(FormatConverter):
                "# ::tok " + " ".join(t.text for t in passage.layer(layer0.LAYER_ID).all)]
         if self.alignments:
             ret.append("# ::alignments " + " ".join("%d-%s" % (i, a) for i, a in sorted(self.alignments.items())))
+        original_format = passage.extra.get("format", "ucca")
+        if original_format != self.format:
+            ret.append("# ::format " + original_format)
         return ret
