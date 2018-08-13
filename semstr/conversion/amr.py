@@ -125,6 +125,8 @@ class AmrConverter(FormatConverter):
         visited = set()  # to avoid cycles
         while pending:  # breadth-first search creating layer 1 nodes
             triple = pending.pop(0)
+            if triple.inverted:
+                triple = penman.Triple(triple.target, triple.relation + "-of", triple.source, inverted=False)
             if triple in visited:
                 continue
             visited.add(triple)
@@ -154,7 +156,8 @@ class AmrConverter(FormatConverter):
                     if not self.remove_cycles or not _reachable(triple.target, triple.source):  # add only if no cycle
                         l1.add_remote(parent, rel, node)
                 elif triple.target in amr.variables():  # new variable
-                    pending += amr.triples(source=triple.target)  # to continue breadth-first search
+                    pending += amr.triples(source=triple.target) + [  # to continue breadth-first search
+                        t for t in amr.triples(target=triple.target) if t.inverted]
                     variables[triple.target] = node = l1.add_fnode(parent, rel)
                 else:  # constant: save value in node attributes
                     node = l1.add_fnode(parent, rel)
