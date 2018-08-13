@@ -51,10 +51,10 @@ def udpipe(sentences, model_name, verbose=False):
     return processed.splitlines()
 
 
-def parse_udpipe(passages, model_name, verbose=False, annotate=False):
+def parse_udpipe(passages, model_name, verbose=False, annotate=False, terminals_only=False):
     passages1, passages2 = tee(passages)
     processed = udpipe((to_conllu(p, tree=True, test=True) for p in passages1), model_name, verbose)
-    return zip(passages2, from_conllu(processed, passage_id=None, annotate=annotate))
+    return zip(passages2, from_conllu(processed, passage_id=None, annotate=annotate, terminals_only=terminals_only))
 
 
 def split(passage):
@@ -69,21 +69,21 @@ def annotate_udpipe(passages, model_name, as_array=True, verbose=False, lang=Non
         t1, t2 = tee((paragraph, passage) for passage in passages for paragraph in split(passage))
         paragraphs = map(itemgetter(0), t1)
         passages = map(itemgetter(1), t2)
-        for key, group in groupby(zip(passages, parse_udpipe(paragraphs, model_name, verbose, annotate=True)),
-                                  key=itemgetter(0)):
+        for key, group in groupby(zip(passages, parse_udpipe(paragraphs, model_name, verbose,
+                                                             annotate=True, terminals_only=True)), key=itemgetter(0)):
             passage = key
             for passage, (paragraph, annotated) in group:
                 # noinspection PyUnresolvedReferences
                 l0 = annotated.layer(layer0.LAYER_ID)
                 if l0.all:
                     i = next(iter(t.extra["orig_paragraph"] for t in paragraph.layer(layer0.LAYER_ID).all))
+                    out_l0 = passage.layer(layer0.LAYER_ID)
                     if as_array:
-                        passage.layer(layer0.LAYER_ID).doc(i)[:] = l0.doc(1)
+                        out_l0.doc(i)[:] = l0.doc(1)
                     else:
-                        for terminal in passage.layer(layer0.LAYER_ID).all:
+                        for terminal in out_l0.all:
                             if terminal.paragraph == i:
-                                annotated_terminal = l0.by_position(terminal.para_pos)
-                                copy_tok_to_extra(annotated_terminal, terminal, lang=lang)
+                                copy_tok_to_extra(l0.by_position(terminal.para_pos), terminal, lang=lang)
             yield passage
     else:
         yield from passages

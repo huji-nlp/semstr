@@ -51,21 +51,25 @@ class ConlluConverter(ConllConverter):
     def read_line(self, *args, **kwargs):
         return self.read_line_and_append(super().read_line, *args, **kwargs)
 
-    def from_format(self, lines, passage_id, split=False, return_original=False, annotate=False):
+    def from_format(self, lines, passage_id, split=False, return_original=False, annotate=False, terminals_only=False):
         for graph in self.generate_graphs(lines, split):
             if not graph.id:
                 graph.id = passage_id
+            annotations = {}
+            if annotate:  # get all node attributes before they are possibly modified by build_passage
+                for dep_node in graph.nodes[1:]:
+                    annotations.setdefault(dep_node.token.paragraph, []).append(
+                        [ATTR_GETTERS.get(a, {}.get)(dep_node) for a in textutil.Attr])
             try:
-                passage = self.build_passage(graph)
+                passage = self.build_passage(graph, terminals_only=terminals_only)
             except (AttributeError, IndexError) as e:
                 raise RuntimeError("Failed converting '%s'" % graph.id) from e
-            if annotate:
+            if annotate:  # copy attributes into layer 0 extra member "doc", encoded to numeric IDs
                 docs = passage.layer(layer0.LAYER_ID).extra.setdefault("doc", [[]])
-                for dep_node in graph.nodes[1:]:
-                    paragraph = dep_node.token.paragraph
+                for paragraph, paragraph_annotations in annotations.items():
                     while len(docs) < paragraph:
                         docs.append([])
-                    docs[paragraph - 1].append([ATTR_GETTERS.get(a, {}.get)(dep_node) for a in textutil.Attr])
+                    docs[paragraph - 1] = paragraph_annotations
             yield (passage, self.lines_read, passage.ID) if return_original else passage
             self.lines_read = []
 

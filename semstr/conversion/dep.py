@@ -252,11 +252,12 @@ class DependencyConverter(FormatConverter):
         if not split or dep_nodes:
             yield _graph()
 
-    def build_passage(self, graph):
+    def build_passage(self, graph, terminals_only=False):
         passage = core.Passage(graph.id)
         self.create_terminals(graph, layer0.Layer0(passage))
-        self.create_non_terminals(graph, layer1.Layer1(passage))
-        graph.link_pre_terminals()
+        if not terminals_only:
+            self.create_non_terminals(graph, layer1.Layer1(passage))
+            graph.link_pre_terminals()
         if graph.format is None or graph.format == self.format:
             passage.extra["format"] = self.format
         return passage
@@ -364,20 +365,21 @@ class DependencyConverter(FormatConverter):
                 if dep_node.parent_multi_word:  # part of a multi-word token (e.g. zum = zu + dem)
                     dep_node.terminal.extra[self.MULTI_WORD_TEXT_ATTRIB] = dep_node.parent_multi_word.token.text
 
-    def from_format(self, lines, passage_id, split=False, return_original=False):
+    def from_format(self, lines, passage_id, split=False, return_original=False, terminals_only=False):
         """Converts from parsed text in dependency format to a Passage object.
 
         :param lines: an iterable of lines in dependency format, describing a single passage.
         :param passage_id: ID to set for passage, in case no ID is specified in the file
         :param split: split each sentence to its own passage?
         :param return_original: return original passage in addition to converted one
+        :param terminals_only: create only terminals (with any annotation if specified), no non-terminals
 
         :return generator of Passage objects.
         """
         for graph in self.generate_graphs(lines, split):
             if not graph.id:
                 graph.id = passage_id
-            passage = self.build_passage(graph)
+            passage = self.build_passage(graph, terminals_only=terminals_only)
             yield (passage, self.lines_read, passage.ID) if return_original else passage
             self.lines_read = []
 

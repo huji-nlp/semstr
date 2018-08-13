@@ -113,7 +113,8 @@ def to_amr(passage, metadata=True, wikification=True, use_original=True, verbose
                                     default_label=default_label)
 
 
-def from_conllu(lines, passage_id=None, split=True, return_original=False, annotate=False, *args, **kwargs):
+def from_conllu(lines, passage_id=None, split=True, return_original=False, annotate=False, terminals_only=False,
+                *args, **kwargs):
     """Converts from parsed text in Universal Dependencies format to a Passage object.
 
     :param lines: iterable of lines in Universal Dependencies format, describing a single passage.
@@ -121,12 +122,14 @@ def from_conllu(lines, passage_id=None, split=True, return_original=False, annot
     :param split: split each sentence to its own passage?
     :param return_original: return triple of (UCCA passage, Universal Dependencies string, sentence ID)
     :param annotate: whether to save dependency annotations in "extra" dict of layer 0
+    :param terminals_only: create only terminals (with any annotation if specified), no non-terminals
 
     :return generator of Passage objects
     """
     del args, kwargs
     from semstr.conversion.conllu import ConlluConverter
-    return ConlluConverter().from_format(lines, passage_id, split, return_original=return_original, annotate=annotate)
+    return ConlluConverter().from_format(lines, passage_id, split, return_original=return_original, annotate=annotate,
+                                         terminals_only=terminals_only)
 
 
 def to_conllu(passage, test=False, *args, **kwargs):
