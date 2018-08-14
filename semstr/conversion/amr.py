@@ -42,7 +42,7 @@ class AmrConverter(FormatConverter):
         self.wikification = wikification
         self.extensions = [l for l in EXTENSIONS if kwargs.get(l)]
         self.excluded = {i for l, r in EXTENSIONS.items() if l not in self.extensions for i in r}
-        for passage, graph in textutil.annotate_all(self._init_passages(self._amr_generator(lines)),
+        for passage, graph in textutil.annotate_all(self._init_passages(self._amr_generator(lines), **kwargs),
                                                     as_array=True, as_tuples=True):
             yield self._build_passage(passage, graph)
 
@@ -77,11 +77,12 @@ class AmrConverter(FormatConverter):
         if amr_lines:
             yield _graph()
 
-    def _init_passages(self, graphs):
+    def _init_passages(self, graphs, **kwargs):
         for graph in graphs:
             if not graph.id:
                 graph.id = graph.id or self.passage_id
             passage = next(convert.from_text(graph.tokens, graph.id, tokenized=True))
+            graph.format = kwargs.get("format") or graph.format
             if graph.format is None or graph.format == self.format:
                 passage.extra["format"] = self.format
             yield passage, graph
@@ -265,7 +266,7 @@ class AmrConverter(FormatConverter):
             node.attrib[LABEL_ATTRIB] = label
 
     def to_format(self, passage, metadata=True, wikification=True, verbose=False, use_original=True,
-                  default_label=None):
+                  default_label=None, **kwargs):
         self.wikification = wikification
         if use_original:
             original = passage.extra.get("original")
@@ -280,7 +281,7 @@ class AmrConverter(FormatConverter):
             print("Expanding names...")
         self._expand_names(passage.layer(layer1.LAYER_ID))
         triples = list(self._to_triples(passage, default_label=default_label)) or [("y", INSTANCE, "yes")]
-        return (self.header(passage) if metadata else []) + (penman.encode(penman.Graph(triples)).split("\n"))
+        return (self.header(passage, **kwargs) if metadata else []) + (penman.encode(penman.Graph(triples)).split("\n"))
 
     def _to_triples(self, passage, default_label=None):
         class PathElement:
@@ -364,12 +365,12 @@ class AmrConverter(FormatConverter):
     def alignment_str(node):
         return "~e." + ",".join([str(t.position - 1) for t in node.terminals]) if node.terminals else ""
 
-    def header(self, passage):
+    def header(self, passage, **kwargs):
         ret = ["# ::id " + passage.ID,
                "# ::tok " + " ".join(t.text for t in passage.layer(layer0.LAYER_ID).all)]
         if self.alignments:
             ret.append("# ::alignments " + " ".join("%d-%s" % (i, a) for i, a in sorted(self.alignments.items())))
-        original_format = passage.extra.get("format", "ucca")
+        original_format = kwargs.get("format") or passage.extra.get("format", "ucca")
         if original_format != self.format:
             ret.append("# ::format " + original_format)
         return ret

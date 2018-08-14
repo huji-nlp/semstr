@@ -19,7 +19,7 @@ description = """Parses files in the specified format, and writes as the specifi
 Each passage is written to the file: <outdir>/<prefix><passage_id>.<extension> """
 
 
-def from_conll(lines, passage_id, split=True, return_original=False, *args, **kwargs):
+def from_conll(lines, passage_id, split=True, return_original=False, **kwargs):
     """Converts from parsed text in CoNLL format to a Passage object.
 
     :param lines: iterable of lines in CoNLL format, describing a single passage.
@@ -29,12 +29,12 @@ def from_conll(lines, passage_id, split=True, return_original=False, *args, **kw
 
     :return generator of Passage objects
     """
-    del args, kwargs
     from semstr.conversion.conll import ConllConverter
-    return ConllConverter().from_format(lines, passage_id=passage_id, split=split, return_original=return_original)
+    return ConllConverter().from_format(lines, passage_id=passage_id, split=split, return_original=return_original,
+                                        format=kwargs.get("format"))
 
 
-def to_conll(passage, test=False, tree=True, *args, **kwargs):
+def to_conll(passage, test=False, tree=True, **kwargs):
     """ Convert from a Passage object to a string in CoNLL-X format (conll)
 
     :param passage: the Passage object to convert
@@ -43,12 +43,11 @@ def to_conll(passage, test=False, tree=True, *args, **kwargs):
 
     :return list of lines representing the dependencies in the passage
     """
-    del args, kwargs
     from semstr.conversion.conll import ConllConverter
-    return ConllConverter().to_format(passage, test, tree)
+    return ConllConverter().to_format(passage, test, tree, format=kwargs.get("format"))
 
 
-def from_export(lines, passage_id=None, split=True, return_original=False, *args, **kwargs):
+def from_export(lines, passage_id=None, split=True, return_original=False, **kwargs):
     """Converts from parsed text in NeGra export format to a Passage object.
 
     :param lines: iterable of lines in NeGra export format, describing a single passage.
@@ -58,12 +57,12 @@ def from_export(lines, passage_id=None, split=True, return_original=False, *args
 
     :return generator of Passage objects
     """
-    del args, kwargs
     from semstr.conversion.export import ExportConverter
-    return ExportConverter().from_format(lines, passage_id=passage_id, split=split, return_original=return_original)
+    return ExportConverter().from_format(lines, passage_id=passage_id, split=split, return_original=return_original,
+                                         format=kwargs.get("format"))
 
 
-def to_export(passage, test=False, tree=False, *args, **kwargs):
+def to_export(passage, test=False, tree=False, **kwargs):
     """ Convert from a Passage object to a string in NeGra export format (export)
 
     :param passage: the Passage object to convert
@@ -72,12 +71,11 @@ def to_export(passage, test=False, tree=False, *args, **kwargs):
 
     :return list of lines representing a (discontinuous) tree structure constructed from the passage
     """
-    del args, kwargs
     from semstr.conversion.export import ExportConverter
-    return ExportConverter().to_format(passage, test=test, tree=tree)
+    return ExportConverter().to_format(passage, test=test, tree=tree, format=kwargs.get("format"))
 
 
-def from_amr(lines, passage_id=None, return_original=False, save_original=True, wikification=False, *args, **kwargs):
+def from_amr(lines, passage_id=None, return_original=False, save_original=True, wikification=False, **kwargs):
     """Converts from parsed text in AMR PENMAN format to a Passage object.
 
     :param lines: iterable of lines in AMR PENMAN format, describing a single passage.
@@ -88,14 +86,14 @@ def from_amr(lines, passage_id=None, return_original=False, save_original=True, 
 
     :return generator of Passage objects
     """
-    del args, kwargs
     from semstr.conversion.amr import AmrConverter
     return AmrConverter().from_format(lines, passage_id=passage_id, return_original=return_original,
-                                      save_original=save_original, wikification=wikification)
+                                      save_original=save_original, wikification=wikification,
+                                      format=kwargs.get("format"))
 
 
 def to_amr(passage, metadata=True, wikification=True, use_original=True, verbose=False, default_label=None,
-           *args, **kwargs):
+           **kwargs):
     """ Convert from a Passage object to a string in AMR PENMAN format (export)
 
     :param passage: the Passage object to convert
@@ -107,14 +105,13 @@ def to_amr(passage, metadata=True, wikification=True, use_original=True, verbose
 
     :return list of lines representing an AMR in PENMAN format, constructed from the passage
     """
-    del args, kwargs
     from semstr.conversion.amr import AmrConverter
     return AmrConverter().to_format(passage, metadata, wikification, verbose, use_original=use_original,
-                                    default_label=default_label)
+                                    default_label=default_label, format=kwargs.get("format"))
 
 
 def from_conllu(lines, passage_id=None, split=True, return_original=False, annotate=False, terminals_only=False,
-                *args, **kwargs):
+                **kwargs):
     """Converts from parsed text in Universal Dependencies format to a Passage object.
 
     :param lines: iterable of lines in Universal Dependencies format, describing a single passage.
@@ -126,13 +123,12 @@ def from_conllu(lines, passage_id=None, split=True, return_original=False, annot
 
     :return generator of Passage objects
     """
-    del args, kwargs
     from semstr.conversion.conllu import ConlluConverter
     return ConlluConverter().from_format(lines, passage_id=passage_id, split=split, return_original=return_original,
-                                         annotate=annotate, terminals_only=terminals_only)
+                                         annotate=annotate, terminals_only=terminals_only, format=kwargs.get("format"))
 
 
-def to_conllu(passage, test=False, tree=False, *args, **kwargs):
+def to_conllu(passage, test=False, tree=False, **kwargs):
     """ Convert from a Passage object to a string in Universal Dependencies format (conllu)
 
     :param passage: the Passage object to convert
@@ -141,12 +137,11 @@ def to_conllu(passage, test=False, tree=False, *args, **kwargs):
 
     :return list of lines representing the semantic dependencies in the passage
     """
-    del args, kwargs
     from semstr.conversion.conllu import ConlluConverter
-    return ConlluConverter().to_format(passage, test=test, tree=tree)
+    return ConlluConverter().to_format(passage, test=test, tree=tree, format=kwargs.get("format"))
 
 
-def from_sdp(lines, passage_id, split=True, mark_aux=False, return_original=False, *args, **kwargs):
+def from_sdp(lines, passage_id, split=True, mark_aux=False, return_original=False, **kwargs):
     """Converts from parsed text in SemEval 2015 SDP format to a Passage object.
 
     :param lines: iterable of lines in SDP format, describing a single passage.
@@ -157,13 +152,12 @@ def from_sdp(lines, passage_id, split=True, mark_aux=False, return_original=Fals
 
     :return generator of Passage objects
     """
-    del args, kwargs
     from semstr.conversion.sdp import SdpConverter
     return SdpConverter(mark_aux=mark_aux).from_format(lines, passage_id=passage_id, split=split,
-                                                       return_original=return_original)
+                                                       return_original=return_original, format=kwargs.get("format"))
 
 
-def to_sdp(passage, test=False, tree=False, mark_aux=False, *args, **kwargs):
+def to_sdp(passage, test=False, tree=False, mark_aux=False, **kwargs):
     """ Convert from a Passage object to a string in SemEval 2015 SDP format (sdp)
 
     :param passage: the Passage object to convert
@@ -173,9 +167,8 @@ def to_sdp(passage, test=False, tree=False, mark_aux=False, *args, **kwargs):
 
     :return list of lines representing the semantic dependencies in the passage
     """
-    del args, kwargs
     from semstr.conversion.sdp import SdpConverter
-    return SdpConverter(mark_aux=mark_aux).to_format(passage, test=test, tree=tree)
+    return SdpConverter(mark_aux=mark_aux).to_format(passage, test=test, tree=tree, format=kwargs.get("format"))
 
 
 CONVERTERS = {
@@ -203,7 +196,7 @@ def iter_files(patterns):
 
 
 def iter_passages(patterns, desc=None, input_format=None, prefix="", split=False, mark_aux=False, annotate=False,
-                  wikification=False):
+                  wikification=False, label_map_file=None, output_format=None):
     t = tqdm(list(iter_files(patterns)), unit="file", desc=desc)
     for filename in t:
         t.set_postfix(file=filename)
@@ -218,10 +211,10 @@ def iter_passages(patterns, desc=None, input_format=None, prefix="", split=False
                 passage_id = re.search(r"\d+(\.\d+)*", basename).group(0)
             except AttributeError:
                 passage_id = basename
-            converter, _ = CONVERTERS.get(input_format or ext.lstrip("."), (from_text,))
+            converter = FROM_FORMAT.get(input_format or ext.lstrip("."), (from_text,))
             with open(filename, encoding="utf-8") as f:
                 yield from converter(f, prefix + passage_id, split=split, mark_aux=mark_aux, annotate=annotate,
-                                     wikification=wikification)
+                                     wikification=wikification, format=output_format if label_map_file else None)
 
 
 def map_labels(passage, label_map_file):
@@ -241,15 +234,16 @@ def map_labels(passage, label_map_file):
 
 def write_passage(passage, args):
     ext = {None: UCCA_EXT[args.binary], "amr": ".txt"}.get(args.output_format) or "." + args.output_format
-    outfile = args.out_dir + os.path.sep + passage.ID + ext
+    outfile = os.path.join(args.out_dir, passage.ID + ext)
     if args.verbose:
         with ioutil.external_write_mode():
             print("Writing '%s'..." % outfile, file=sys.stderr)
     if args.output_format is None:  # UCCA output
         ioutil.passage2file(passage, outfile, binary=args.binary)
     else:
-        converter = CONVERTERS[args.output_format][1]
-        output = "\n".join(converter(passage, wikification=args.wikification, default_label=args.default_label)) \
+        converter = TO_FORMAT[args.output_format]
+        output = "\n".join(converter(passage, wikification=args.wikification, default_label=args.default_label,
+                                     format=args.output_format if args.label_map else None)) \
             if args.output_format == "amr" else \
             "\n".join(line for p in (split2sentences(passage) if args.split else [passage]) for line in
                       converter(p, test=args.test, tree=args.tree, mark_aux=args.mark_aux))
@@ -261,7 +255,8 @@ def main(args):
     os.makedirs(args.out_dir, exist_ok=True)
     for passage in iter_passages(args.filenames, desc="Converting", input_format=args.input_format, prefix=args.prefix,
                                  split=args.split, mark_aux=args.mark_aux, annotate=args.annotate,
-                                 wikification=args.wikification):
+                                 wikification=args.wikification,
+                                 label_map_file=args.label_map, output_format=args.output_format):
         map_labels(passage, args.label_map)
         if args.normalize:
             normalize(passage, extra=args.extra_normalization)

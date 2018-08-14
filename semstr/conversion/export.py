@@ -121,7 +121,7 @@ class ExportConverter(FormatConverter):
 
         return p
 
-    def from_format(self, lines, passage_id, split=False, return_original=False):
+    def from_format(self, lines, passage_id, split=False, return_original=False, **kwargs):
         self.passage_id = passage_id
         self.node_by_id = None
         for line in filter(str.strip, lines):
@@ -129,14 +129,14 @@ class ExportConverter(FormatConverter):
                 self._init_nodes(line)
             elif line.startswith("#EOS"):  # finished reading input for a passage
                 passage = self._build_passage()
-                passage.extra["format"] = "export"
+                passage.extra["format"] = kwargs.get("format") or "export"
                 yield (passage, self.lines_read, passage.ID) if return_original else passage
                 self.node_by_id = None
                 self.lines_read = []
             else:  # read input line
                 self._read_line(line)
 
-    def to_format(self, passage, test=False, tree=False):
+    def to_format(self, passage, test=False, tree=False, **kwargs):
         lines = ["#BOS %s" % passage.ID]  # list of output lines to return
         entries = []
         nodes = list(passage.layer(layer0.LAYER_ID).all)

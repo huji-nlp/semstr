@@ -59,10 +59,12 @@ class ConlluConverter(ConllConverter):
                 del dep_node.incoming[1:]
         yield from super().generate_lines(graph, test, tree)
 
-    def from_format(self, lines, passage_id, split=False, return_original=False, annotate=False, terminals_only=False):
+    def from_format(self, lines, passage_id, split=False, return_original=False, annotate=False, terminals_only=False,
+                    **kwargs):
         for graph in self.generate_graphs(lines, split):
             if not graph.id:
                 graph.id = passage_id
+            graph.format = kwargs.get("format") or graph.format
             annotations = {}
             if annotate:  # get all node attributes before they are possibly modified by build_passage
                 for dep_node in graph.nodes[1:]:
@@ -81,31 +83,19 @@ class ConlluConverter(ConllConverter):
             yield (passage, self.lines_read, passage.ID) if return_original else passage
             self.lines_read = []
 
-    def to_format(self, *args, **kwargs):
-        return super().to_format(*args, **kwargs)
-
     def generate_header_lines(self, graph):
         yield from super().generate_header_lines(graph)
         yield ["# text = " + " ".join(dep_node.token.text for dep_node in graph.nodes)]
         if "." in graph.id:
             yield ["# doc_id = " + graph.id.rpartition(".")[0]]
 
-    def find_headed_unit(self, unit):
-        while unit.incoming and (not unit.outgoing or unit.incoming[0].tag == self.HEAD) and \
-                not (unit.incoming[0].tag == layer1.EdgeTags.Terminal and unit != unit.parents[0].children[0]):
-            unit = unit.parents[0]
-        return unit
-
-    def _label_edge(self, node):
-        return self.HEAD
-
-    def add_node(self, dep_node, edge, l1):
+    def add_fnode(self, edge, l1):
         if edge.rel == AUX and edge.head.preterminal:  # Attached aux as sibling of main predicate
             # TODO update to UCCA guidelines v1.0.6
-            dep_node.preterminal = dep_node.node = l1.add_fnode(edge.head.preterminal, edge.rel)
-            edge.head.preterminal = l1.add_fnode(edge.head.preterminal, self.HEAD)
+            edge.dependent.preterminal = edge.dependent.node = l1.add_fnode(edge.head.preterminal, edge.rel)
+            edge.head.preterminal = l1.add_fnode(edge.head.preterminal, self.label_edge(edge))
         else:
-            super().add_node(dep_node, edge, l1)
+            super().add_fnode(edge, l1)
 
     def preprocess(self, dep_nodes, to_dep=True):
         max_pos = (max(d.position for d in dep_nodes) if dep_nodes else 0) + 1
@@ -114,9 +104,10 @@ class ConlluConverter(ConllConverter):
                 return e.dependent.position + (max_pos if e.dependent.position < dep_node.position else 0)
             for edge in dep_node.incoming:
                 edge.rel = edge.rel.partition(":")[0]  # Strip suffix
-                for source, target in REL_REPLACEMENTS:
-                    if edge.rel == (source, target)[to_dep]:
-                        edge.rel = (target, source)[to_dep]
+                if to_dep or not self.is_ucca:
+                    for source, target in REL_REPLACEMENTS:
+                        if edge.rel == (source, target)[to_dep]:
+                            edge.rel = (target, source)[to_dep]
                 rels = HIGH_ATTACHING.get(edge.rel)
                 if rels:
                     candidates = [e for e in (edge.head.incoming, edge.head.outgoing)[to_dep] if e.rel in rels]

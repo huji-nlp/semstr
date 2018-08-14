@@ -146,6 +146,7 @@ class DependencyConverter(FormatConverter):
         # noinspection PyTypeChecker
         self.tag_priority = [self.HEAD] + list(tag_priority) + self.TAG_PRIORITY + [None]
         self.format = kwargs["format"]
+        self.is_ucca = None
 
     def read_line(self, line, previous_node, copy_of):
         return self.Node()
@@ -199,19 +200,19 @@ class DependencyConverter(FormatConverter):
                 for n in sorted(level_nodes, key=lambda x: x.terminal.position)]
 
     @staticmethod
-    def _label(node):
-        dependent_rels = {e.rel for e in node.outgoing}
-        if layer0.is_punct(node.terminal):
+    def _label(dep_edge):
+        dependent_rels = {e.rel for e in dep_edge.dependent.outgoing}
+        if layer0.is_punct(dep_edge.dependent.terminal):
             return EdgeTags.Punctuation
+        elif EdgeTags.ParallelScene in dependent_rels or not dep_edge.head.incoming:
+            return EdgeTags.ParallelScene
         elif EdgeTags.Participant in dependent_rels:
             return EdgeTags.Process
-        elif EdgeTags.ParallelScene in dependent_rels:
-            return EdgeTags.ParallelScene
         else:
             return EdgeTags.Center
 
-    def _label_edge(self, node):
-        return ("#" if self.mark_aux else "") + self._label(node)
+    def label_edge(self, dep_edge):
+        return (("#" if self.mark_aux else "") + self._label(dep_edge)) if self.is_ucca else self.HEAD
 
     def generate_graphs(self, lines, split=False):
         # read dependencies and terminals from lines and create nodes
@@ -257,19 +258,19 @@ class DependencyConverter(FormatConverter):
 
     def build_passage(self, graph, terminals_only=False):
         passage = core.Passage(graph.id)
+        self.is_ucca = (graph.format == "ucca")
+        if graph.format is None or graph.format == self.format:
+            passage.extra["format"] = self.format
         self.create_terminals(graph, layer0.Layer0(passage))
         if not terminals_only:
             self.create_non_terminals(graph, layer1.Layer1(passage))
             graph.link_pre_terminals()
-        if graph.format is None or graph.format == self.format:
-            passage.extra["format"] = self.format
         return passage
 
     def create_non_terminals(self, graph, l1):
-        is_ucca = (graph.format == "ucca")
         for dep_node in graph.nodes:
             if dep_node.outgoing:
-                if not is_ucca and not self.tree and dep_node.position and not dep_node.incoming:  # Create top node
+                if not self.is_ucca and not self.tree and dep_node.position and not dep_node.incoming:  # Top node
                     dep_node.node = dep_node.preterminal = l1.add_fnode(None, (self.ROOT, self.TOP)[dep_node.is_top])
                 if self.is_punct(dep_node):  # Avoid outgoing edges from punctuation by flipping edges
                     head = dep_node.incoming[0].head if dep_node.incoming else graph.nodes[0]
@@ -281,7 +282,7 @@ class DependencyConverter(FormatConverter):
         remote_edges = []
         sorted_dep_nodes = self._topological_sort(graph.nodes)
         self.preprocess(sorted_dep_nodes, to_dep=False)
-        if is_ucca:
+        if self.is_ucca:
             sorted_dep_nodes = [n for n in graph.nodes[1:] if not n.incoming and not n.is_top] + sorted_dep_nodes
         for dep_node in sorted_dep_nodes:  # Other nodes
             incoming = list(dep_node.incoming)
@@ -289,13 +290,14 @@ class DependencyConverter(FormatConverter):
                 if dep_node.is_top and incoming[0].head_index != 0:
                     top_edge = self.Edge(head_index=0, rel=self.TOP, remote=False)
                     top_edge.head = graph.nodes[0]
+                    top_edge.dependent = dep_node
                     incoming[:0] = [top_edge]
                 edge, *remotes = incoming
-                self.add_node(dep_node, edge, l1)
+                self.add_fnode(edge, l1)
                 remote_edges += remotes
             if dep_node.outgoing and not any(map(self.is_flat, dep_node.incoming)):
                 dep_node.preterminal = l1.add_fnode(dep_node.preterminal,  # Intermediate head for hierarchy
-                                                    self._label_edge(dep_node) if is_ucca else self.HEAD)
+                                                    self.label_edge(dep_node.incoming[0]))
         for edge in remote_edges:
             parent = edge.head.node or l1.heads[0]
             child = edge.dependent.node or l1.heads[0]
@@ -368,7 +370,7 @@ class DependencyConverter(FormatConverter):
                 if dep_node.parent_multi_word:  # part of a multi-word token (e.g. zum = zu + dem)
                     dep_node.terminal.extra[self.MULTI_WORD_TEXT_ATTRIB] = dep_node.parent_multi_word.token.text
 
-    def from_format(self, lines, passage_id, split=False, return_original=False, terminals_only=False):
+    def from_format(self, lines, passage_id, split=False, return_original=False, terminals_only=False, **kwargs):
         """Converts from parsed text in dependency format to a Passage object.
 
         :param lines: an iterable of lines in dependency format, describing a single passage.
@@ -382,6 +384,7 @@ class DependencyConverter(FormatConverter):
         for graph in self.generate_graphs(lines, split):
             if not graph.id:
                 graph.id = passage_id
+            graph.format = kwargs.get("format") or graph.format
             passage = self.build_passage(graph, terminals_only=terminals_only)
             yield (passage, self.lines_read, passage.ID) if return_original else passage
             self.lines_read = []
@@ -508,7 +511,7 @@ class DependencyConverter(FormatConverter):
                     dep_node.incoming = [self.Edge(head_index=-1, rel=self.ROOT.lower(), remote=False)]
         # self.break_cycles(dep_nodes)
 
-    def to_format(self, passage, test=False, tree=True):
+    def to_format(self, passage, test=False, tree=True, **kwargs):
         """ Convert from a Passage object to a string in dependency format.
 
         :param passage: the Passage object to convert
@@ -519,9 +522,13 @@ class DependencyConverter(FormatConverter):
         """
         lines = []  # list of output lines to return
         terminals = passage.layer(layer0.LAYER_ID).all  # terminal units from the passage
+        original_format = kwargs.get("format") or passage.extra.get("format", "ucca")
+        if original_format == self.format:
+            original_format = None
+        self.is_ucca = original_format == "ucca"
         multi_words = [None]
-        dep_nodes = [self.Node(terminal.position, self.incoming_edges(terminal, test, tree), terminal=terminal,
-                               is_top=self.is_top(terminal),
+        dep_nodes = [self.Node(terminal.position, self.incoming_edges(terminal, test, tree),
+                               terminal=terminal, is_top=self.is_top(terminal),
                                token=self.Token(terminal.text, terminal.extra.get("tag", terminal.tag),
                                                 lemma=terminal.extra.get("lemma"),
                                                 pos=terminal.extra.get("pos"),
@@ -532,9 +539,6 @@ class DependencyConverter(FormatConverter):
                      for terminal in sorted(terminals, key=attrgetter("position"))]
         self._link_heads(dep_nodes)
         self.preprocess(dep_nodes)
-        original_format = passage.extra.get("format", "ucca")
-        if original_format == self.format:
-            original_format = None
         graph = self.Graph(dep_nodes, passage.ID, original_format=original_format)
         lines += ["\t".join(map(str, entry)) for entry in self.generate_lines(graph, test, tree)] + [""]
         return lines
@@ -547,7 +551,7 @@ class DependencyConverter(FormatConverter):
         # (head positions, dependency relations, is remote for each one)
         return {self.Edge(head_index, e.tag, e.attrib.get("remote", False))
                 for e, head_index in zip(edges, head_indices)
-            if head_index != terminal.position - 1 and  # avoid self loops
+                if head_index != terminal.position - 1 and  # avoid self loops
                 not self.omit_edge(e, tree)}  # different implementation for each subclass
 
     def parent_multi_word(self, terminal, multi_words):
@@ -571,13 +575,14 @@ class DependencyConverter(FormatConverter):
     def split_line(self, line):
         return line.split("\t")
 
-    def add_node(self, dep_node, edge, l1):
+    def add_fnode(self, edge, l1):
         if self.is_flat(edge):  # Unanalyzable unit
-            dep_node.preterminal = edge.head.preterminal
-            dep_node.node = edge.head.node
+            edge.dependent.preterminal = edge.head.preterminal
+            edge.dependent.node = edge.head.node
         else:  # Add top-level edge (like UCCA H) if top-level, otherwise add child to head's node
-            dep_node.preterminal = dep_node.node = \
-                l1.add_fnode(dep_node.preterminal, self.HEAD) if edge.rel.upper() == self.ROOT else (
+            edge.dependent.preterminal = edge.dependent.node = \
+                l1.add_fnode(edge.dependent.preterminal, self.label_edge(edge)) \
+                if edge.rel.upper() == self.ROOT else (
                     l1.add_fnode(None if self.is_scene(edge) else edge.head.node, edge.rel))
 
     @staticmethod
@@ -596,7 +601,10 @@ class DependencyConverter(FormatConverter):
         return [n for n in dep_nodes if any(e.rel == self.ROOT.lower() for e in n.incoming)]
 
     def find_headed_unit(self, unit):
-        while unit.incoming and unit == self.find_head_child(unit.parents[0]):
+        while unit.incoming and (self.is_ucca and unit == self.find_head_child(unit.parents[0]) or
+                                 not self.is_ucca and (not unit.outgoing or unit.incoming[0].tag == self.HEAD) and
+                                 not (unit.incoming[0].tag == layer1.EdgeTags.Terminal and
+                                      unit != unit.parents[0].children[0])):
             unit = unit.parents[0]
         return unit
 
