@@ -31,7 +31,7 @@ def from_conll(lines, passage_id, split=True, return_original=False, *args, **kw
     """
     del args, kwargs
     from semstr.conversion.conll import ConllConverter
-    return ConllConverter().from_format(lines, passage_id, split, return_original=return_original)
+    return ConllConverter().from_format(lines, passage_id=passage_id, split=split, return_original=return_original)
 
 
 def to_conll(passage, test=False, tree=True, *args, **kwargs):
@@ -60,7 +60,7 @@ def from_export(lines, passage_id=None, split=True, return_original=False, *args
     """
     del args, kwargs
     from semstr.conversion.export import ExportConverter
-    return ExportConverter().from_format(lines, passage_id, split, return_original=return_original)
+    return ExportConverter().from_format(lines, passage_id=passage_id, split=split, return_original=return_original)
 
 
 def to_export(passage, test=False, tree=False, *args, **kwargs):
@@ -74,7 +74,7 @@ def to_export(passage, test=False, tree=False, *args, **kwargs):
     """
     del args, kwargs
     from semstr.conversion.export import ExportConverter
-    return ExportConverter().to_format(passage, test, tree)
+    return ExportConverter().to_format(passage, test=test, tree=tree)
 
 
 def from_amr(lines, passage_id=None, return_original=False, save_original=True, wikification=False, *args, **kwargs):
@@ -90,8 +90,8 @@ def from_amr(lines, passage_id=None, return_original=False, save_original=True, 
     """
     del args, kwargs
     from semstr.conversion.amr import AmrConverter
-    return AmrConverter().from_format(lines, passage_id, return_original=return_original, save_original=save_original,
-                                      wikification=wikification)
+    return AmrConverter().from_format(lines, passage_id=passage_id, return_original=return_original,
+                                      save_original=save_original, wikification=wikification)
 
 
 def to_amr(passage, metadata=True, wikification=True, use_original=True, verbose=False, default_label=None,
@@ -128,21 +128,22 @@ def from_conllu(lines, passage_id=None, split=True, return_original=False, annot
     """
     del args, kwargs
     from semstr.conversion.conllu import ConlluConverter
-    return ConlluConverter().from_format(lines, passage_id, split, return_original=return_original, annotate=annotate,
-                                         terminals_only=terminals_only)
+    return ConlluConverter().from_format(lines, passage_id=passage_id, split=split, return_original=return_original,
+                                         annotate=annotate, terminals_only=terminals_only)
 
 
-def to_conllu(passage, test=False, *args, **kwargs):
+def to_conllu(passage, test=False, tree=False, *args, **kwargs):
     """ Convert from a Passage object to a string in Universal Dependencies format (conllu)
 
     :param passage: the Passage object to convert
     :param test: whether to omit the head and deprel columns. Defaults to False
+    :param tree: whether to omit columns for non-primary parents. Defaults to False
 
     :return list of lines representing the semantic dependencies in the passage
     """
     del args, kwargs
     from semstr.conversion.conllu import ConlluConverter
-    return ConlluConverter().to_format(passage, test, tree=True)
+    return ConlluConverter().to_format(passage, test=test, tree=tree)
 
 
 def from_sdp(lines, passage_id, split=True, mark_aux=False, return_original=False, *args, **kwargs):
@@ -158,7 +159,8 @@ def from_sdp(lines, passage_id, split=True, mark_aux=False, return_original=Fals
     """
     del args, kwargs
     from semstr.conversion.sdp import SdpConverter
-    return SdpConverter(mark_aux=mark_aux).from_format(lines, passage_id, split, return_original=return_original)
+    return SdpConverter(mark_aux=mark_aux).from_format(lines, passage_id=passage_id, split=split,
+                                                       return_original=return_original)
 
 
 def to_sdp(passage, test=False, tree=False, mark_aux=False, *args, **kwargs):
@@ -173,7 +175,7 @@ def to_sdp(passage, test=False, tree=False, mark_aux=False, *args, **kwargs):
     """
     del args, kwargs
     from semstr.conversion.sdp import SdpConverter
-    return SdpConverter(mark_aux=mark_aux).to_format(passage, test, tree)
+    return SdpConverter(mark_aux=mark_aux).to_format(passage, test=test, tree=tree)
 
 
 CONVERTERS = {
