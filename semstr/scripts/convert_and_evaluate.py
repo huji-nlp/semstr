@@ -5,6 +5,7 @@ import sys
 from glob import glob
 
 import configargparse
+from tqdm import tqdm
 from ucca import ioutil
 from ucca.normalization import normalize
 
@@ -23,9 +24,6 @@ def main(args):
         if not filenames:
             raise IOError("Not found: " + pattern)
         for filename in filenames:
-            print("\rConverting '%s'" % filename, end="")
-            if args.out_dir or args.verbose:
-                print(flush=True)
             basename, ext = os.path.splitext(os.path.basename(filename))
             passage_format = ext.lstrip(".")
             if passage_format == "txt":
@@ -33,13 +31,18 @@ def main(args):
             converters = CONVERTERS.get(passage_format, CONVERTERS[args.format])
             evaluator = EVALUATORS.get(passage_format, EVALUATORS[args.format])
             with open(filename, encoding="utf-8") as f:
-                for passage, ref, passage_id in converters[0](f, passage_id=basename, return_original=True):
+                for passage, ref, passage_id in tqdm(
+                        converters[0](f, passage_id=basename, return_original=True, split=True),
+                        desc=("Converting '%s'" % filename) +
+                             ((", writing to '%s'" % args.out_dir) if args.out_dir else ""), unit=" passages"):
                     if args.normalize:
                         normalize(passage, extra=args.extra_normalization)
                     if args.out_dir:
                         os.makedirs(args.out_dir, exist_ok=True)
                         outfile = "%s/%s.xml" % (args.out_dir, passage.ID)
-                        print("Writing '%s'..." % outfile, file=sys.stderr, flush=True)
+                        if args.verbose:
+                            with ioutil.external_write_mode():
+                                print("Writing '%s'..." % outfile, file=sys.stderr, flush=True)
                         ioutil.passage2file(passage, outfile)
                     try:
                         guessed = converters[1](passage, wikification=args.wikification, use_original=False)
@@ -47,7 +50,9 @@ def main(args):
                         raise ValueError("Error converting %s back from %s" % (filename, passage_format)) from e
                     if args.out_dir:
                         outfile = "%s/%s%s" % (args.out_dir, passage.ID, ext)
-                        print("Writing '%s'..." % outfile, file=sys.stderr, flush=True)
+                        if args.verbose:
+                            with ioutil.external_write_mode():
+                                print("Writing '%s'..." % outfile, file=sys.stderr, flush=True)
                         with open(outfile, "w", encoding="utf-8") as f_out:
                             print("\n".join(guessed), file=f_out)
                     try:
@@ -56,8 +61,9 @@ def main(args):
                         raise ValueError("Error evaluating conversion of %s" % filename) from e
                     scores.append(s)
                     if args.verbose:
-                        print(passage_id)
-                        s.print()
+                        with ioutil.external_write_mode():
+                            print(passage_id)
+                            s.print()
     print()
     if args.verbose and len(scores) > 1:
         print("Aggregated scores:")
