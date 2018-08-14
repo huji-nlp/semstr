@@ -29,7 +29,7 @@ def main(args):
             if passage_format == "txt":
                 passage_format = args.format
             converters = CONVERTERS.get(passage_format, CONVERTERS[args.format])
-            evaluator = EVALUATORS.get(passage_format, EVALUATORS[args.format])
+            evaluate = EVALUATORS.get(passage_format, EVALUATORS[args.format])
             with open(filename, encoding="utf-8") as f:
                 for passage, ref, passage_id in tqdm(
                         converters[0](f, passage_id=basename, return_original=True, split=True),
@@ -56,7 +56,7 @@ def main(args):
                         with open(outfile, "w", encoding="utf-8") as f_out:
                             print("\n".join(guessed), file=f_out)
                     try:
-                        s = evaluator(guessed, ref, verbose=args.verbose > 1)
+                        s = evaluate(guessed, ref, verbose=args.verbose > 1, units=args.units)
                     except Exception as e:
                         raise ValueError("Error evaluating conversion of %s" % filename) from e
                     scores.append(s)
@@ -82,6 +82,7 @@ if __name__ == '__main__':
     argparser.add_argument("-f", "--format", choices=CONVERTERS, default="amr",
                            help="default format (if cannot determine by suffix)")
     add_verbose_arg(argparser, help="detailed evaluation output")
+    argparser.add_argument("--units", action="store_true", help="print mutual and unique units")
     add_boolean_option(argparser, "wikification", "Spotlight to wikify any named node (for AMR)")
     argparser.add_argument("-o", "--out-dir", help="output directory (if unspecified, files are not written)")
     argparser.add_argument("-n", "--normalize", action="store_true", help="normalize passages before conversion")

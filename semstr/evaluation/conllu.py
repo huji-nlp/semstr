@@ -20,7 +20,7 @@ def get_scores(s1, s2, eval_type, verbose=False, units=False):
     g, r = map(set, edges)
     res = evaluation.EvaluatorResults({PRIMARY: evaluation.SummaryStatistics(len(g & r), len(g - r), len(r - g))},
                                       default={PRIMARY.name: PRIMARY})
-    if verbose:
+    if verbose or units:
         print()
         print("Evaluation type: (" + eval_type + ")")
         if units:
@@ -30,7 +30,8 @@ def get_scores(s1, s2, eval_type, verbose=False, units=False):
             print(g - r)
             print("==> Only in reference:")
             print(r - g)
-        res.print()
+        if verbose:
+            res.print()
     return res
 
 
