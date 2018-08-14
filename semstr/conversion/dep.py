@@ -200,19 +200,19 @@ class DependencyConverter(FormatConverter):
                 for n in sorted(level_nodes, key=lambda x: x.terminal.position)]
 
     @staticmethod
-    def _label(dep_edge):
+    def _label(dep_edge, top=False):
         dependent_rels = {e.rel for e in dep_edge.dependent.outgoing}
         if layer0.is_punct(dep_edge.dependent.terminal):
             return EdgeTags.Punctuation
-        elif EdgeTags.ParallelScene in dependent_rels or not dep_edge.head.incoming:
+        elif top or EdgeTags.ParallelScene in dependent_rels:
             return EdgeTags.ParallelScene
-        elif EdgeTags.Participant in dependent_rels:
-            return EdgeTags.Process
+        elif dependent_rels.intersection((EdgeTags.Participant, EdgeTags.Adverbial)):
+            return EdgeTags.Process  # May be State but we can't tell
         else:
             return EdgeTags.Center
 
-    def label_edge(self, dep_edge):
-        return (("#" if self.mark_aux else "") + self._label(dep_edge)) if self.is_ucca else self.HEAD
+    def label_edge(self, dep_edge, top=False):
+        return (("#" if self.mark_aux else "") + self._label(dep_edge, top=top)) if self.is_ucca else self.HEAD
 
     def generate_graphs(self, lines, split=False):
         # read dependencies and terminals from lines and create nodes
@@ -288,16 +288,14 @@ class DependencyConverter(FormatConverter):
             incoming = list(dep_node.incoming)
             if incoming:
                 if dep_node.is_top and incoming[0].head_index != 0:
-                    top_edge = self.Edge(head_index=0, rel=self.TOP, remote=False)
-                    top_edge.head = graph.nodes[0]
-                    top_edge.dependent = dep_node
-                    incoming[:0] = [top_edge]
+                    incoming[:0] = [self.top_edge(dep_node, graph)]
                 edge, *remotes = incoming
                 self.add_fnode(edge, l1)
                 remote_edges += remotes
             if dep_node.outgoing and not any(map(self.is_flat, dep_node.incoming)):
-                dep_node.preterminal = l1.add_fnode(dep_node.preterminal,  # Intermediate head for hierarchy
-                                                    self.label_edge(dep_node.incoming[0]))
+                dep_node.preterminal = l1.add_fnode(  # Intermediate head for hierarchy
+                    dep_node.preterminal, self.label_edge(
+                        dep_node.incoming[0] if dep_node.incoming else self.top_edge(dep_node, graph)))
         for edge in remote_edges:
             parent = edge.head.node or l1.heads[0]
             child = edge.dependent.node or l1.heads[0]
@@ -356,6 +354,12 @@ class DependencyConverter(FormatConverter):
         #     if link_relation.node is None:
         #         link_relation.node = link_relation.preterminal = l1.add_fnode(None, EdgeTags.Linker)
         #     l1.add_linkage(link_relation.node, *args)
+
+    def top_edge(self, dep_node, graph):
+        top_edge = self.Edge(head_index=0, rel=self.TOP, remote=False)
+        top_edge.head = graph.nodes[0]
+        top_edge.dependent = dep_node
+        return top_edge
 
     def create_terminals(self, graph, l0):
         for dep_node in graph.nodes:
@@ -581,7 +585,7 @@ class DependencyConverter(FormatConverter):
             edge.dependent.node = edge.head.node
         else:  # Add top-level edge (like UCCA H) if top-level, otherwise add child to head's node
             edge.dependent.preterminal = edge.dependent.node = \
-                l1.add_fnode(edge.dependent.preterminal, self.label_edge(edge)) \
+                l1.add_fnode(edge.dependent.preterminal, self.label_edge(edge, top=True)) \
                 if edge.rel.upper() == self.ROOT else (
                     l1.add_fnode(None if self.is_scene(edge) else edge.head.node, edge.rel))
 

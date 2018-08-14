@@ -104,7 +104,7 @@ class ConlluConverter(ConllConverter):
                 return e.dependent.position + (max_pos if e.dependent.position < dep_node.position else 0)
             for edge in dep_node.incoming:
                 edge.rel = edge.rel.partition(":")[0]  # Strip suffix
-                if to_dep or not self.is_ucca:
+                if not to_dep or not self.is_ucca:
                     for source, target in REL_REPLACEMENTS:
                         if edge.rel == (source, target)[to_dep]:
                             edge.rel = (target, source)[to_dep]
