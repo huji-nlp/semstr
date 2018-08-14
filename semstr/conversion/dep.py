@@ -58,8 +58,10 @@ class DependencyConverter(FormatConverter):
             self.span = span
 
         def add_edges(self, edges):
-            for edge in edges:
-                edge.dependent = self
+            for remote in (False, True):
+                for edge in edges:
+                    if edge.remote == remote:
+                        edge.dependent = self
 
         def __repr__(self):
             return self.token.text if self.token else DependencyConverter.ROOT
@@ -224,6 +226,7 @@ class DependencyConverter(FormatConverter):
         for line in lines:
             line = line.strip()
             if line.startswith("#"):  # comment
+                self.lines_read.append(line)
                 m = re.match("#\s*(\d+).*", line) or re.match("#\s*sent_id\s*=\s*(\S+)", line)
                 if m:  # comment may optionally contain the sentence ID
                     sentence_id = m.group(1)
@@ -544,7 +547,7 @@ class DependencyConverter(FormatConverter):
         # (head positions, dependency relations, is remote for each one)
         return {self.Edge(head_index, e.tag, e.attrib.get("remote", False))
                 for e, head_index in zip(edges, head_indices)
-                if head_index != terminal.position - 1 and  # avoid self loops
+            if head_index != terminal.position - 1 and  # avoid self loops
                 not self.omit_edge(e, tree)}  # different implementation for each subclass
 
     def parent_multi_word(self, terminal, multi_words):

@@ -51,6 +51,14 @@ class ConlluConverter(ConllConverter):
     def read_line(self, *args, **kwargs):
         return self.read_line_and_append(super().read_line, *args, **kwargs)
 
+    def generate_lines(self, graph, test, tree):
+        for dep_node in graph.nodes:
+            if dep_node.incoming:
+                if not tree:
+                    dep_node.enhanced = "|".join("%d:%s" % (e.head_index + 1, e.rel) for e in dep_node.incoming)
+                del dep_node.incoming[1:]
+        yield from super().generate_lines(graph, test, tree)
+
     def from_format(self, lines, passage_id, split=False, return_original=False, annotate=False, terminals_only=False):
         for graph in self.generate_graphs(lines, split):
             if not graph.id:
