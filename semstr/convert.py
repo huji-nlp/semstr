@@ -9,7 +9,7 @@ from glob import glob
 import configargparse
 from tqdm import tqdm
 from ucca import ioutil, layer1
-from ucca.convert import from_text, to_text, from_json, to_json, split2sentences
+from ucca.convert import from_text, to_text, from_json, to_json
 from ucca.normalization import normalize
 
 from semstr.cfgutil import add_verbose_arg
@@ -243,13 +243,11 @@ def write_passage(passage, args):
         ioutil.passage2file(passage, outfile, binary=args.binary)
     else:
         converter = TO_FORMAT[args.output_format]
-        output = "\n".join(converter(passage, wikification=args.wikification, default_label=args.default_label,
-                                     format=args.output_format if args.label_map else None)) \
-            if args.output_format == "amr" else \
-            "\n".join(line for p in (split2sentences(passage) if args.split else [passage]) for line in
-                      converter(p, test=args.test, tree=args.tree, mark_aux=args.mark_aux))
         with open(outfile, "w", encoding="utf-8") as f:
-            print(output, file=f)
+            for line in converter(passage, test=args.test, tree=args.tree, mark_aux=args.mark_aux, split=args.split,
+                                  wikification=args.wikification, default_label=args.default_label,
+                                  format=args.output_format if args.label_map else None, sentences=args.split):
+                print(line, file=f)
 
 
 def main(args):
