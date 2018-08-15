@@ -503,7 +503,7 @@ class DependencyConverter(FormatConverter):
                 if edge.remote:
                     if self.is_flat(edge):  # Unanalyzable remote is not possible
                         edge.remove()
-                    else:  # Avoid * marking in CoNLL-U
+                    elif not self.is_ucca:  # Avoid * marking in CoNLL-*
                         edge.remote = False
                 else:  # Found primary parent
                     is_parentless = False
