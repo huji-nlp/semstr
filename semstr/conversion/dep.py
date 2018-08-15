@@ -1,6 +1,7 @@
 import re
 import sys
 from collections import defaultdict
+from itertools import groupby
 from operator import attrgetter
 
 from ucca import core, layer0, layer1
@@ -532,8 +533,11 @@ class DependencyConverter(FormatConverter):
                         edge.remove()
                     elif not self.is_ucca:  # Avoid * marking in CoNLL-*
                         edge.remote = False
-                else:  # Found primary parent
-                    is_parentless = False
+                    if edge.rel == self.ROOT.lower():
+                        edge.head_index = -1
+                    else:
+                        continue
+                is_parentless = False  # Found primary parent
             if is_parentless and self.tree:  # Must have exactly one root
                 if roots:  # Root already exist, so attach as its child
                     dep_node.incoming = [self.Edge(head_index=roots[0].position - 1, rel=self.ORPHAN, remote=False)]
@@ -582,10 +586,12 @@ class DependencyConverter(FormatConverter):
         edges = list(self.find_top_headed_edges(terminal))
         head_indices = [self.find_head_terminal(e.parent).position - 1 for e in edges]
         # (head positions, dependency relations, is remote for each one)
-        return {self.Edge(head_index, e.tag, e.attrib.get("remote", False))
-                for e, head_index in zip(edges, head_indices)
-                if head_index != terminal.position - 1 and  # avoid self loops
-                not self.omit_edge(e, tree)}  # different implementation for each subclass
+        dep_edges = [self.Edge(head_index, e.tag, e.attrib.get("remote", False))
+                     for e, head_index in zip(edges, head_indices)
+                     if head_index != terminal.position - 1 and  # avoid self loops
+                     not self.omit_edge(e, tree)]  # different implementation for each subclass
+        # Avoid multiple edges between the same pair of node; in case of duplicates, prefer non-remote edges:
+        return {sorted(es, key=attrgetter("remote"))[-1] for _, es in groupby(dep_edges, key=attrgetter("head_index"))}
 
     def parent_multi_word(self, terminal, multi_words):
         multi_word_text = terminal.extra.get(self.MULTI_WORD_TEXT_ATTRIB)
