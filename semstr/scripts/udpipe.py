@@ -7,7 +7,7 @@ from operator import itemgetter
 from time import time
 
 from tqdm import tqdm
-from ucca import layer0, ioutil
+from ucca import layer0, ioutil, core
 from ucca.convert import split2paragraphs
 from ucca.textutil import Attr, get_vocab
 
@@ -53,7 +53,7 @@ def udpipe(sentences, model_name, verbose=False):
 
 def parse_udpipe(passages, model_name, verbose=False, annotate=False, terminals_only=False):
     passages1, passages2 = tee(passages)
-    processed = udpipe((to_conllu(p, tree=True, test=True) for p in passages1), model_name, verbose)
+    processed = udpipe((to_conllu_native(p, test=True, enhanced=False) for p in passages1), model_name, verbose)
     return zip(passages2, from_conllu(processed, passage_id=None, annotate=annotate, terminals_only=terminals_only))
 
 
@@ -98,18 +98,25 @@ def copy_tok_to_extra(annotated_terminal, terminal, lang=None):
 
 def split_by_empty_lines(lines, *args, **kwargs):
     del args, kwargs
+    # noinspection PyTypeChecker
     yield from (list(g) + [""] for k, g in groupby(map(str.strip, lines), bool) if k)
 
 
-CONVERTERS = {f: lambda l: (to_conllu(p, tree=True) for p in c(l, passage_id=None)) for f, c in FROM_FORMAT.items()}
-CONVERTERS["conllu"] = split_by_empty_lines
+def to_conllu_native(p, **kwargs):
+    return to_conllu(p, format="conllu", **kwargs)
+
+
+CONVERTERS = {f: lambda l: (to_conllu_native(p) for p in c(l, passage_id=None)) for f, c in FROM_FORMAT.items()}
+CONVERTERS["conllu"] = split_by_empty_lines  # If getting CoNLL-U as input, don't bother converting just to convert back
 
 
 def main(args):
     for spec in read_specs(args, converters=CONVERTERS):
         scores = []
-        sentences1, sentences2 = tee(spec.passages)
-        t = tqdm(zip(sentences1, split_by_empty_lines(udpipe(sentences2, spec.udpipe, args.verbose))),
+        sentences, to_parse = tee((to_conllu_native(p), to_conllu_native(p, test=True, enhanced=False))
+                                  if isinstance(p, core.Passage) else p for p in spec.passages)
+        t = tqdm(zip((x for x, _ in sentences),
+                     split_by_empty_lines(udpipe((x for _, x in to_parse), spec.udpipe, args.verbose))),
                  unit=" sentences")
         for sentence, parsed in t:
             sentence = list(sentence)

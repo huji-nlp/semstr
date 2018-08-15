@@ -515,12 +515,13 @@ class DependencyConverter(FormatConverter):
                     dep_node.incoming = [self.Edge(head_index=-1, rel=self.ROOT.lower(), remote=False)]
         # self.break_cycles(dep_nodes)
 
-    def to_format(self, passage, test=False, tree=True, **kwargs):
+    def to_format(self, passage, test=False, tree=True, enhanced=True, **kwargs):
         """ Convert from a Passage object to a string in dependency format.
 
         :param passage: the Passage object to convert
         :param test: whether to omit the head and deprel columns. Defaults to False
         :param tree: whether to omit columns for non-primary parents. Defaults to True
+        :param enhanced: whether to include enhanced edges
 
         :return a list of strings representing the dependencies in the passage
         """
@@ -539,7 +540,8 @@ class DependencyConverter(FormatConverter):
                                                 features=terminal.extra.get("features"),
                                                 paragraph=terminal.paragraph),
                                parent_multi_word=self.parent_multi_word(terminal, multi_words),
-                               enhanced=terminal.extra.get("enhanced"), misc=terminal.extra.get("misc"))
+                               enhanced=terminal.extra.get("enhanced") if enhanced else None,
+                               misc=terminal.extra.get("misc"))
                      for terminal in sorted(terminals, key=attrgetter("position"))]
         self._link_heads(dep_nodes)
         self.preprocess(dep_nodes)

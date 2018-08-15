@@ -128,17 +128,18 @@ def from_conllu(lines, passage_id=None, split=True, return_original=False, annot
                                          annotate=annotate, terminals_only=terminals_only, format=kwargs.get("format"))
 
 
-def to_conllu(passage, test=False, tree=False, **kwargs):
+def to_conllu(passage, test=False, tree=False, enhanced=True, **kwargs):
     """ Convert from a Passage object to a string in Universal Dependencies format (conllu)
 
     :param passage: the Passage object to convert
     :param test: whether to omit the head and deprel columns. Defaults to False
     :param tree: whether to omit columns for non-primary parents. Defaults to False
+    :param enhanced: whether to include enhanced edges
 
     :return list of lines representing the semantic dependencies in the passage
     """
     from semstr.conversion.conllu import ConlluConverter
-    return ConlluConverter().to_format(passage, test=test, tree=tree, format=kwargs.get("format"))
+    return ConlluConverter().to_format(passage, test=test, tree=tree, enhanced=enhanced, format=kwargs.get("format"))
 
 
 def from_sdp(lines, passage_id, split=True, mark_aux=False, return_original=False, **kwargs):
