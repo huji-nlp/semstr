@@ -1,7 +1,8 @@
 import os
+from collections import OrderedDict
 
 from ucca import evaluation
-from ucca.constructions import PRIMARY
+from ucca.constructions import PRIMARY, CONSTRUCTION_BY_NAME
 
 from ..conversion.conllu import ConlluConverter
 
@@ -9,27 +10,29 @@ EVAL_TYPES = (evaluation.LABELED, evaluation.UNLABELED)
 
 
 def get_scores(s1, s2, eval_type, verbose=False, units=False):
-    converter = ConlluConverter()
-    g1, g2 = list(map(list, list(map(converter.generate_graphs, (s1, s2)))))
+    g1, g2 = list(map(list, list(map(ConlluConverter().generate_graphs, (s1, s2)))))
     t1, t2 = list(map(join_tokens, (g1, g2)))
     assert t1 == t2, "Tokens do not match: '%s' != '%s'" % diff(t1, t2)
     edges = [[e for g in gs for n in g.nodes for e in n.outgoing] for gs in (g1, g2)]
     for es in edges:
         for e in es:
-            e.rel = None if eval_type == evaluation.UNLABELED else e.rel.partition(":")[0]
-    g, r = map(set, edges)
-    res = evaluation.EvaluatorResults({PRIMARY: evaluation.SummaryStatistics(len(g & r), len(g - r), len(r - g))},
-                                      default={PRIMARY.name: PRIMARY})
+            e.rel = None if eval_type == evaluation.UNLABELED else e.rel.partition(":")[0]  # Ignore relation subtype
+    matches = OrderedDict()
+    for construction, remote in (PRIMARY, False), (CONSTRUCTION_BY_NAME["remote"], True):
+        g, r = [{e for e in es if e.remote == remote} for es in edges]
+        if not remote or g or r:
+            matches[construction] = (g & r, g - r, r - g)
+    res = evaluation.EvaluatorResults((c, evaluation.SummaryStatistics(*list(map(len, m)))) for c, m in matches.items())
     if verbose or units:
         print()
         print("Evaluation type: (" + eval_type + ")")
         if units:
-            print("==> Mutual Units:")
-            print(g & r)
-            print("==> Only in guessed:")
-            print(g - r)
-            print("==> Only in reference:")
-            print(r - g)
+            for c, ms in matches.items():
+                print(c.description + ":")
+                for title, m in zip(("Mutual Units", "Only in guessed", "Only in reference"), ms):
+                    print("==> %s:" % title)
+                    print(m)
+                print()
         if verbose:
             res.print()
     return res
