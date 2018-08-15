@@ -191,7 +191,7 @@ if __name__ == '__main__':
     argparser.add_argument("ref", help="filename/directory for the reference annotation(s)")
     argparser.add_argument("-r", "--ref-yield-tags", help="xml/pickle file name for reference used for extracting edge "
                                                           "categories for fine-grained annotation "
-                                                          "(--constructions categories), or directory of files")
+                                                          "(--constructions=categories), or directory of files")
     argparser.add_argument("-f", "--format", default="amr", choices=CONVERTERS,
                            help="default format (if cannot determine by suffix)")
     argparser.add_argument("-o", "--out-file", help="file to write results for each evaluated passage to in CSV format")

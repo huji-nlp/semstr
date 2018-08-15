@@ -57,6 +57,14 @@ class DependencyConverter(FormatConverter):
             self.misc = "_" if misc is None else misc
             self.span = span
 
+        @property
+        def tag(self):
+            return ""
+
+        @property
+        def attrib(self):
+            return {}
+
         def add_edges(self, edges):
             for remote in (False, True):
                 for edge in edges:
@@ -72,6 +80,9 @@ class DependencyConverter(FormatConverter):
         def __hash__(self):
             return hash((self.position, tuple(self.span or ())))
 
+        def __iter__(self):
+            return iter(self.outgoing)
+
     class Edge:
         def __init__(self, head_index, rel, remote):
             self.head_index = head_index
@@ -79,6 +90,22 @@ class DependencyConverter(FormatConverter):
             self.remote = remote
             self._head = self._dependent = None
             self.head = self.dependent = None
+
+        @property
+        def tag(self):
+            return self.rel
+
+        @property
+        def parent(self):
+            return self.head
+
+        @property
+        def child(self):
+            return self.dependent
+
+        @property
+        def attrib(self):
+            return dict(remote=self.remote)
 
         @property
         def head(self):
@@ -201,7 +228,7 @@ class DependencyConverter(FormatConverter):
 
     @staticmethod
     def _label(dep_edge, top=False):
-        dependent_rels = {e.rel for e in dep_edge.dependent.outgoing}
+        dependent_rels = {e.rel for e in dep_edge.dependent}
         if layer0.is_punct(dep_edge.dependent.terminal):
             return EdgeTags.Punctuation
         elif top or EdgeTags.ParallelScene in dependent_rels:
@@ -274,7 +301,7 @@ class DependencyConverter(FormatConverter):
                     dep_node.node = dep_node.preterminal = l1.add_fnode(None, (self.ROOT, self.TOP)[dep_node.is_top])
                 if self.is_punct(dep_node):  # Avoid outgoing edges from punctuation by flipping edges
                     head = dep_node.incoming[0].head if dep_node.incoming else graph.nodes[0]
-                    outgoing = list(dep_node.outgoing)
+                    outgoing = list(dep_node)
                     for edge in outgoing:
                         edge.head = head
                     for edge in dep_node.incoming:
@@ -422,11 +449,11 @@ class DependencyConverter(FormatConverter):
         """
         try:
             return next(e for tag in self.TAG_PRIORITY  # head selection by priority
-                        for e in unit.outgoing if e.tag == tag and not e.child.attrib.get("implicit"))
+                        for e in unit if e.tag == tag and not e.child.attrib.get("implicit"))
         except StopIteration:
             # edge tags are not in the priority list, so use a simple heuristic:
             # find the child with the highest number of terminals in the yield
-            return max(unit.outgoing, key=lambda e: len(e.child.get_terminals()))
+            return max(unit, key=lambda e: len(e.child.get_terminals()))
 
     def find_head_terminal(self, unit):
         """ find the head terminal of this unit, by recursive descent.
