@@ -34,3 +34,4 @@
 32	weitervermitteln	weitervermitteln	VERB	VVINF	VerbForm=Inf	14	acl	_	_
 33	konnte	können	AUX	VMFIN	Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin	32	aux	_	SpaceAfter=No
 34	.	.	PUNCT	$.	_	16	punct	_	_
+
