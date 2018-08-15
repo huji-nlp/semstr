@@ -258,13 +258,16 @@ def main(args):
                                  wikification=args.wikification,
                                  label_map_file=args.label_map, output_format=args.output_format):
         map_labels(passage, args.label_map)
-        if args.normalize:
+        if args.normalize and args.output_format != "txt":
             normalize(passage, extra=args.extra_normalization)
         if args.lang:
             passage.attrib["lang"] = args.lang
         write_passage(passage, args)
         if args.validate:
-            errors = list(validate(passage, ucca_validation=args.ucca_validation, output_format=args.output_format))
+            try:
+                errors = list(validate(passage, ucca_validation=args.ucca_validation, output_format=args.output_format))
+            except ValueError:
+                continue
             if errors:
                 print_errors(errors, passage.ID)
                 sys.exit(1)

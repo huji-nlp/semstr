@@ -140,7 +140,10 @@ def validate(passage, normalization=False, extra_normalization=False, ucca_valid
     if ucca_validation:
         yield from ucca_validations.validate(passage)
     else:  # Generic validations depending on format-specific constraints
-        constraints = CONSTRAINTS[passage.extra.get("format", output_format)]()
+        try:
+            constraints = CONSTRAINTS[passage.extra.get("format", output_format)]()
+        except KeyError as e:
+            raise ValueError("No validations defined for '%s' format" % output_format) from e
         yield from detect_cycles(passage)
         l0 = passage.layer(layer0.LAYER_ID)
         l1 = passage.layer(layer1.LAYER_ID)
