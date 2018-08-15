@@ -4,7 +4,7 @@ import csv
 import os
 import re
 import sys
-from itertools import groupby
+from itertools import groupby, repeat
 
 import configargparse
 from tqdm import tqdm
@@ -120,22 +120,26 @@ def read_files(files, default_format=None, verbose=0, force_basename=False):
 
 def evaluate_all(evaluate, files, name=None, verbose=0, quiet=False, basename=False, matching_ids=False,
                  units=False, errors=False, unlabeled=False, normalize=True, constructions=None, **kwargs):
-    guessed, ref = [iter(read_files(f, kwargs["format"], verbose=verbose, force_basename=basename)) for f in files]
-    for (g, r) in tqdm(zip(guessed, ref), unit=" passages", desc=name, total=len(files[-1])):
+    guessed, ref, ref_yield_tags = [repeat(None) if f is None else
+                                    iter(read_files(f, kwargs["format"], verbose=verbose, force_basename=basename))
+                                    for f in files]
+    for (g, r, ryt) in tqdm(zip(guessed, ref, ref_yield_tags), unit=" passages", desc=name, total=len(files[1])):
         if matching_ids:
             while g.ID < r.ID:
                 g = next(guessed)
             while g.ID > r.ID:
                 r = next(ref)
+                ryt = next(ref_yield_tags)
         if not quiet:
             with ioutil.external_write_mode():
                 print(r.ID, end=" ")
-        if g.format != r.format:
-            # noinspection PyCallingNonCallable
-            g.passage = g.converted if r.out_converter is None else r.out_converter(g.converted)
+        for p in g, ryt:
+            if p and p.format != r.format:
+                # noinspection PyCallingNonCallable
+                p.passage = p.converted if r.out_converter is None else r.out_converter(p.converted)
         result = evaluate(g.passage, r.passage, verbose=verbose > 1 or units, units=units, errors=errors,
                           eval_type=UNLABELED if unlabeled else None, normalize=normalize,
-                          constructions=constructions)
+                          constructions=constructions, ref_yield_tags=ryt.passage if ryt else None)
         if not quiet:
             with ioutil.external_write_mode():
                 print("F1: %.3f" % result.average_f1(UNLABELED if unlabeled else LABELED))
@@ -152,10 +156,10 @@ def write_csv(filename, rows):
 
 
 def main(args):
-    files = [[os.path.join(d, f) for f in os.listdir(d) if not os.path.isdir(os.path.join(d, f))]
-             if os.path.isdir(d) else [d] for d in (args.guessed, args.ref)]
+    files = [None if d is None else [os.path.join(d, f) for f in os.listdir(d) if not os.path.isdir(os.path.join(d, f))]
+             if os.path.isdir(d) else [d] for d in (args.guessed, args.ref, args.ref_yield_tags)]
     try:
-        evaluate = EVALUATORS.get(passage_format(files[1][0])[1], EVALUATORS[args.format])
+        evaluate = EVALUATORS.get(passage_format(files[1][0])[1], EVALUATORS[args.format])  # Evaluate by ref format
     except IndexError as e:
         raise ValueError("No reference passages found: %s" % args.ref) from e
     results = list(evaluate_all(evaluate, files, **vars(args)))
@@ -185,6 +189,9 @@ if __name__ == '__main__':
     argparser = configargparse.ArgParser(description=desc)
     argparser.add_argument("guessed", help="filename/directory for the guessed annotation(s)")
     argparser.add_argument("ref", help="filename/directory for the reference annotation(s)")
+    argparser.add_argument("-r", "--ref-yield-tags", help="xml/pickle file name for reference used for extracting edge "
+                                                          "categories for fine-grained annotation "
+                                                          "(--constructions categories), or directory of files")
     argparser.add_argument("-f", "--format", default="amr", choices=CONVERTERS,
                            help="default format (if cannot determine by suffix)")
     argparser.add_argument("-o", "--out-file", help="file to write results for each evaluated passage to in CSV format")
