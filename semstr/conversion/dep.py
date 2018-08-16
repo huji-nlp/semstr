@@ -479,7 +479,7 @@ class DependencyConverter(FormatConverter):
         :param unit: unit to start from
         :return generator of edges
         """
-        return [e for e in self.find_headed_unit(unit).incoming if e.tag not in (self.ROOT, self.TOP)]
+        return [e for e in self.find_headed_unit(unit).incoming if e.tag.upper() not in (self.ROOT, self.TOP)]
         # This iterative implementation has a bug... find it and re-enable
         # remaining = list(unit.incoming)
         # ret = []
@@ -527,24 +527,30 @@ class DependencyConverter(FormatConverter):
             roots = [roots[0]]
         for dep_node in dep_nodes:
             is_parentless = True
-            for edge in dep_node.incoming:
+            for edge in list(dep_node.incoming):
                 if edge.remote:
                     if self.is_flat(edge):  # Unanalyzable remote is not possible
                         edge.remove()
-                    elif not self.is_ucca:  # Avoid * marking in CoNLL-*
-                        edge.remote = False
+                    elif not self.is_ucca:
+                        edge.remote = False  # Avoid * marking
                     if edge.rel == self.ROOT.lower():
                         edge.head_index = -1
+                        dep_node.incoming = [edge] + [e for e in dep_node.incoming if e != edge]  # Make root edge first
                     else:
                         continue
                 is_parentless = False  # Found primary parent
             if is_parentless and self.tree:  # Must have exactly one root
+                dep_node.incoming = []
                 if roots:  # Root already exist, so attach as its child
-                    dep_node.incoming = [self.Edge(head_index=roots[0].position - 1, rel=self.ORPHAN, remote=False)]
+                    edge = self.Edge(head_index=None, rel=self.ORPHAN, remote=False)
+                    edge.head = roots[0]
+                    edge.dependent = dep_node
                 else:  # This is the first root
                     roots = [dep_node]
-                    dep_node.incoming = [self.Edge(head_index=-1, rel=self.ROOT.lower(), remote=False)]
-        # self.break_cycles(dep_nodes)
+                    edge = self.Edge(head_index=-1, rel=self.ROOT.lower(), remote=False)
+                    edge.head = self.Node()
+                    edge.dependent = dep_node
+        self.break_cycles(dep_nodes)
 
     def to_format(self, passage, test=False, tree=True, enhanced=True, **kwargs):
         """ Convert from a Passage object to a string in dependency format.
@@ -621,7 +627,7 @@ class DependencyConverter(FormatConverter):
         else:  # Add top-level edge (like UCCA H) if top-level, otherwise add child to head's node
             edge.dependent.preterminal = edge.dependent.node = \
                 l1.add_fnode(edge.dependent.preterminal, self.label_edge(edge, top=True)) \
-                if edge.rel.upper() == self.ROOT else (
+                if edge.rel == self.ROOT.lower() else (
                     l1.add_fnode(None if self.is_scene(edge) else edge.head.node, edge.rel))
 
     @staticmethod
