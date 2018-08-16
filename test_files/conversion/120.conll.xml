@@ -67,7 +67,7 @@
     <attributes />
     <node ID="1.1" type="FN">
       <attributes />
-      <edge toID="1.2" type="H">
+      <edge toID="1.2" type="ROOT">
         <attributes />
       </edge>
     </node>
