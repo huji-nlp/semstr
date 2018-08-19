@@ -223,9 +223,12 @@ def map_labels(passage, label_map_file):
         with open(label_map_file, encoding="utf-8") as f:
             label_map = dict(csv.reader(f))
         for node in passage.layer(layer1.LAYER_ID).all:
-            for edge in node:
+            for edge in list(node):
                 mapped = label_map.get(edge.tag) or label_map.get(edge.tag.partition(":")[0])
-                if mapped is not None:
+                if mapped is None:
+                    if edge.attrib.get("remote"):
+                        node.remove(edge)
+                else:
                     edge.tag = mapped
         try:
             del passage.extra["format"]  # Remove original format as it no longer applies, after labels were replaced
