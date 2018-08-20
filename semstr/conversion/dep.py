@@ -20,6 +20,8 @@ class DependencyConverter(FormatConverter):
     HEAD = "head"
     ORPHAN = "orphan"
     MULTI_WORD_TEXT_ATTRIB = "multi_word_text"
+    MULTI_WORD_START_ATTRIB = "multi_word_start"
+    MULTI_WORD_END_ATTRIB = "multi_word_end"
 
     class Graph:
         def __init__(self, dep_nodes, sentence_id, original_format=None):
@@ -174,7 +176,7 @@ class DependencyConverter(FormatConverter):
         # noinspection PyTypeChecker
         self.tag_priority = [self.HEAD] + list(tag_priority) + self.TAG_PRIORITY + [None]
         self.format = kwargs["format"]
-        self.is_ucca = None
+        self.is_ucca = self.multi_words = None
 
     def read_line(self, line, previous_node, copy_of):
         return self.Node()
@@ -396,11 +398,13 @@ class DependencyConverter(FormatConverter):
                     text=dep_node.token.text,
                     punct=self.is_punct(dep_node),
                     paragraph=dep_node.token.paragraph)
-                dep_node.terminal.extra.update(tag=dep_node.token.tag, pos=dep_node.token.pos,
-                                               lemma=dep_node.token.lemma, features=dep_node.token.features,
-                                               enhanced=dep_node.enhanced, frame=dep_node.frame)
-                if dep_node.parent_multi_word:  # part of a multi-word token (e.g. zum = zu + dem)
-                    dep_node.terminal.extra[self.MULTI_WORD_TEXT_ATTRIB] = dep_node.parent_multi_word.token.text
+                extra = dep_node.terminal.extra
+                extra.update(tag=dep_node.token.tag, pos=dep_node.token.pos, lemma=dep_node.token.lemma,
+                             features=dep_node.token.features, enhanced=dep_node.enhanced, frame=dep_node.frame)
+                multi_word = dep_node.parent_multi_word
+                if multi_word:  # part of a multi-word token (e.g. zum = zu + dem)
+                    extra[self.MULTI_WORD_TEXT_ATTRIB] = multi_word.token.text
+                    (extra[self.MULTI_WORD_START_ATTRIB], extra[self.MULTI_WORD_END_ATTRIB]) = multi_word.span
 
     def from_format(self, lines, passage_id, split=False, return_original=False, terminals_only=False, **kwargs):
         """Converts from parsed text in dependency format to a Passage object.
@@ -568,7 +572,7 @@ class DependencyConverter(FormatConverter):
         if original_format == self.format:
             original_format = None
         self.is_ucca = original_format == "ucca"
-        multi_words = [None]
+        self.multi_words = {}
         dep_nodes = [self.Node(terminal.position, self.incoming_edges(terminal, test, tree),
                                terminal=terminal, is_top=self.is_top(terminal),
                                token=self.Token(terminal.text, terminal.extra.get("tag", terminal.tag),
@@ -576,7 +580,7 @@ class DependencyConverter(FormatConverter):
                                                 pos=terminal.extra.get("pos"),
                                                 features=terminal.extra.get("features"),
                                                 paragraph=terminal.paragraph),
-                               parent_multi_word=self.parent_multi_word(terminal, multi_words),
+                               parent_multi_word=self.parent_multi_word(terminal),
                                enhanced=terminal.extra.get("enhanced") if enhanced else None,
                                misc=terminal.extra.get("misc"))
                      for terminal in sorted(terminals, key=attrgetter("position"))]
@@ -599,16 +603,27 @@ class DependencyConverter(FormatConverter):
         # Avoid multiple edges between the same pair of node; in case of duplicates, prefer non-remote edges:
         return {sorted(es, key=attrgetter("remote"))[-1] for _, es in groupby(dep_edges, key=attrgetter("head_index"))}
 
-    def parent_multi_word(self, terminal, multi_words):
+    def parent_multi_word(self, terminal):
+        multi_word = self.multi_words.get(terminal.position)
+        if multi_word:
+            return multi_word
         multi_word_text = terminal.extra.get(self.MULTI_WORD_TEXT_ATTRIB)
         if multi_word_text is None:
-            multi_words[0] = None
-        elif multi_words[0] is None or multi_word_text != multi_words[0].token.text:
-            multi_words[0] = self.Node(terminal.position, token=self.Token(multi_word_text, tag="_"),
-                                       span=2 * [terminal.position])
-        else:
-            multi_words[0].span[-1] = terminal.position
-        return multi_words[0]
+            return None
+        multi_word_span = list(map(terminal.extra.get, (self.MULTI_WORD_START_ATTRIB, self.MULTI_WORD_END_ATTRIB)))
+        span_found = any(multi_word_span)
+        multi_word_span = [terminal.position if p is None else p for p in multi_word_span]
+        if not span_found:
+            multi_word = self.multi_words.get(terminal.position - 1)
+            if not multi_word or multi_word.token.text != multi_word_text:
+                multi_word = None
+        if multi_word is None:
+            multi_word = self.Node(terminal.position, token=self.Token(multi_word_text, tag="_"), span=multi_word_span)
+        if not span_found:
+            multi_word.span[-1] = terminal.position
+        for i in range(multi_word_span[0], multi_word_span[1] + 1):
+            self.multi_words[i] = multi_word
+        return multi_word
 
     def read_line_and_append(self, read_line, line, *args, **kwargs):
         self.lines_read.append(line)
