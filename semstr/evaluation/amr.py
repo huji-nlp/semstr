@@ -5,12 +5,9 @@ import re
 import sys
 from importlib import util
 
+import smatch
 from ucca import evaluation
 from ucca.constructions import PRIMARY
-
-sys.path.insert(0, os.path.dirname(util.find_spec("smatch.smatch").origin))  # to find amr.py from smatch
-from smatch import smatch
-sys.path.pop(0)
 
 EVAL_TYPES = (evaluation.LABELED, evaluation.UNLABELED)
 
@@ -19,10 +16,10 @@ def get_scores(a1, a2, amr_id, eval_type, verbose):
     if eval_type == evaluation.UNLABELED:
         a1, a2 = [re.sub(":[a-zA-Z0-9-]*", ":label", a) for a in (a1, a2)]
     try:
-        counts = smatch.process_amr_pair((a1, a2, amr_id))
+        counts = smatch.get_amr_match(a1, a2, amr_id)
     except (AttributeError, IndexError):  # error in one of the AMRs
         try:
-            counts = smatch.process_amr_pair((a2, a2, amr_id))
+            counts = smatch.get_amr_match(a2, a2, amr_id)
             counts = (0, 0, counts[-1])  # best_match_num, test_triple_num
         except (AttributeError, IndexError):  # error in ref AMR
             counts = (0, 0, 1)  # best_match_num, test_triple_num, gold_triple_num

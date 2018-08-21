@@ -1,4 +1,5 @@
 penman==0.6.2
+smatch==1.0.1
 nltk==3.3
 parsimonious==0.8.1
 word2number==1.1
