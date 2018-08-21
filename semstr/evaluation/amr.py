@@ -23,6 +23,7 @@ def get_scores(a1, a2, amr_id, eval_type, verbose):
             counts = (0, 0, counts[-1])  # best_match_num, test_triple_num
         except (AttributeError, IndexError):  # error in ref AMR
             counts = (0, 0, 1)  # best_match_num, test_triple_num, gold_triple_num
+    smatch.match_triple_dict.clear()
     res = SmatchResults(*counts)
     if verbose:
         print("Evaluation type: (" + eval_type + ")")
