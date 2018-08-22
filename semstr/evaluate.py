@@ -123,7 +123,8 @@ def evaluate_all(evaluate, files, name=None, verbose=0, quiet=False, basename=Fa
     guessed, ref, ref_yield_tags = [repeat(None) if f is None else
                                     iter(read_files(f, kwargs["format"], verbose=verbose, force_basename=basename))
                                     for f in files]
-    for (g, r, ryt) in tqdm(zip(guessed, ref, ref_yield_tags), unit=" passages", desc=name, total=len(files[1])):
+    t = tqdm(zip(guessed, ref, ref_yield_tags), unit=" passages", desc=name, total=len(files[1]))
+    for (g, r, ryt) in t:
         if matching_ids:
             while g.ID < r.ID:
                 g = next(guessed)
@@ -133,6 +134,7 @@ def evaluate_all(evaluate, files, name=None, verbose=0, quiet=False, basename=Fa
         if not quiet:
             with ioutil.external_write_mode():
                 print(r.ID, end=" ")
+        t.set_postfix(ID=r.ID)
         for p in g, ryt:
             if p and p.format != r.format:
                 # noinspection PyCallingNonCallable
@@ -162,7 +164,7 @@ def main(args):
         evaluate = EVALUATORS.get(passage_format(files[1][0])[1], EVALUATORS[args.format])  # Evaluate by ref format
     except IndexError as e:
         raise ValueError("No reference passages found: %s" % args.ref) from e
-    results = list(evaluate_all(evaluate, files, **vars(args)))
+    results = list(evaluate_all(evaluate, files, name="Evaluating", **vars(args)))
     summary = Scores(results)
     eval_type = UNLABELED if args.unlabeled else LABELED
     if len(results) > 1:
