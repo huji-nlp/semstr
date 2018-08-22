@@ -199,8 +199,7 @@ def resolve_label(node, label=None, reverse=False, conservative=False, wikificat
         new = new.strip('"()')
         if reverse:
             old, new = new, old
-        replaceable = old and (len(old) > 2 or len(label) < 5)
-        return re.sub(re.escape(old) + "(?![^<]*>|[^(]*\(|\d+$)", new, label, 1) if replaceable else label
+        return re.sub(re.escape(old) + "(?![^<]*>|[^(]*\(|\d+$)", new, label, 1) if old else label
 
     read_resources()
 
