@@ -523,7 +523,7 @@ class DependencyConverter(FormatConverter):
                        key=lambda e: (not e.remote, e.rel != EdgeTags.Linker))
             edge.remove()
 
-    def preprocess(self, dep_nodes, to_dep=True):
+    def attach_orphans(self, dep_nodes, to_dep=True):
         roots = self.roots(dep_nodes)
         if to_dep and self.tree and len(roots) > 1:
             for root in roots[1:]:
@@ -554,7 +554,11 @@ class DependencyConverter(FormatConverter):
                     edge = self.Edge(head_index=-1, rel=self.ROOT.lower(), remote=False)
                     edge.head = self.Node()
                     edge.dependent = dep_node
+
+    def preprocess(self, dep_nodes, to_dep=True):
+        self.attach_orphans(dep_nodes, to_dep)
         self.break_cycles(dep_nodes)
+        self.attach_orphans(dep_nodes, to_dep)
 
     def to_format(self, passage, test=False, tree=True, enhanced=True, **kwargs):
         """ Convert from a Passage object to a string in dependency format.

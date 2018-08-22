@@ -57,7 +57,7 @@ class ConllConverter(DependencyConverter):
                 yield fields + 4 * ["_"]  # head, relation, enhanced, misc
             else:
                 heads = [(e.head_index + 1, e.rel + ("*" if e.remote else "")) for e in dep_node.incoming] or \
-                        [(0, DependencyConverter.ROOT)]
+                        [(0, self.ROOT)]
                 if tree:
                     heads = [heads[0]]
                 for head in heads:
