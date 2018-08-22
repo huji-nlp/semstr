@@ -185,13 +185,12 @@ class AmrConverter(FormatConverter):
         alignments = graph.amr.alignments()
         lower = list(map(str.lower, graph.tokens))
         for triple, node in self.nodes.items():
-            indices = alignments.get(triple, [])
-            assert set(indices) <= set(range(len(graph.tokens))), \
-                "%d tokens, invalid alignment: %s" % (len(lower), indices)
-            if not self.is_variable(triple.target, graph.amr):
-                indices = self._expand_alignments(triple.target, indices, lower)
-            for i in indices:
-                preterminals.setdefault(i, []).append(node)
+            if not self.is_variable(triple.target, graph.amr):  # drop reentrancy alignments
+                indices = alignments.get(triple, [])
+                assert set(indices) <= set(range(len(graph.tokens))), \
+                    "%d tokens, invalid alignment: %s" % (len(lower), indices)
+                for i in self._expand_alignments(triple.target, indices, lower):
+                    preterminals.setdefault(i, []).append(node)
         return preterminals
 
     @staticmethod
