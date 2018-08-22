@@ -654,8 +654,11 @@ class DependencyConverter(FormatConverter):
         try:
             # noinspection PyTypeChecker
             return next(e.child for tag in self.tag_priority for e in self.primary_edges(unit, tag))
-        except StopIteration:
-            raise RuntimeError("Could not find head child for unit (%s): %s" % (unit.ID, unit))
+        except StopIteration as e:
+            try:
+                return unit.children[0]
+            except IndexError:
+                raise RuntimeError("Could not find head child for unit (%s): %s" % (unit.ID, unit)) from e
 
     def roots(self, dep_nodes):
         return [n for n in dep_nodes if any(e.rel == self.ROOT.lower() for e in n.incoming)]
