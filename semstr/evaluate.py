@@ -67,8 +67,8 @@ class Scores:
     def fields(self, *args, **kwargs):
         return [f for e, _ in self.elements for f in e.fields(*args, **kwargs)]
 
-    def titles(self, *args, **kwargs):
-        return [(e.name + (("_" + l) if l else "") + "_" + f) for e, l in self.elements
+    def titles(self, *args, prefix=True, **kwargs):
+        return [(((e.name + (("_" + l) if l else "") + "_") if prefix else "") + f) for e, l in self.elements
                 for f in e.titles(*args, **kwargs)]
 
     def details(self, average_f1):
@@ -175,8 +175,20 @@ def main(args):
             summarize(summary)
     elif not args.verbose:
         summarize(summary, errors=args.errors)
-    write_csv(args.out_file,     [summary.titles(eval_type)] + [result.fields(eval_type) for result in results])
+    # noinspection PyTypeChecker
+    title2index = dict(map(reversed, enumerate(summary.titles(eval_type, prefix=False))))
+    write_csv(args.out_file, [summary.titles(eval_type)] + [align_fields(result.fields(eval_type),
+                                                                         result.titles(eval_type),
+                                                                         title2index) for result in results])
     write_csv(args.summary_file, [summary.titles(eval_type), summary.fields(eval_type)])
+
+
+def align_fields(fields, titles, title2index):
+    """ Make sure score fields for individual passage are aligned with summary result fields by inserting empties """
+    ret = len(title2index) * [""]
+    for field, title in zip(fields, titles):
+        ret[title2index[title]] = field
+    return ret
 
 
 def summarize(scores, errors=False):
