@@ -208,9 +208,11 @@ class AmrConverter(FormatConverter):
                     elif not SKIP_TOKEN_PATTERN.match(tokens[i]):  # skip meaningless tokens
                         break
                     i += offset
-            full_range = range(min(indices), max(indices) + 1)  # make this a contiguous range if valid
-            if AmrConverter._contains_substring(stripped, tokens, full_range):
-                indices = list(full_range)
+            indices = sorted(indices)
+            for i, j in zip(list(indices[:-1]), list(indices[1:])):  # make this a contiguous range if valid
+                if j > i + 1 and AmrConverter._contains_substring(stripped, tokens, range(i, j + 1)):
+                    indices += list(range(i + 1, j))
+            indices = sorted(indices)
         elif len(stripped) > 1:  # no given alignment, and label has more than one character (to avoid aligning "-")
             for i, token in enumerate(tokens):  # use any equal span, or any equal token if it occurs only once
                 if stripped.startswith(token):
