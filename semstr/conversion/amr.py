@@ -204,7 +204,7 @@ class AmrConverter(FormatConverter):
                 while 0 <= i < len(tokens):
                     if AmrConverter._contains_substring(stripped, tokens, indices + [i]):
                         indices.append(i)
-                    elif not SKIP_TOKEN_PATTERN.match(tokens[i]):  # skip meaningless tokens
+                    elif not SKIP_TOKEN_PATTERN.fullmatch(tokens[i]):  # skip meaningless tokens
                         break
                     i += offset
             indices = sorted(indices)
@@ -219,7 +219,7 @@ class AmrConverter(FormatConverter):
                     j = i
                     while j < len(tokens) - 1:
                         j += 1
-                        if not SKIP_TOKEN_PATTERN.match(tokens[j]):
+                        if not SKIP_TOKEN_PATTERN.fullmatch(tokens[j]):
                             if not AmrConverter._contains_substring(stripped, tokens, interval + [j]):
                                 break
                             interval.append(j)
@@ -255,7 +255,7 @@ class AmrConverter(FormatConverter):
                     if label and label != NAME:
                         name.attrib[LABEL_ATTRIB] = NAME
                         for l in AmrConverter.strip_quotes(label).split("_"):
-                            l1.add_fnode(name, OP).attrib[LABEL_ATTRIB] = l if NUM_PATTERN.match(l) else '"%s"' % l
+                            l1.add_fnode(name, OP).attrib[LABEL_ATTRIB] = l if NUM_PATTERN.fullmatch(l) else '"%s"' % l
 
     def _update_labels(self, l1):
         for node in l1.all:
