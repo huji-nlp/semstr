@@ -1,8 +1,8 @@
 import os
 from collections import OrderedDict
 
-from ucca.constructions import PRIMARY, DEFAULT, Candidate
-from ucca.evaluation import LABELED, UNLABELED, Scores, Evaluator, EvaluatorResults, SummaryStatistics
+from ucca.constructions import PRIMARY, DEFAULT, Candidate, create_passage_yields
+from ucca.evaluation import LABELED, UNLABELED, Scores, Evaluator, EvaluatorResults, SummaryStatistics, ALL_EDGES
 
 from ..conversion.conllu import ConlluConverter
 
@@ -12,8 +12,21 @@ EVAL_TYPES = (LABELED, UNLABELED)
 class ConlluEvaluator(Evaluator):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, fscore=True, errors=False, **kwargs)
+        self.reference_yield_tags = None
 
-    def get_scores(self, s1, s2, eval_type, verbose=False, units=False):
+    def get_scores(self, s1, s2, eval_type, r=None, verbose=False, units=False):
+        """
+        :param s1: sentence to compare
+        :param s2: reference sentence
+        :param eval_type: evaluation type to use, out of EVAL_TYPES
+        1. UNLABELED: disregard dependency relation labels.
+        2. LABELED: also requires relation match
+        :param r: reference passage for fine-grained evaluation
+        :param verbose: print extra information
+        :param units: print all matches and mismatches
+        :returns EvaluatorResults
+        """
+        self.reference_yield_tags = None if r is None else create_passage_yields(r)[ALL_EDGES.name]
         g1, g2 = list(map(list, list(map(ConlluConverter().generate_graphs, (s1, s2)))))
         t1, t2 = list(map(join_tokens, (g1, g2)))
         assert t1 == t2, "Tokens do not match: '%s' != '%s'" % diff(t1, t2)
@@ -48,7 +61,8 @@ class ConlluEvaluator(Evaluator):
     def get_edges_by_construction(self, edges):
         edges_by_construction = OrderedDict()
         for edge in edges:
-            for construction in Candidate(edge).constructions(self.constructions):
+            candidate = Candidate(edge, reference_yield_tags=self.reference_yield_tags)
+            for construction in candidate.constructions(self.constructions):
                 edges_by_construction.setdefault(construction, set()).add(edge)
         return edges_by_construction
 
@@ -69,14 +83,15 @@ def diff(s1, s2):
     return tuple(s[start - 1:-end] for s in (s1, s2))
 
 
-def evaluate(guessed, ref, converter=None, verbose=False, eval_types=EVAL_TYPES, units=False, constructions=DEFAULT,
-             **kwargs):
+def evaluate(guessed, ref, ref_yield_tags=None, converter=None, verbose=False, eval_types=EVAL_TYPES, units=False,
+             constructions=DEFAULT, **kwargs):
     del kwargs
     if converter is not None:
         guessed = converter(guessed)
         ref = converter(ref)
     evaluator = ConlluEvaluator(verbose, constructions, units)
-    return ConlluScores((eval_type, evaluator.get_scores(guessed, ref, eval_type)) for eval_type in eval_types)
+    return ConlluScores((eval_type, evaluator.get_scores(guessed, ref, eval_type, r=ref_yield_tags))
+                        for eval_type in eval_types)
 
 
 class ConlluScores(Scores):

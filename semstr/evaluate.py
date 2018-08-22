@@ -135,10 +135,11 @@ def evaluate_all(evaluate, files, name=None, verbose=0, quiet=False, basename=Fa
             with ioutil.external_write_mode():
                 print(r.ID, end=" ")
         t.set_postfix(ID=r.ID)
-        for p in g, ryt:
-            if p and p.format != r.format:
-                # noinspection PyCallingNonCallable
-                p.passage = p.converted if r.out_converter is None else r.out_converter(p.converted)
+        if g.format != r.format:
+            # noinspection PyCallingNonCallable
+            g.passage = g.converted if r.out_converter is None else r.out_converter(g.converted)
+        if ryt is not None and ryt.in_converter is not None:
+            ryt.passage = ryt.converted  # Passage for fine-grained yield reference must be in UCCA format
         result = evaluate(g.passage, r.passage, verbose=verbose > 1 or units, units=units, errors=errors,
                           eval_type=UNLABELED if unlabeled else None, normalize=normalize,
                           constructions=constructions, ref_yield_tags=ryt.passage if ryt else None)
