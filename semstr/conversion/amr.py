@@ -122,14 +122,10 @@ class AmrConverter(FormatConverter):
         variables = {amr.top: l1.heads[0]}  # map AMR variables to UCCA nodes
         names = set()  # to collapse :name (... / name) :op "..." into one string node
         excluded = set()  # nodes whose outgoing edges (except for instance-of edges) will be ignored
-        visited = set()  # to avoid cycles
         while pending:  # breadth-first search creating layer 1 nodes
             triple = pending.pop(0)
             if triple.inverted:
                 triple = penman.Triple(triple.target, triple.relation + "-of", triple.source, inverted=False)
-            if triple in visited:
-                continue
-            visited.add(triple)
             if triple.relation in self.excluded or triple.source in excluded:
                 continue  # skip edges whose relation belongs to excluded layers
             if triple.target in self.excluded:
@@ -138,31 +134,36 @@ class AmrConverter(FormatConverter):
                 PREFIXED_RELATION_SUBSTITUTION, triple.relation)  # remove numeric/prep suffix
             if rel == NAME:
                 names.add(triple.target)
-            # noinspection PyUnresolvedReferences
-            parent = variables.get(triple.source)
-            assert parent is not None, "Outgoing edge from a non-variable: " + str(triple)
-            if triple.source in names:
+            parent = variables.get(triple.source)  # should normally not be None
+            node = variables.get(triple.target)  # should be None unless this is reentrancy
+            children = [t for t in amr.triples(source=triple.target) if not t.inverted] + \
+                       [t for t in amr.triples(target=triple.target) if t.inverted]
+            if parent is None:  # for some reason the traversal order was not topological
+                assert triple not in self.nodes, "Outgoing edge from a non-variable: " + str(triple)
+                pending.append(triple)  # revisit triple at the end again
+            elif triple.source in names:  # flatten names
                 node = parent
-                if rel == OP:
+                if rel == OP:  # one of the :op children of the name; append to label gotten so far
                     label = node.attrib.get(LABEL_ATTRIB)
                     node.attrib[LABEL_ATTRIB] = '"%s"' % "_".join(
                         AmrConverter.strip_quotes(l) for l in (label, str(triple.target)) if l)
-            elif rel == INSTANCE:
+            elif rel == INSTANCE:  # concept: save as variable label on the pre-existing node
                 node = parent
-                node.attrib[LABEL_ATTRIB] = str(triple.target)  # concepts are saved as variable labels
-            else:
-                node = variables.get(triple.target)
-                if node is not None:  # reentrancy
-                    if not self.remove_cycles or not _reachable(triple.target, triple.source):  # add only if no cycle
-                        l1.add_remote(parent, rel, node)
-                elif triple.target in amr.variables():  # new variable
-                    pending += amr.triples(source=triple.target) + [  # to continue breadth-first search
-                        t for t in amr.triples(target=triple.target) if t.inverted]
-                    variables[triple.target] = node = l1.add_fnode(parent, rel)
-                else:  # constant: save value in node attributes
-                    node = l1.add_fnode(parent, rel)
-                    node.attrib[LABEL_ATTRIB] = str(triple.target)
+                node.attrib[LABEL_ATTRIB] = str(triple.target)
+            elif node is not None:  # reentrancy: add as remote edge, only if no cycle
+                if not self.remove_cycles or not _reachable(triple.target, triple.source):
+                    l1.add_remote(parent, rel, node)
+            elif children:  # new variable, continue graph traversal
+                pending += [t for t in children if t not in self.nodes]
+                variables[triple.target] = node = l1.add_fnode(parent, rel)
+            else:  # constant: save as label on new node (no variable)
+                node = l1.add_fnode(parent, rel)
+                node.attrib[LABEL_ATTRIB] = str(triple.target)
             self.nodes[triple] = node
+
+    @staticmethod
+    def is_variable(name, amr):
+        return str(name)[0].isalpha() and name in amr.variables()
 
     @staticmethod
     def _build_layer0(preterminals, l1, l0):  # add edges to terminals according to alignments
@@ -187,7 +188,7 @@ class AmrConverter(FormatConverter):
             indices = alignments.get(triple, [])
             assert set(indices) <= set(range(len(graph.tokens))), \
                 "%d tokens, invalid alignment: %s" % (len(lower), indices)
-            if triple.target not in graph.amr.variables():
+            if not self.is_variable(triple.target, graph.amr):
                 indices = self._expand_alignments(triple.target, indices, lower)
             for i in indices:
                 preterminals.setdefault(i, []).append(node)
