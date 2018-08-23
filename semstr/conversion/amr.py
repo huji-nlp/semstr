@@ -97,7 +97,8 @@ class AmrConverter(FormatConverter):
         self._build_layer0(self.align_nodes(graph), l1, l0)
         self._update_implicit(l1)
         self._update_labels(l1)
-        original = self.header(passage) + penman.encode(penman.Graph(graph.amr.triples())).split("\n") if \
+        original = self.header(passage) + penman.encode(
+                penman.Graph(graph.amr.triples(), top=graph.amr.top)).split("\n") if \
             self.save_original or self.return_original else None
         if self.save_original:
             passage.extra["original"] = original
@@ -283,7 +284,7 @@ class AmrConverter(FormatConverter):
             print("Expanding names...")
         self._expand_names(passage.layer(layer1.LAYER_ID))
         triples = dict(self._generate_aligned_triples(passage, default_label=default_label)) or EMPTY_ALIGNED_TRIPLES
-        graph = penman.Graph(triples, alignments={k: v for k, v in triples.items() if v} if alignments else None)
+        graph = penman.Graph(triples, top="v1", alignments={k: v for k, v in triples.items() if v} if alignments else None)
         if not alignments:
             self.alignments = None
         return (self.header(passage, **kwargs) if metadata else []) + (AMR_CODEC.encode(graph).split("\n"))
