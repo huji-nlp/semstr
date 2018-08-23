@@ -5,7 +5,7 @@ from collections import namedtuple, OrderedDict
 from operator import attrgetter
 
 import penman
-from ucca import layer0, layer1, convert, textutil
+from ucca import layer0, layer1, convert, normalization, textutil
 
 from .format import FormatConverter
 from ..util.amr import resolve_label, EXTENSIONS, COMMENT_PREFIX, PLACEHOLDER_PATTERN, \
@@ -97,6 +97,8 @@ class AmrConverter(FormatConverter):
         self._build_layer0(self.align_nodes(graph), l1, l0)
         self._update_implicit(l1)
         self._update_labels(l1)
+        normalization.attach_punct(l0, l1)
+        normalization.attach_terminals(l0, l1)
         original = self.header(passage) + penman.encode(
                 penman.Graph(graph.amr.triples(), top=graph.amr.top)).split("\n") if \
             self.save_original or self.return_original else None
