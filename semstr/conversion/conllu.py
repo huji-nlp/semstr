@@ -23,7 +23,6 @@ ATTR_GETTERS = {
 }
 
 PUNCT_TAG = "PUNCT"
-PUNCT = "punct"
 FLAT = "flat"
 PARATAXIS = "parataxis"
 CC = "cc"
@@ -37,15 +36,14 @@ APPOS = "appos"
 
 HIGH_ATTACHING = {layer1.EdgeTags.Connector: (CONJ,), CC: (CONJ,), MARK: (ADVCL, XCOMP)}  # trigger: attach to rel
 TOP_RELS = (layer1.EdgeTags.ParallelScene, PARATAXIS)
-PUNCT_RELS = (PUNCT, layer1.EdgeTags.Punctuation)
+PUNCT_RELS = (ConllConverter.PUNCT, layer1.EdgeTags.Punctuation)
 FLAT_RELS = (FLAT, layer1.EdgeTags.Terminal)
 REL_REPLACEMENTS = (FLAT_RELS, PUNCT_RELS)
 
 
 class ConlluConverter(ConllConverter):
-
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, tree=True, punct_tag=PUNCT_TAG, punct_rel=PUNCT,
+        super().__init__(*args, tree=True, punct_tag=PUNCT_TAG, punct_rel=self.PUNCT,
                          tag_priority=[self.TOP, PARATAXIS, CONJ, ADVCL, XCOMP], format="conllu", **kwargs)
 
     def read_line(self, *args, **kwargs):

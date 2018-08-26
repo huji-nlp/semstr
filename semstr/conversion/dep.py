@@ -19,6 +19,7 @@ class DependencyConverter(FormatConverter):
     TOP = "TOP"
     HEAD = "head"
     ORPHAN = "orphan"
+    PUNCT = "punct"
     MULTI_WORD_TEXT_ATTRIB = "multi_word_text"
     MULTI_WORD_START_ATTRIB = "multi_word_start"
     MULTI_WORD_END_ATTRIB = "multi_word_end"
@@ -546,7 +547,7 @@ class DependencyConverter(FormatConverter):
             if is_parentless and self.tree:  # Must have exactly one root
                 dep_node.incoming = []
                 if roots:  # Root already exist, so attach as its child
-                    edge = self.Edge(head_index=None, rel=self.ORPHAN, remote=False)
+                    edge = self.Edge(head_index=None, rel=self.orphan_label(dep_node), remote=False)
                     edge.head = roots[0]
                     edge.dependent = dep_node
                 else:  # This is the first root
@@ -554,6 +555,9 @@ class DependencyConverter(FormatConverter):
                     edge = self.Edge(head_index=-1, rel=self.ROOT.lower(), remote=False)
                     edge.head = self.Node()
                     edge.dependent = dep_node
+
+    def orphan_label(self, dep_node):
+        return self.PUNCT if self.is_punct(dep_node) else self.ORPHAN
 
     def preprocess(self, dep_nodes, to_dep=True):
         self.attach_orphans(dep_nodes, to_dep)
