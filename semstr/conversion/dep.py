@@ -388,7 +388,7 @@ class DependencyConverter(FormatConverter):
 
     def top_edge(self, dep_node, graph):
         top_edge = self.Edge(head_index=0, rel=self.TOP, remote=False)
-        top_edge.head = graph.nodes[0]
+        top_edge.head = self.Node()
         top_edge.dependent = dep_node
         return top_edge
 
