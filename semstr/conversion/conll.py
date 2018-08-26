@@ -68,5 +68,4 @@ class ConllConverter(DependencyConverter):
         yield ["# sent_id = " + graph.id]
 
     def omit_edge(self, edge, linkage=False):
-        return (self.tree or not linkage) and edge.tag in (EdgeTags.LinkRelation, EdgeTags.LinkArgument) \
-               or self.tree and edge.attrib.get("remote")
+        return (self.tree or not linkage) and edge.tag in (EdgeTags.LinkRelation, EdgeTags.LinkArgument)
