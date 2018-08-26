@@ -75,7 +75,7 @@ class ConlluEvaluator(Evaluator):
 
 def join_tokens(graphs):
     return "".join((n.parent_multi_word.token.text if n.position == n.parent_multi_word.span[0] else "")
-                   if n.parent_multi_word else n.token.text for g in graphs for n in g.nodes[1:])
+                   if n.parent_multi_word else n.token.text for g in graphs for n in g.nodes)
 
 
 def diff(s1, s2):

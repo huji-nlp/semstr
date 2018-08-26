@@ -304,7 +304,7 @@ class DependencyConverter(FormatConverter):
                 if not self.is_ucca and not self.tree and dep_node.position and not dep_node.incoming:  # Top node
                     dep_node.node = dep_node.preterminal = l1.add_fnode(None, (self.ROOT, self.TOP)[dep_node.is_top])
                 if self.is_punct(dep_node):  # Avoid outgoing edges from punctuation by flipping edges
-                    head = dep_node.incoming[0].head if dep_node.incoming else graph.nodes[0]
+                    head = dep_node.incoming[0].head if dep_node.incoming else self.Node()
                     outgoing = list(dep_node)
                     for edge in outgoing:
                         edge.head = head
@@ -314,7 +314,7 @@ class DependencyConverter(FormatConverter):
         sorted_dep_nodes = self._topological_sort(graph.nodes)
         self.preprocess(sorted_dep_nodes, to_dep=False)
         if self.is_ucca:
-            sorted_dep_nodes = [n for n in graph.nodes[1:] if not n.incoming and not n.is_top] + sorted_dep_nodes
+            sorted_dep_nodes = [n for n in graph.nodes if not n.incoming and not n.is_top] + sorted_dep_nodes
         for dep_node in sorted_dep_nodes:  # Other nodes
             incoming = list(dep_node.incoming)
             if incoming:
