@@ -302,7 +302,7 @@ class DependencyConverter(FormatConverter):
         for dep_node in graph.nodes:
             if dep_node.outgoing:
                 if not self.is_ucca and not self.tree and dep_node.position and not dep_node.incoming:  # Top node
-                    dep_node.node = dep_node.preterminal = l1.add_fnode(None, (self.ROOT, self.TOP)[dep_node.is_top])
+                    self.top_edge(dep_node, rel=self.TOP if dep_node.is_top else self.ROOT)
                 if self.is_punct(dep_node):  # Avoid outgoing edges from punctuation by flipping edges
                     head = dep_node.incoming[0].head if dep_node.incoming else self.Node()
                     outgoing = list(dep_node)
@@ -319,14 +319,14 @@ class DependencyConverter(FormatConverter):
             incoming = list(dep_node.incoming)
             if incoming:
                 if dep_node.is_top and incoming[0].head_index != 0:
-                    incoming[:0] = [self.top_edge(dep_node, graph)]
+                    incoming[:0] = [self.top_edge(dep_node)]
                 edge, *remotes = incoming
                 self.add_fnode(edge, l1)
                 remote_edges += remotes
             if dep_node.outgoing and not any(map(self.is_flat, dep_node.incoming)):
                 dep_node.preterminal = l1.add_fnode(  # Intermediate head for hierarchy
                     dep_node.preterminal, self.label_edge(
-                        dep_node.incoming[0] if dep_node.incoming else self.top_edge(dep_node, graph)))
+                        dep_node.incoming[0] if dep_node.incoming else self.top_edge(dep_node)))
         for edge in remote_edges:
             parent = edge.head.node or l1.heads[0]
             child = edge.dependent.node or l1.heads[0]
@@ -386,8 +386,8 @@ class DependencyConverter(FormatConverter):
         #         link_relation.node = link_relation.preterminal = l1.add_fnode(None, EdgeTags.Linker)
         #     l1.add_linkage(link_relation.node, *args)
 
-    def top_edge(self, dep_node, graph):
-        top_edge = self.Edge(head_index=0, rel=self.TOP, remote=False)
+    def top_edge(self, dep_node, rel=TOP):
+        top_edge = self.Edge(head_index=0, rel=rel, remote=False)
         top_edge.head = self.Node()
         top_edge.dependent = dep_node
         return top_edge
