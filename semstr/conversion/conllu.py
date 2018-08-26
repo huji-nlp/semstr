@@ -107,7 +107,7 @@ class ConlluConverter(ConllConverter):
                         if edge.rel == (source, target)[to_dep]:
                             edge.rel = (target, source)[to_dep]
                 rels = HIGH_ATTACHING.get(edge.rel)
-                if rels and edge.head.incoming and edge.rel != self.ROOT.lower():  # Avoid changing the root edge
+                if rels:
                     candidates = [e for e in (edge.head.incoming, edge.head.outgoing)[to_dep] if e.rel in rels]
                     if candidates:
                         head_edge = min(candidates, key=_attach_forward_sort_key)
