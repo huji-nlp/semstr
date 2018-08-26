@@ -43,19 +43,18 @@ REL_REPLACEMENTS = (FLAT_RELS, PUNCT_RELS)
 
 class ConlluConverter(ConllConverter):
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, tree=True, punct_tag=PUNCT_TAG, punct_rel=self.PUNCT,
+        super().__init__(*args, punct_tag=PUNCT_TAG, punct_rel=self.PUNCT,
                          tag_priority=[self.TOP, PARATAXIS, CONJ, ADVCL, XCOMP], format="conllu", **kwargs)
 
     def read_line(self, *args, **kwargs):
         return self.read_line_and_append(super().read_line, *args, **kwargs)
 
-    def generate_lines(self, graph, test, tree):
+    def generate_lines(self, graph, test):
         for dep_node in graph.nodes:
             if dep_node.incoming:
-                if not tree:
-                    dep_node.enhanced = "|".join("%d:%s" % (e.head_index + 1, e.rel) for e in dep_node.incoming)
+                dep_node.enhanced = "|".join("%d:%s" % (e.head_index, e.rel) for e in dep_node.incoming)
                 del dep_node.incoming[1:]
-        yield from super().generate_lines(graph, test, tree)
+        yield from super().generate_lines(graph, test)
 
     def from_format(self, lines, passage_id, split=False, return_original=False, annotate=False, terminals_only=False,
                     **kwargs):
@@ -65,7 +64,7 @@ class ConlluConverter(ConllConverter):
             graph.format = kwargs.get("format") or graph.format
             annotations = {}
             if annotate:  # get all node attributes before they are possibly modified by build_passage
-                for dep_node in graph.nodes[1:]:
+                for dep_node in graph.nodes:
                     annotations.setdefault(dep_node.token.paragraph, []).append(
                         [ATTR_GETTERS.get(a, {}.get)(dep_node) for a in textutil.Attr])
             try:
@@ -129,7 +128,7 @@ class ConlluConverter(ConllConverter):
         if to_dep:
             for dep_node in dep_nodes:
                 if dep_node.incoming:
-                    dep_node.enhanced = "|".join("%d:%s" % (e.head_index + 1, e.rel) for e in dep_node.incoming)
+                    dep_node.enhanced = "|".join("%d:%s" % (e.head_index, e.rel) for e in dep_node.incoming)
 
     @staticmethod
     def between(dep_node, edges, *rels):

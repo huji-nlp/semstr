@@ -6,10 +6,10 @@ from .dep import DependencyConverter
 
 
 class ConllConverter(DependencyConverter):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, tree=True, **kwargs):
         if "format" not in kwargs:
             kwargs["format"] = "conll"
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, tree=tree, **kwargs)
 
     def read_line(self, line, previous_node, copy_of):
         fields = self.split_line(line)
@@ -42,8 +42,8 @@ class ConllConverter(DependencyConverter):
                                             is_multi_word=len(span) > 1, enhanced=enhanced, misc=misc, span=span)
         previous_node.add_edges(edges)
 
-    def generate_lines(self, graph, test, tree):
-        yield from super().generate_lines(graph, test, tree)
+    def generate_lines(self, graph, test):
+        yield from super().generate_lines(graph, test)
         # id, form, lemma, coarse pos, fine pos, features
         for i, dep_node in enumerate(graph.nodes):
             position = i + 1
@@ -56,9 +56,9 @@ class ConllConverter(DependencyConverter):
             if test:
                 yield fields + 4 * ["_"]  # head, relation, enhanced, misc
             else:
-                heads = [(e.head_index + 1, e.rel + ("*" if e.remote else "")) for e in dep_node.incoming] or \
+                heads = [(e.head_index, e.rel + ("*" if e.remote else "")) for e in dep_node.incoming] or \
                         [(0, self.ROOT)]
-                if tree:
+                if self.tree:
                     heads = [heads[0]]
                 for head in heads:
                     yield fields + list(head) + [dep_node.enhanced, dep_node.misc]
@@ -67,5 +67,6 @@ class ConllConverter(DependencyConverter):
         yield from super().generate_header_lines(graph)
         yield ["# sent_id = " + graph.id]
 
-    def omit_edge(self, edge, tree, linkage=False):
-        return (tree or not linkage) and edge.tag == EdgeTags.LinkArgument or tree and edge.attrib.get("remote")
+    def omit_edge(self, edge, linkage=False):
+        return (self.tree or not linkage) and edge.tag in (EdgeTags.LinkRelation, EdgeTags.LinkArgument) \
+               or self.tree and edge.attrib.get("remote")
