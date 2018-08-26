@@ -2,10 +2,12 @@
 
 import unittest
 
-from ucca.convert import split2sentences
+from ucca.convert import split2sentences, textutil
 
 from semstr.convert import from_amr, to_amr
 from semstr.evaluation.amr import evaluate
+
+textutil.models["en"] = "en_core_web_sm"
 
 
 class ConversionTests(unittest.TestCase):

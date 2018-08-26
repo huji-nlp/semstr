@@ -2,10 +2,12 @@ import os
 from glob import glob
 
 import pytest
-from ucca import layer0, layer1
+from ucca import layer0, layer1, textutil
 from ucca.ioutil import read_files_and_dirs
 
 from semstr.convert import FROM_FORMAT
+
+textutil.models["en"] = "en_core_web_sm"
 
 
 @pytest.mark.parametrize("suffix", ("xml", "amr", "sdp", "conllu"))

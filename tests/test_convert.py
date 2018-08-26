@@ -6,6 +6,8 @@ from semstr import convert
 
 """Tests convert module correctness and API."""
 
+textutil.models["en"] = "en_core_web_sm"
+
 
 # def simple():
 #     p = core.Passage("120")
