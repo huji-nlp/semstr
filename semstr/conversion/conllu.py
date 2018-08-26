@@ -105,6 +105,8 @@ class ConlluConverter(ConllConverter):
                     for source, target in REL_REPLACEMENTS:
                         if edge.rel == (source, target)[to_dep]:
                             edge.rel = (target, source)[to_dep]
+                if edge.rel == self.HEAD:
+                    edge.rel = XCOMP
                 rels = HIGH_ATTACHING.get(edge.rel)
                 if rels:
                     candidates = [e for e in (edge.head.incoming, edge.head.outgoing)[to_dep] if e.rel in rels]
