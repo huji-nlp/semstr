@@ -1,28 +1,35 @@
 #!/usr/bin/env python3
 
 import os
+from glob import glob
 
 import configargparse
 import numpy as np
 from tqdm import tqdm
 from ucca import evaluation
 
-from semstr.cfgutil import add_verbose_arg
 from semstr.evaluate import EVALUATORS, passage_format, evaluate_all, Scores
 
 desc = """Evaluates statistical significance of F1 scores between two systems."""
 
 
 def main(args):
-    files = [[os.path.join(d, f) for f in os.listdir(d)] for d in args.guessed + [args.ref]]
-    n = len(files[-1])
-    evaluate = EVALUATORS.get(passage_format(files[-1][0])[1], EVALUATORS[args.format])
-    results = [list(evaluate_all(evaluate, f, n, **vars(args))) for f, n in zip((files[0::2], files[1:]), args.guessed)]
-    d = diff(results, verbose=True)
-    sample = np.random.choice(n, (args.nboot, n))
-    s = np.sum(np.sign(d) * diff(results, indices) > 2 * np.abs(d) for indices in tqdm(sample, unit=" samples"))
-    print("p-value:")
-    print(s / args.nboot)
+    files = [None if d is None else [os.path.join(d, f) for f in os.listdir(d) if not os.path.isdir(os.path.join(d, f))]
+             if os.path.isdir(d) else [d] for p in args.guessed + [args.ref] for d in glob(p) or [p]]
+    ref_files = files[-1]
+    n = len(ref_files)
+    evaluate = EVALUATORS.get(passage_format(ref_files[0])[1], EVALUATORS[args.format])
+    results = [list(evaluate_all(evaluate, [f, ref_files, None], n, **vars(args))) for f, n in zip(files, args.guessed)]
+    for evaluated, name in zip(results[1:], args.guessed[1:]):
+        print(name)
+        baseline = results[0]
+        pair = (baseline, evaluated)
+        d = diff(pair, verbose=True)
+        sample = np.random.choice(n, (args.nboot, n))
+        s = np.sum(np.sign(d) * diff(pair, indices) > 2 * np.abs(d) for indices in tqdm(sample, unit=" samples"))
+        print("p-value:")
+        print(s / args.nboot)
+        print()
 
 
 def diff(results, indices=None, verbose=False):
@@ -36,11 +43,9 @@ def diff(results, indices=None, verbose=False):
 
 if __name__ == '__main__':
     argparser = configargparse.ArgParser(description=desc)
-    argparser.add_argument("guessed", nargs=2, help="directories for the guessed annotations: baseline, evaluated")
+    argparser.add_argument("guessed", nargs="+", help="directories for the guessed annotations: baseline, evaluated")
     argparser.add_argument("ref", help="directory for the reference annotations")
     argparser.add_argument("-b", "--nboot", type=int, default=int(1e4), help="number of bootstrap samples")
     argparser.add_argument("-f", "--format", default="amr", help="default format (if cannot determine by suffix)")
     group = argparser.add_mutually_exclusive_group()
-    add_verbose_arg(group, help="detailed evaluation output")
-    group.add_argument("-q", "--quiet", action="store_true", help="do not print anything")
     main(argparser.parse_args())
