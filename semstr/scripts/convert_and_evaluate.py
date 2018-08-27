@@ -18,38 +18,38 @@ desc = """Convert files to UCCA standard format, convert back to the original fo
 
 
 def main(args):
+    if args.out_dir:
+        os.makedirs(args.out_dir, exist_ok=True)
     scores = []
     for pattern in args.filenames:
-        filenames = glob(pattern)
-        if not filenames:
-            raise IOError("Not found: " + pattern)
-        for filename in filenames:
+        for filename in glob(pattern) or [pattern]:
+            file_scores = []
             basename, ext = os.path.splitext(os.path.basename(filename))
             passage_format = ext.lstrip(".")
             if passage_format == "txt":
                 passage_format = args.format
-            converters = CONVERTERS.get(passage_format, CONVERTERS[args.format])
+            in_converter, out_converter = CONVERTERS.get(passage_format, CONVERTERS[args.format])
             evaluate = EVALUATORS.get(passage_format, EVALUATORS[args.format])
             with open(filename, encoding="utf-8") as f:
-                for passage, ref, passage_id in tqdm(
-                        converters[0](f, passage_id=basename, return_original=True, split=True),
-                        desc=("Converting '%s'" % filename) +
-                             ((", writing to '%s'" % args.out_dir) if args.out_dir else ""), unit=" passages"):
+                t = tqdm(in_converter(f, passage_id=basename, return_original=True, split=True), unit=" passages",
+                         desc=("Converting '%s'" % filename) +
+                              ((", writing to '%s'" % args.out_dir) if args.out_dir else ""))
+                for passage, ref, passage_id in t:
                     if args.normalize:
                         normalize(passage, extra=args.extra_normalization)
                     if args.out_dir:
                         os.makedirs(args.out_dir, exist_ok=True)
-                        outfile = "%s/%s.xml" % (args.out_dir, passage.ID)
+                        outfile = os.path.join(args.out_dir, passage.ID + ".xml")
                         if args.verbose:
                             with ioutil.external_write_mode():
                                 print("Writing '%s'..." % outfile, file=sys.stderr, flush=True)
                         ioutil.passage2file(passage, outfile)
                     try:
-                        guessed = converters[1](passage, wikification=args.wikification, use_original=False)
+                        guessed = out_converter(passage, wikification=args.wikification, use_original=False)
                     except Exception as e:
                         raise ValueError("Error converting %s back from %s" % (filename, passage_format)) from e
                     if args.out_dir:
-                        outfile = "%s/%s%s" % (args.out_dir, passage.ID, ext)
+                        outfile = os.path.join(args.out_dir, passage.ID + "." + ext)
                         if args.verbose:
                             with ioutil.external_write_mode():
                                 print("Writing '%s'..." % outfile, file=sys.stderr, flush=True)
@@ -59,11 +59,13 @@ def main(args):
                         s = evaluate(guessed, ref, verbose=args.verbose > 1, units=args.units)
                     except Exception as e:
                         raise ValueError("Error evaluating conversion of %s" % filename) from e
-                    scores.append(s)
+                    file_scores.append(s)
                     if args.verbose:
                         with ioutil.external_write_mode():
                             print(passage_id)
                             s.print()
+                    t.set_postfix(F1="%.2f" % (100.0 * Scores(file_scores).average_f1()))
+            scores += file_scores
     print()
     if args.verbose and len(scores) > 1:
         print("Aggregated scores:")
