@@ -332,59 +332,7 @@ class DependencyConverter(FormatConverter):
             child = edge.dependent.node or l1.heads[0]
             if child not in parent.children and parent not in child.iter():  # Avoid cycles and multi-edges
                 l1.add_remote(parent, edge.rel, child)
-
-        # create nodes starting from the root and going down to pre-terminals
-        # linkages = defaultdict(list)
-        # for dep_node in self._topological_sort(dep_nodes):
-        #     incoming_rels = {e.rel for e in dep_node.incoming}
-        #     if incoming_rels == {self.ROOT}:
-        #         # keep dep_node.node as None so that dependents are attached to the root
-        #         dep_node.preterminal = l1.add_fnode(None, self._label_edge(dep_node))
-        #     elif incoming_rels == {EdgeTags.Terminal}:  # part of non-analyzable expression
-        #         head = dep_node.incoming[0].head
-        #         if layer0.is_punct(head.terminal) and head.incoming and \
-        #                 head.incoming[0].head.incoming:
-        #             head = head.incoming[0].head  # do not put terminals and punctuation together
-        #         if head.preterminal is None:
-        #             head.preterminal = l1.add_fnode(None, self._label_edge(head))
-        #         dep_node.preterminal = head.preterminal  # only edges to layer 0 can be Terminal
-        #     else:  # usual case
-        #         remotes = []
-        #         for edge in dep_node.incoming:
-        #             if edge.rel == EdgeTags.LinkArgument:
-        #                 linkages[edge.head].append(dep_node)
-        #             elif edge.remote and any(not e.remote for e in dep_node.incoming):
-        #                 remotes.append(edge)
-        #             elif dep_node.node is None:
-        #                 dep_node.node = l1.add_fnode(edge.head.node, edge.rel)
-        #                 dep_node.preterminal = l1.add_fnode(
-        #                     dep_node.node, self._label_edge(dep_node)) \
-        #                     if dep_node.outgoing else dep_node.node
-        #             else:
-        #                 # print("More than one non-remote non-linkage head for '%s': %s"
-        #                 #       % (dep_node.node, dep_node.incoming), file=sys.stderr)
-        #                 pass
-        #
-        #         # link remote edges
-        #         for edge in remotes:
-        #             if edge.head.node is None:  # add intermediate parent node
-        #                 if edge.head.preterminal is None:
-        #                     edge.head.preterminal = l1.add_fnode(None, self._label_edge(edge.head))
-        #                 edge.head.node = edge.head.preterminal
-        #                 edge.head.preterminal = l1.add_fnode(edge.head.node,
-        #                                                      self._label_edge(edge.head))
-        #             l1.add_remote(edge.head.node, edge.rel, dep_node.node)
-        #
-        # # link linkage arguments to relations
-        # for link_relation, link_arguments in linkages.items():
-        #     args = []
-        #     for arg in link_arguments:
-        #         if arg.node is None:  # add argument node
-        #             arg.node = arg.preterminal = l1.add_fnode(None, self._label_edge(arg))
-        #         args.append(arg.node)
-        #     if link_relation.node is None:
-        #         link_relation.node = link_relation.preterminal = l1.add_fnode(None, EdgeTags.Linker)
-        #     l1.add_linkage(link_relation.node, *args)
+        self.break_cycles(l1)
 
     def top_edge(self, dep_node, rel=TOP):
         top_edge = self.Edge(head_index=0, rel=rel, remote=False)
@@ -472,11 +420,6 @@ class DependencyConverter(FormatConverter):
         if unit.layer.ID != layer0.LAYER_ID:
             raise ValueError("Implicit unit in conversion to dependencies (%s): %s" % (unit.ID, unit.root))
         return unit
-        # while unit.outgoing:
-        #     unit = self.find_head_child_edge(unit).child
-        # if unit.layer.ID != layer0.LAYER_ID:
-        #     raise ValueError("Implicit unit in conversion to dependencies (%s): %s" % (unit.ID, unit.root))
-        # return unit
 
     def find_top_headed_edges(self, unit):
         """ find uppermost edges above here, to a head child from its parent.
@@ -501,30 +444,33 @@ class DependencyConverter(FormatConverter):
         #     elif self.find_head_terminal(e.parent).layer.ID == layer0.LAYER_ID:
         #         yield e
 
-    def find_cycle(self, n, v, p):
-        if n in v:
+    def find_cycle(self, unit, visited, path):
+        if unit in visited:
             return False
-        v.add(n)
-        p.add(n)
-        for e in n.incoming:
-            if e.head in p or self.find_cycle(e.head, v, p):
+        visited.add(unit)
+        path.add(unit)
+        for e in unit.incoming:
+            if e.parent in path or self.find_cycle(e.parent, visited, path):
                 return True
-        p.remove(n)
+        path.remove(unit)
         return False
 
-    def break_cycles(self, dep_nodes):
+    def break_cycles(self, l1):
         # find cycles and remove them
         while True:
             path = set()
             visited = set()
-            if not any(self.find_cycle(dep_node, visited, path) for dep_node in dep_nodes):
+            if not any(self.find_cycle(unit, visited, path) for unit in l1.heads):
                 break
             # remove edges from cycle in priority order: first remote edges, then linker edges
-            edge = min((e for dep_node in path for e in dep_node.incoming),
-                       key=lambda e: (not e.remote, e.rel != EdgeTags.Linker))
-            edge.remove()
+            edge = min((e for unit in path for e in unit.incoming),
+                       key=lambda e: (not e.attrib.get("remote"), e.tag != EdgeTags.Linker))
+            edge.parent.remove(edge)
 
-    def attach_orphans(self, dep_nodes, to_dep=True):
+    def orphan_label(self, dep_node):
+        return self.PUNCT if self.is_punct(dep_node) else self.ORPHAN
+
+    def preprocess(self, dep_nodes, to_dep=True):
         roots = self.roots(dep_nodes)
         if to_dep and self.tree and len(roots) > 1:
             for root in roots[1:]:
@@ -555,14 +501,6 @@ class DependencyConverter(FormatConverter):
                     edge = self.Edge(head_index=0, rel=self.ROOT.lower(), remote=False)
                     edge.head = self.Node()
                     edge.dependent = dep_node
-
-    def orphan_label(self, dep_node):
-        return self.PUNCT if self.is_punct(dep_node) else self.ORPHAN
-
-    def preprocess(self, dep_nodes, to_dep=True):
-        self.attach_orphans(dep_nodes, to_dep)
-        self.break_cycles(dep_nodes)
-        self.attach_orphans(dep_nodes, to_dep)
 
     def to_format(self, passage, test=False, enhanced=True, **kwargs):
         """ Convert from a Passage object to a string in dependency format.
