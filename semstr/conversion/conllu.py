@@ -109,7 +109,8 @@ class ConlluConverter(ConllConverter):
                     edge.rel = XCOMP
                 rels = HIGH_ATTACHING.get(edge.rel)
                 if rels:
-                    candidates = [e for e in (edge.head.incoming, edge.head.outgoing)[to_dep] if e.rel in rels]
+                    candidates = [e for e in (edge.head.incoming, edge.head.outgoing)[to_dep]
+                                  if e.rel in rels and not e.remote]
                     if candidates:
                         head_edge = min(candidates, key=_attach_forward_sort_key)
                         head = (head_edge.head, head_edge.dependent)[to_dep]
