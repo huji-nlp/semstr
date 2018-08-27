@@ -9,6 +9,7 @@ from ucca.layer1 import EdgeTags
 
 from .format import FormatConverter
 
+CYCLES_REMOVED = 0
 
 class DependencyConverter(FormatConverter):
     """
@@ -465,6 +466,9 @@ class DependencyConverter(FormatConverter):
             # remove edges from cycle in priority order: first remote edges, then linker edges
             edge = min((e for unit in path for e in unit.incoming),
                        key=lambda e: (not e.attrib.get("remote"), e.tag != EdgeTags.Linker))
+            global CYCLES_REMOVED
+            CYCLES_REMOVED += 1
+            print("CYCLES_REMOVED: %d %s" % (CYCLES_REMOVED, edge.tag, edge.parent, edge.child))
             edge.parent.remove(edge)
 
     def orphan_label(self, dep_node):

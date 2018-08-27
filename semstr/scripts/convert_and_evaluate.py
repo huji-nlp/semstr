@@ -49,7 +49,7 @@ def main(args):
                     except Exception as e:
                         raise ValueError("Error converting %s back from %s" % (filename, passage_format)) from e
                     if args.out_dir:
-                        outfile = os.path.join(args.out_dir, passage.ID + "." + ext)
+                        outfile = os.path.join(args.out_dir, passage.ID + ext)
                         if args.verbose:
                             with ioutil.external_write_mode():
                                 print("Writing '%s'..." % outfile, file=sys.stderr, flush=True)
