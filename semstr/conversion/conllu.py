@@ -32,6 +32,7 @@ MARK = "mark"
 ADVCL = "advcl"
 XCOMP = "xcomp"
 APPOS = "appos"
+ACL = "acl"
 
 
 HIGH_ATTACHING = {layer1.EdgeTags.Connector: (CONJ,), CC: (CONJ,), MARK: (ADVCL, XCOMP)}  # trigger: attach to rel
@@ -116,6 +117,10 @@ class ConlluConverter(ConllConverter):
                         head = (head_edge.head, head_edge.dependent)[to_dep]
                         if not any(e.rel == edge.rel for e in head.outgoing):
                             edge.head = head
+                if edge.rel == ACL:
+                    remotes = [e.child for e in edge.child if e.remote]
+                    if len(remotes) == 1:
+                        edge.head = remotes[0]
         if to_dep:
             for dep_node in dep_nodes:
                 for edge in dep_node.incoming:
