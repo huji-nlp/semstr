@@ -9,7 +9,6 @@ from ucca.layer1 import EdgeTags
 
 from .format import FormatConverter
 
-CYCLES_REMOVED = 0
 
 class DependencyConverter(FormatConverter):
     """
@@ -333,7 +332,7 @@ class DependencyConverter(FormatConverter):
             child = edge.dependent.node or l1.heads[0]
             if child not in parent.children and parent not in child.iter():  # Avoid cycles and multi-edges
                 l1.add_remote(parent, edge.rel, child)
-        self.break_cycles(l1)
+        self.break_cycles(l1.heads)
 
     def top_edge(self, dep_node, rel=TOP):
         top_edge = self.Edge(head_index=0, rel=rel, remote=False)
@@ -456,25 +455,27 @@ class DependencyConverter(FormatConverter):
         path.remove(unit)
         return False
 
-    def break_cycles(self, l1):
+    def break_cycles(self, nodes):
         # find cycles and remove them
         while True:
             path = set()
             visited = set()
-            if not any(self.find_cycle(unit, visited, path) for unit in l1.heads):
+            if not any(self.find_cycle(unit, visited, path) for unit in nodes):
                 break
             # remove edges from cycle in priority order: first remote edges, then linker edges
             edge = min((e for unit in path for e in unit.incoming),
                        key=lambda e: (not e.attrib.get("remote"), e.tag != EdgeTags.Linker))
-            global CYCLES_REMOVED
-            CYCLES_REMOVED += 1
-            print("CYCLES_REMOVED: %d %s" % (CYCLES_REMOVED, edge.tag, edge.parent, edge.child))
-            edge.parent.remove(edge)
+            try:
+                edge.remove()
+            except AttributeError:
+                edge.parent.remove(edge)
 
     def orphan_label(self, dep_node):
         return self.PUNCT if self.is_punct(dep_node) else self.ORPHAN
 
     def preprocess(self, dep_nodes, to_dep=True):
+        if to_dep:
+            self.break_cycles(dep_nodes)
         roots = self.roots(dep_nodes)
         if to_dep and self.tree and len(roots) > 1:
             for root in roots[1:]:
@@ -505,6 +506,8 @@ class DependencyConverter(FormatConverter):
                     edge = self.Edge(head_index=0, rel=self.ROOT.lower(), remote=False)
                     edge.head = self.Node()
                     edge.dependent = dep_node
+        if to_dep:
+            self.break_cycles(dep_nodes)
 
     def to_format(self, passage, test=False, enhanced=True, **kwargs):
         """ Convert from a Passage object to a string in dependency format.
