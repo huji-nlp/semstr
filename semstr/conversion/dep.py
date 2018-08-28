@@ -444,26 +444,27 @@ class DependencyConverter(FormatConverter):
         #     elif self.find_head_terminal(e.parent).layer.ID == layer0.LAYER_ID:
         #         yield e
 
-    def find_cycle(self, unit, visited, path):
+    def find_cycle(self, unit, visited, path, remotes=True):
         if unit in visited:
             return False
         visited.add(unit)
         path.add(unit)
         for e in unit.incoming:
-            if e.parent in path or self.find_cycle(e.parent, visited, path):
+            if (remotes or not e.attrib.get("remote")) and \
+                    (e.parent in path or self.find_cycle(e.parent, visited, path, remotes=remotes)):
                 return True
         path.remove(unit)
         return False
 
-    def break_cycles(self, nodes):
+    def break_cycles(self, nodes, remotes=True):
         # find cycles and remove them
         while True:
             path = set()
             visited = set()
-            if not any(self.find_cycle(unit, visited, path) for unit in nodes):
+            if not any(self.find_cycle(unit, visited, path, remotes=remotes) for unit in nodes):
                 break
             # remove edges from cycle in priority order: first remote edges, then linker edges
-            edge = min((e for unit in path for e in unit.incoming),
+            edge = min((e for unit in path for e in unit.incoming if remotes or not e.attrib.get("remote")),
                        key=lambda e: (not e.attrib.get("remote"), e.tag != EdgeTags.Linker))
             try:
                 edge.remove()
@@ -475,7 +476,7 @@ class DependencyConverter(FormatConverter):
 
     def preprocess(self, dep_nodes, to_dep=True):
         if to_dep:
-            self.break_cycles(dep_nodes)
+            self.break_cycles(dep_nodes, remotes=False)
         roots = self.roots(dep_nodes)
         if to_dep and self.tree and len(roots) > 1:
             for root in roots[1:]:
@@ -506,8 +507,6 @@ class DependencyConverter(FormatConverter):
                     edge = self.Edge(head_index=0, rel=self.ROOT.lower(), remote=False)
                     edge.head = self.Node()
                     edge.dependent = dep_node
-        if to_dep:
-            self.break_cycles(dep_nodes)
 
     def to_format(self, passage, test=False, enhanced=True, **kwargs):
         """ Convert from a Passage object to a string in dependency format.
