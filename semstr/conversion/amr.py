@@ -1,8 +1,9 @@
 import re
 from collections import defaultdict
 from collections import namedtuple, OrderedDict
-
 # noinspection PyPackageRequirements
+from operator import attrgetter
+
 import penman
 from ucca import layer0, layer1, convert, textutil
 
@@ -320,7 +321,7 @@ class AmrConverter(FormatConverter):
                     else:
                         nodes.append(elem.edge.child)
                         pending += [PathElement(edge=e, path=elem.path + [i])
-                                    for i, e in enumerate(elem.edge.child, start=1)]
+                                    for i, e in enumerate(sorted(elem.edge.child, key=attrgetter("ID")), start=1)]
                 head_dep = []  # will be pair of (parent label, child label)
                 for node in nodes:
                     label = resolve_label(node, wikification=self.wikification)
