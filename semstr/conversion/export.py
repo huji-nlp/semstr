@@ -2,6 +2,7 @@ import re
 import sys
 from collections import defaultdict
 from itertools import islice
+from operator import attrgetter
 
 from ucca import core, layer0, layer1
 from ucca.layer1 import EdgeTags
@@ -146,9 +147,9 @@ class ExportConverter(FormatConverter):
             for node in nodes:
                 if node.ID in node_to_id:
                     continue
-                children = [child for child in node.children if
-                            child.layer.ID != layer0.LAYER_ID and child.ID not in node_to_id and
-                            not (tree and child.attrib.get("implicit"))]  # tree also means no implicit
+                children = sorted((child for child in node.children if
+                                   child.layer.ID != layer0.LAYER_ID and child.ID not in node_to_id and
+                                   not (tree and child.attrib.get("implicit"))), key=attrgetter("ID"))
                 if children:
                     next_nodes += children
                     continue
@@ -157,7 +158,7 @@ class ExportConverter(FormatConverter):
                                                              e.tag in (EdgeTags.LinkRelation,
                                                                        EdgeTags.LinkArgument))),
                                        1 if tree else None))  # all or just one
-                next_nodes += [e.parent for e in incoming]
+                next_nodes += sorted((e.parent for e in incoming), key=attrgetter("ID"))
                 # word/id, (POS) tag, morph tag, edge, parent, [second edge, second parent]*
                 identifier = node.text if node.layer.ID == layer0.LAYER_ID else ("#" + node_to_id[node.ID])
                 fields = [identifier, node.tag, "--"]
