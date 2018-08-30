@@ -45,7 +45,7 @@ class install(_install):
         run(["git", "submodule", "update", "--init", "--recursive"], check=True)
 
         run(["pip", "uninstall", "penman", "-y"])
-        run(["pip", "install", "git+git://github.com/goodmami/penman@alignments#egg=penman"])
+        run(["pip", "install", "git+https://github.com/goodmami/penman@alignments#egg=penman"])
 
         # Install requirements
         self.announce("Installing dependencies...")
