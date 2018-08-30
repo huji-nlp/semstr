@@ -15,10 +15,11 @@ from ..util.amr import resolve_label, EXTENSIONS, COMMENT_PREFIX, PLACEHOLDER_PA
 
 AMR_CODEC = penman.AMRCodec()
 EMPTY_ALIGNED_TRIPLES = {("y", INSTANCE, "yes"): []}
-DELETE_PATTERN = re.compile("\\\\|(?<=(?<!<)<)[^<>]+(?=>(?!>))")  # Delete text inside single angle brackets
-ID_PATTERN = re.compile("#\s*::id\s+(\S+)")
-TOK_PATTERN = re.compile("#\s*::(?:tok|snt)\s+(.*)")
-FORMAT_PATTERN = re.compile("#\s*::(?:format)\s+(.*)")
+DELETE_PATTERN = re.compile(r"\\\\|(?<=(?<!<)<)[^<>]+(?=>(?!>))")  # Delete text inside single angle brackets
+ID_PATTERN = re.compile(r"#\s*::id\s+(\S+)")
+TOK_PATTERN = re.compile(r"#\s*::(?:tok|snt)\s+(.*)")
+FORMAT_PATTERN = re.compile(r"#\s*::(?:format)\s+(.*)")
+SENSE_PATTERN = re.compile(r"-\d\d$")
 
 
 class AmrConverter(FormatConverter):
@@ -363,7 +364,7 @@ class AmrConverter(FormatConverter):
 
     @staticmethod
     def strip_sense(label):
-        return re.sub("-\d\d$", "", label)
+        return SENSE_PATTERN.sub("", label)
 
     @staticmethod
     def strip_quotes(label):
