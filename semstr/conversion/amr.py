@@ -7,6 +7,7 @@ from operator import attrgetter
 import penman
 from ucca import layer0, layer1, convert, normalization, textutil
 
+from semstr import validation
 from .format import FormatConverter
 from ..util.amr import resolve_label, EXTENSIONS, COMMENT_PREFIX, PLACEHOLDER_PATTERN, \
     PREFIXED_RELATION_PATTERN, PREFIXED_RELATION_SUBSTITUTION, LABEL_ATTRIB, NAME, OP, PUNCTUATION_DEP, \
@@ -99,6 +100,9 @@ class AmrConverter(FormatConverter):
         self._build_layer0(self.align_nodes(graph), l1, l0)
         self._update_implicit(l1)
         self._update_labels(l1)
+        errors = list(validation.detect_cycles(passage))
+        if errors:
+            raise RuntimeError(errors[0])
         normalization.attach_punct(l0, l1)
         normalization.attach_terminals(l0, l1)
         original = self.header(passage) + penman.encode(
