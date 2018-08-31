@@ -69,7 +69,8 @@ class AmrConverter(FormatConverter):
                 else:
                     m = TOK_PATTERN.match(line)
                     if m:
-                        tokens = [t.strip("@") or "@" for t in DELETE_PATTERN.sub("", m.group(1)).split()]
+                        tokens = [t.strip("@").replace(r'\"', r'"') or "@"
+                                  for t in DELETE_PATTERN.sub("", m.group(1)).split()]
                     else:
                         m = FORMAT_PATTERN.match(line)
                         if m:
