@@ -42,7 +42,7 @@ def detect_cycles(passage):
     while stack:
         for node in stack[-1]:
             if node in path_set:
-                yield "Detected cycle (%s)" % "->".join(n.ID for n in path)
+                yield path
             elif node not in visited:
                 visited.add(node)
                 path.append(node)
@@ -144,7 +144,8 @@ def validate(passage, normalization=False, extra_normalization=False, ucca_valid
             constraints = CONSTRAINTS[passage.extra.get("format", output_format)]()
         except KeyError as e:
             raise ValueError("No validations defined for '%s' format" % output_format) from e
-        yield from detect_cycles(passage)
+        for cycle in detect_cycles(passage):
+            yield "Detected cycle (%s)" % "->".join(n.ID for n in cycle)
         l0 = passage.layer(layer0.LAYER_ID)
         l1 = passage.layer(layer1.LAYER_ID)
         for terminal in l0.all:

@@ -100,9 +100,8 @@ class AmrConverter(FormatConverter):
         self._build_layer0(self.align_nodes(graph), l1, l0)
         self._update_implicit(l1)
         self._update_labels(l1)
-        errors = list(validation.detect_cycles(passage))
-        if errors:
-            raise RuntimeError(errors[0])
+        for cycle in validation.detect_cycles(passage):
+            raise RuntimeError("Detected cycle (%s)" % " -> ".join(resolve_label(n) for n in cycle))
         normalization.attach_punct(l0, l1)
         normalization.attach_terminals(l0, l1)
         original = self.header(passage) + penman.encode(
