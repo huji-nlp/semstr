@@ -122,7 +122,8 @@ class AmrConverter(FormatConverter):
                 v.add(x)
                 if x == y:
                     return True
-                q += [d for _, _, d in amr.triples(source=x)]
+                q += [t.target for t in amr.triples(source=x) if not t.inverted] + \
+                     [t.source for t in amr.triples(target=x) if t.inverted]
             return False
 
         pending = amr.triples(source=amr.top)
