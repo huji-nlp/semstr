@@ -42,7 +42,7 @@ def detect_cycles(passage):
     while stack:
         for node in stack[-1]:
             if node in path_set:
-                yield path
+                yield path[path.index(node):]
             elif node not in visited:
                 visited.add(node)
                 path.append(node)
