@@ -552,6 +552,7 @@ class DependencyConverter(FormatConverter):
                 head_index = self.find_head_terminal(edge.parent).position
                 dep_edges.append(self.Edge(0, self.root_label(edge), remote=False) if head_index == terminal.position
                                  else self.Edge(head_index, edge.tag, remote=edge.attrib.get("remote", False)))
+        dep_edges = sorted(dep_edges, key=attrgetter("head_index"))
         # Avoid multiple edges between the same pair of node; in case of duplicates, prefer non-remote edges:
         return {sorted(es, key=attrgetter("remote"))[-1] for _, es in groupby(dep_edges, key=attrgetter("head_index"))}
 
