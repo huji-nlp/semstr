@@ -554,7 +554,7 @@ class DependencyConverter(FormatConverter):
                                  else self.Edge(head_index, edge.tag, remote=edge.attrib.get("remote", False)))
         dep_edges = sorted(dep_edges, key=attrgetter("head_index"))
         # Avoid multiple edges between the same pair of node; in case of duplicates, prefer non-remote edges:
-        return {sorted(es, key=attrgetter("remote"))[-1] for _, es in groupby(dep_edges, key=attrgetter("head_index"))}
+        return [sorted(es, key=attrgetter("remote"))[-1] for _, es in groupby(dep_edges, key=attrgetter("head_index"))]
 
     def root_label(self, edge):
         return self.ROOT.lower() if edge.parent.tag == layer1.NodeTags.Foundational and not self.is_ucca else edge.tag
