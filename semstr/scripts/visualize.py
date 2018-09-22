@@ -20,6 +20,7 @@ if __name__ == "__main__":
     group.add_argument("-e", "--extra-normalization", action="store_true", help="more normalization rules")
     argparser.add_argument("--label-map", help="CSV file specifying mapping of input edge labels to output edge labels")
     argparser.add_argument("-i", "--node-ids", action="store_true", help="print tikz code rather than showing plots")
+    argparser.add_argument("-f", "--format", choices=("png", "svg"), default="png", help="image format")
     args = argparser.parse_args()
 
     if args.out_dir:
@@ -41,7 +42,7 @@ if __name__ == "__main__":
             plt.title(" ".join(filter(None, (passage.extra.get("format"), passage.ID))))
             visualization.draw(passage, node_ids=args.node_ids)
             if args.out_dir:
-                plt.savefig(os.path.join(args.out_dir, passage.ID + ".png"))
+                plt.savefig(os.path.join(args.out_dir, passage.ID + "." + args.format))
             else:
                 mng = plt.get_current_fig_manager()
                 mng.full_screen_toggle()
