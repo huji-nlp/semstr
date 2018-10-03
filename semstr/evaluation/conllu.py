@@ -26,7 +26,7 @@ class ConlluEvaluator(Evaluator):
         :param units: print all matches and mismatches
         :returns EvaluatorResults
         """
-        self.reference_yield_tags = None if r is None else create_passage_yields(r)[ALL_EDGES.name]
+        self.reference_yield_tags = None if r is None else create_passage_yields(r, punct=True)[ALL_EDGES.name]
         g1, g2 = list(map(list, list(map(ConlluConverter().generate_graphs, (s1, s2)))))
         t1, t2 = list(map(join_tokens, (g1, g2)))
         assert t1 == t2, "Tokens do not match: '%s' != '%s'" % diff(t1, t2)
@@ -68,8 +68,7 @@ class ConlluEvaluator(Evaluator):
 
     def get_ordered_constructions(self, maps):
         ordered_constructions = [c for c in self.constructions if c in maps[0] or c in maps[1] or c == PRIMARY]
-        ordered_constructions += [c for c in maps[1] if c not in ordered_constructions]
-        ordered_constructions += [c for c in maps[0] if c not in ordered_constructions]
+        ordered_constructions += [c for m in maps[::-1] for c in m if c not in ordered_constructions]
         return ordered_constructions
 
 

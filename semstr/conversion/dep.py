@@ -60,6 +60,7 @@ class DependencyConverter(FormatConverter):
             self.enhanced = "_" if enhanced is None else enhanced
             self.misc = "_" if misc is None else misc
             self.span = span
+            self.is_punct = None
 
         @property
         def tag(self):
@@ -74,6 +75,20 @@ class DependencyConverter(FormatConverter):
                 for edge in edges:
                     if edge.remote == remote:
                         edge.dependent = self
+
+        def get_terminals(self, punct=True, remotes=False, visited=None):
+            """Returns a list of all terminals under the span of this Node.
+            :param punct: whether to include punctuation nodes, defaults to True
+            :param remotes: whether to include nodes from remote nodes, defaults to False
+            :param visited: used to detect cycles
+            :return a list of Node objects
+            """
+            if visited is None:
+                visited = set()
+            return sorted(([self] if punct or not self.is_punct else []) +
+                          [t for e in set(self) - visited if remotes or not e.remote
+                           for t in e.dependent.get_terminals(punct, remotes, visited | set(self))],
+                          key=attrgetter("position"))
 
         def __repr__(self):
             return self.token.text if self.token else DependencyConverter.ROOT
@@ -483,6 +498,7 @@ class DependencyConverter(FormatConverter):
                 root.incoming = [e for e in root.incoming if e.rel != self.ROOT.lower() and e.head_index != 0]
             roots = [roots[0]]
         for dep_node in dep_nodes:
+            dep_node.is_punct = self.is_punct(dep_node)
             is_parentless = True
             for edge in list(dep_node.incoming):
                 if edge.remote:
