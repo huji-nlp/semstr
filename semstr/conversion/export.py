@@ -122,7 +122,7 @@ class ExportConverter(FormatConverter):
 
         return p
 
-    def from_format(self, lines, passage_id, split=False, return_original=False, **kwargs):
+    def from_format(self, lines, passage_id, return_original=False, **kwargs):
         self.passage_id = passage_id
         self.node_by_id = None
         for line in filter(str.strip, lines):

@@ -14,7 +14,7 @@ class ConlluEvaluator(Evaluator):
         super().__init__(*args, fscore=True, errors=False, **kwargs)
         self.reference_yield_tags = None
 
-    def get_scores(self, s1, s2, eval_type, r=None, verbose=False, units=False):
+    def get_scores(self, s1, s2, eval_type, r=None):
         """
         :param s1: sentence to compare
         :param s2: reference sentence
@@ -27,54 +27,50 @@ class ConlluEvaluator(Evaluator):
         :returns EvaluatorResults
         """
         self.reference_yield_tags = None if r is None else create_passage_yields(r, punct=True)[ALL_EDGES.name]
-        g1, g2 = list(map(list, list(map(ConlluConverter().generate_graphs, (s1, s2)))))
+        converter = ConlluConverter()
+        g1, g2 = list(map(list, list(map(converter.generate_graphs, (s1, s2)))))
         t1, t2 = list(map(join_tokens, (g1, g2)))
         assert t1 == t2, "Tokens do not match: '%s' != '%s'" % diff(t1, t2)
-        edges = [[e for g in gs for n in g.nodes for e in n] for gs in (g1, g2)]
-        for es in edges:
-            for e in es:
-                e.rel = e.rel.partition(":")[0]  # Ignore dep rel subtype
-        maps = list(map(self.get_edges_by_construction, edges))
-        if eval_type == UNLABELED:
-            for es in edges:
-                for e in es:
-                    e.rel = None
+        maps = [self.map_by_construction(gs, eval_type) for gs in (g1, g2)]
+        ordered_constructions = [c for c in self.constructions if c in maps[0] or c in maps[1] or c == PRIMARY]
+        ordered_constructions += [c for m in maps[::-1] for c in m if c not in ordered_constructions]
         matches = OrderedDict()
-        for construction in self.get_ordered_constructions(maps):
+        for construction in ordered_constructions:
             g, r = [m.get(construction, set()) for m in maps]
             matches[construction] = (g & r, g - r, r - g)
         res = EvaluatorResults((c, SummaryStatistics(*list(map(len, m)))) for c, m in matches.items())
-        if verbose or units:
+        if self.verbose or self.units:
             print()
             print("Evaluation type: (" + eval_type + ")")
-            if units:
+            if self.units:
                 for c, ms in matches.items():
                     print(c.description + ":")
                     for title, m in zip(("Mutual Units", "Only in guessed", "Only in reference"), ms):
                         print("==> %s:" % title)
-                        print(m)
+                        print(", ".join(map(str, sorted(m, key=lambda e: e.dependent.position))))
                     print()
-            if verbose:
+            if self.verbose:
                 res.print()
         return res
 
-    def get_edges_by_construction(self, edges):
+    def map_by_construction(self, graphs, eval_type):
         edges_by_construction = OrderedDict()
-        for edge in edges:
-            candidate = Candidate(edge, reference_yield_tags=self.reference_yield_tags)
-            for construction in candidate.constructions(self.constructions):
-                edges_by_construction.setdefault(construction, set()).add(edge)
+        for graph in graphs:
+            for node in graph.nodes:
+                for edge in node:
+                    edge.rel = edge.rel.partition(":")[0]  # Ignore dep rel subtype
+                    candidate = Candidate(edge, reference_yield_tags=self.reference_yield_tags)
+                    constructions = list(candidate.constructions(self.constructions))
+                    if eval_type == UNLABELED:  # Remove relation after getting constructions
+                        edge.rel = None
+                    for construction in constructions:
+                        edges_by_construction.setdefault(construction, set()).add(edge)
         return edges_by_construction
-
-    def get_ordered_constructions(self, maps):
-        ordered_constructions = [c for c in self.constructions if c in maps[0] or c in maps[1] or c == PRIMARY]
-        ordered_constructions += [c for m in maps[::-1] for c in m if c not in ordered_constructions]
-        return ordered_constructions
 
 
 def join_tokens(graphs):
     return "".join((n.parent_multi_word.token.text if n.position == n.parent_multi_word.span[0] else "")
-                   if n.parent_multi_word else n.token.text for g in graphs for n in g.nodes)
+                   if n.parent_multi_word else n.token.text for g in graphs for n in g.nodes if n.token)
 
 
 def diff(s1, s2):

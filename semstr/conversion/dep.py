@@ -29,11 +29,19 @@ class DependencyConverter(FormatConverter):
             self.nodes = dep_nodes
             self.id = sentence_id
             self.format = original_format
+            self.root = DependencyConverter.Node()
+
+        @property
+        def ID(self):
+            return self.id
+
+        def by_id(self, i):
+            return self.nodes[int(i.split(".")[-1]) - 1]
 
         def link_pre_terminals(self):
             preterminals = []
             for dep_node in self.nodes:
-                if dep_node.preterminal is not None:  # link pre-terminal to terminal
+                if dep_node.terminal and dep_node.preterminal is not None:  # link pre-terminal to terminal
                     dep_node.preterminal.add(EdgeTags.Terminal, dep_node.terminal)
                     preterminals.append(dep_node.preterminal)
             for preterminal in preterminals:  # update tag to PNCT when necessary
@@ -70,6 +78,10 @@ class DependencyConverter(FormatConverter):
         def attrib(self):
             return {}
 
+        @property
+        def ID(self):
+            return "0.%d" % self.position
+
         def add_edges(self, edges):
             for remote in (False, True):
                 for edge in edges:
@@ -103,12 +115,13 @@ class DependencyConverter(FormatConverter):
             return iter(self.outgoing)
 
     class Edge:
-        def __init__(self, head_index, rel, remote):
+        def __init__(self, head_index=None, rel=None, remote=False, head=None, dependent=None):
             self.head_index = head_index
             self.rel = rel
             self.remote = remote
             self._head = self._dependent = None
-            self.head = self.dependent = None
+            self.head = head  # use setter
+            self.dependent = dependent
 
         @property
         def tag(self):
@@ -164,8 +177,11 @@ class DependencyConverter(FormatConverter):
             self.head = self.dependent = None
 
         def __repr__(self):
-            return (str(self.head_index) if self.head is None else repr(self.head)) + \
-                   "-[" + (self.rel or "") + ("*" if self.remote else "") + "]->" + repr(self.dependent)
+            head = str(self.head_index) if self.head is None else repr(self.head)
+            label = (self.rel or "") + ("*" if self.remote else "")
+            if label:
+                label = "-[" + label + "]"
+            return head + label + "->" + repr(self.dependent)
 
         def __eq__(self, other):
             return self.head_index == other.head_index and self.dependent == other.dependent and self.rel == other.rel \
@@ -195,7 +211,7 @@ class DependencyConverter(FormatConverter):
         self.is_ucca = self.multi_words = None
 
     def read_line(self, line, previous_node, copy_of):
-        return self.Node()
+        raise NotImplementedError()
 
     def generate_lines(self, graph, test):
         yield from self.generate_header_lines(graph)
@@ -204,15 +220,15 @@ class DependencyConverter(FormatConverter):
         if graph.format:
             yield ["# format = " + graph.format]
 
-    def link_heads(self, dep_nodes, multi_word_nodes=(), copy_of=None):
-        heads = [self.Node()] + [n for n in dep_nodes if n.is_head]
-        for dep_node in dep_nodes:
+    def link_heads(self, graph, multi_word_nodes=(), copy_of=None):
+        heads = [graph.root] + [n for n in graph.nodes if n.is_head]
+        for dep_node in graph.nodes:
             for edge in dep_node.incoming:
                 edge.link_head(heads, copy_of)
         for dep_node in multi_word_nodes:
             start, end = dep_node.span
             for position in range(start - 1, end):
-                dep_nodes[position].parent_multi_word = dep_node
+                graph.nodes[position].parent_multi_word = dep_node
 
     def omit_edge(self, edge):
         return False
@@ -221,10 +237,11 @@ class DependencyConverter(FormatConverter):
         pass
 
     @staticmethod
-    def _topological_sort(nodes):
+    def _topological_sort(graph):
         # sort into topological ordering to create parents before children
-        levels = defaultdict(set)  # levels start from 0 (root)
-        remaining = [n for n in nodes if not n.outgoing]  # leaves
+        levels = defaultdict(set)  # levels start from 0 (leaves)
+        graph.root.level = 0
+        remaining = [n for n in graph.nodes if not n.outgoing]  # leaves
         while remaining:
             node = remaining.pop()
             if node.level is not None:  # done already
@@ -239,15 +256,13 @@ class DependencyConverter(FormatConverter):
             else:  # root
                 node.level = 0
             levels[node.level].add(node)
-
         return [n for level, level_nodes in sorted(levels.items())
-                if level > 0  # omit dummy root
                 for n in sorted(level_nodes, key=lambda x: x.terminal.position)]
 
     @staticmethod
     def _label(dep_edge, top=False):
         dependent_rels = {e.rel for e in dep_edge.dependent}
-        if layer0.is_punct(dep_edge.dependent.terminal):
+        if dep_edge.dependent.terminal and layer0.is_punct(dep_edge.dependent.terminal):
             return EdgeTags.Punctuation
         elif top or EdgeTags.ParallelScene in dependent_rels:
             return EdgeTags.ParallelScene
@@ -259,7 +274,7 @@ class DependencyConverter(FormatConverter):
     def label_edge(self, dep_edge, top=False):
         return (("#" if self.mark_aux else "") + self._label(dep_edge, top=top)) if self.is_ucca else self.HEAD
 
-    def generate_graphs(self, lines, split=False):
+    def generate_graphs(self, lines):
         # read dependencies and terminals from lines and create nodes
         sentence_id = previous_node = original_format = None
         dep_nodes = []
@@ -268,8 +283,10 @@ class DependencyConverter(FormatConverter):
         paragraph = 1
 
         def _graph():
-            self.link_heads(dep_nodes, multi_word_nodes, copy_of)
-            return self.Graph(dep_nodes, sentence_id, original_format=original_format)
+            graph = self.Graph(dep_nodes, sentence_id, original_format=original_format)
+            self.link_heads(graph, multi_word_nodes, copy_of)
+            graph.nodes.insert(0, graph.root)
+            return graph
 
         for line in lines:
             line = line.strip()
@@ -285,10 +302,13 @@ class DependencyConverter(FormatConverter):
             elif line:
                 dep_node = self.read_line(line, previous_node, copy_of)  # different implementation for each subclass
                 if dep_node is not None:
+                    if dep_node.position and previous_node and previous_node.position:
+                        assert dep_node.position == previous_node.position + 1, "'%d %s' follows '%d %s' in %s" % (
+                            dep_node.position, dep_node, previous_node.position, previous_node, sentence_id)
                     previous_node = dep_node
                     dep_node.token.paragraph = paragraph  # mark down which paragraph this is in
                     (multi_word_nodes if dep_node.is_multi_word else dep_nodes).append(dep_node)
-            elif split and dep_nodes:
+            elif dep_nodes:
                 try:
                     yield _graph()
                 except Exception as e:
@@ -299,7 +319,7 @@ class DependencyConverter(FormatConverter):
                 paragraph = 1
             else:
                 paragraph += 1
-        if not split or dep_nodes:
+        if dep_nodes:
             yield _graph()
 
     def build_passage(self, graph, terminals_only=False):
@@ -314,34 +334,33 @@ class DependencyConverter(FormatConverter):
         return passage
 
     def create_non_terminals(self, graph, l1):
+        self.strip_suffixes(graph)
         for dep_node in graph.nodes:
-            if dep_node.outgoing:
+            if dep_node.outgoing and dep_node.token:  # not the root
                 if not self.is_ucca and not self.tree and dep_node.position and not dep_node.incoming:  # Top node
-                    self.top_edge(dep_node, rel=self.TOP if dep_node.is_top else self.ROOT)
+                    self.top_edge(graph, dep_node, rel=self.TOP if dep_node.is_top else self.ROOT)
                 if self.is_punct(dep_node):  # Avoid outgoing edges from punctuation by flipping edges
-                    head = dep_node.incoming[0].head if dep_node.incoming else self.Node()
+                    head = dep_node.incoming[0].head if dep_node.incoming else graph.root
                     outgoing = list(dep_node)
                     for edge in outgoing:
                         edge.head = head
                     for edge in dep_node.incoming:
                         edge.head = outgoing[0].head
+        self.preprocess(graph, to_dep=False)
         remote_edges = []
-        sorted_dep_nodes = self._topological_sort(graph.nodes)
-        self.preprocess(sorted_dep_nodes, to_dep=False)
-        if self.is_ucca:
-            sorted_dep_nodes = [n for n in graph.nodes if not n.incoming and not n.is_top] + sorted_dep_nodes
-        for dep_node in sorted_dep_nodes:  # Other nodes
+        sorted_nodes = self._topological_sort(graph)
+        for dep_node in sorted_nodes:  # Other nodes
             incoming = list(dep_node.incoming)
             if incoming:
                 if dep_node.is_top and incoming[0].head_index != 0:
-                    incoming[:0] = [self.top_edge(dep_node)]
+                    incoming[:0] = [self.top_edge(graph, dep_node)]
                 edge, *remotes = incoming
                 self.add_fnode(edge, l1)
                 remote_edges += remotes
             if dep_node.outgoing and not any(map(self.is_flat, dep_node.incoming)):
                 dep_node.preterminal = l1.add_fnode(  # Intermediate head for hierarchy
                     dep_node.preterminal, self.label_edge(
-                        dep_node.incoming[0] if dep_node.incoming else self.top_edge(dep_node)))
+                        dep_node.incoming[0] if dep_node.incoming else self.top_edge(graph, dep_node)))
         for edge in remote_edges:
             parent = edge.head.node or l1.heads[0]
             child = edge.dependent.node or l1.heads[0]
@@ -349,9 +368,9 @@ class DependencyConverter(FormatConverter):
                 l1.add_remote(parent, edge.rel, child)
         self.break_cycles(l1.heads)
 
-    def top_edge(self, dep_node, rel=TOP):
+    def top_edge(self, graph, dep_node, rel=TOP):
         top_edge = self.Edge(head_index=0, rel=rel, remote=False)
-        top_edge.head = self.Node()
+        top_edge.head = graph.root
         top_edge.dependent = dep_node
         return top_edge
 
@@ -370,22 +389,22 @@ class DependencyConverter(FormatConverter):
                     extra[self.MULTI_WORD_TEXT_ATTRIB] = multi_word.token.text
                     (extra[self.MULTI_WORD_START_ATTRIB], extra[self.MULTI_WORD_END_ATTRIB]) = multi_word.span
 
-    def from_format(self, lines, passage_id, split=False, return_original=False, terminals_only=False, **kwargs):
+    def from_format(self, lines, passage_id, return_original=False, terminals_only=False, dep=False, **kwargs):
         """Converts from parsed text in dependency format to a Passage object.
 
         :param lines: an iterable of lines in dependency format, describing a single passage.
         :param passage_id: ID to set for passage, in case no ID is specified in the file
-        :param split: split each sentence to its own passage?
         :param return_original: return original passage in addition to converted one
         :param terminals_only: create only terminals (with any annotation if specified), no non-terminals
+        :param dep: return dependency graph rather than converted UCCA passage
 
         :return generator of Passage objects.
         """
-        for graph in self.generate_graphs(lines, split):
+        for graph in self.generate_graphs(lines):
             if not graph.id:
                 graph.id = passage_id
             graph.format = kwargs.get("format") or graph.format
-            passage = self.build_passage(graph, terminals_only=terminals_only)
+            passage = graph if dep else self.build_passage(graph, terminals_only=terminals_only)
             yield (passage, self.lines_read, passage.ID) if return_original else passage
             self.lines_read = []
 
@@ -489,40 +508,41 @@ class DependencyConverter(FormatConverter):
     def orphan_label(self, dep_node):
         return self.PUNCT if self.is_punct(dep_node) else self.ORPHAN
 
-    def preprocess(self, dep_nodes, to_dep=True):
+    def preprocess(self, graph, to_dep=True):
         if to_dep:
-            self.break_cycles(dep_nodes, remotes=False)
-        roots = self.roots(dep_nodes)
+            self.break_cycles(graph.nodes, remotes=False)
+        roots = self.roots(graph.nodes)
         if to_dep and self.tree and len(roots) > 1:
             for root in roots[1:]:
                 root.incoming = [e for e in root.incoming if e.rel != self.ROOT.lower() and e.head_index != 0]
             roots = [roots[0]]
-        for dep_node in dep_nodes:
-            dep_node.is_punct = self.is_punct(dep_node)
-            is_parentless = True
-            for edge in list(dep_node.incoming):
-                if edge.remote:
-                    if self.is_flat(edge):  # Unanalyzable remote is not possible
-                        edge.remove()
-                    elif not self.is_ucca:
-                        edge.remote = False  # Avoid * marking
-                    if edge.rel == self.ROOT.lower():
-                        edge.head_index = 0
-                        dep_node.incoming = [edge] + [e for e in dep_node.incoming if e != edge]  # Make root edge first
-                    else:
-                        continue
-                is_parentless = False  # Found primary parent
-            if is_parentless and self.tree:  # Must have exactly one root
-                dep_node.incoming = []
-                if roots:  # Root already exist, so attach as its child
-                    edge = self.Edge(head_index=roots[0].position, rel=self.orphan_label(dep_node), remote=False)
-                    edge.head = roots[0]
-                    edge.dependent = dep_node
-                else:  # This is the first root
-                    roots = [dep_node]
-                    edge = self.Edge(head_index=0, rel=self.ROOT.lower(), remote=False)
-                    edge.head = self.Node()
-                    edge.dependent = dep_node
+        for dep_node in graph.nodes:
+            if dep_node.token:
+                dep_node.is_punct = self.is_punct(dep_node)
+                is_parentless = True
+                for edge in list(dep_node.incoming):
+                    if edge.remote:
+                        if self.is_flat(edge):  # Unanalyzable remote is not possible
+                            edge.remove()
+                        elif not self.is_ucca:
+                            edge.remote = False  # Avoid * marking
+                        if edge.rel == self.ROOT.lower():
+                            edge.head_index = 0
+                            dep_node.incoming = [edge] + [e for e in dep_node.incoming if e != edge]  # Make root edge first
+                        else:
+                            continue
+                    is_parentless = False  # Found primary parent
+                if is_parentless and self.tree:  # Must have exactly one root
+                    dep_node.incoming = []
+                    if roots:  # Root already exist, so attach as its child
+                        edge = self.Edge(head_index=roots[0].position, rel=self.orphan_label(dep_node), remote=False)
+                        edge.head = roots[0]
+                        edge.dependent = dep_node
+                    else:  # This is the first root
+                        roots = [dep_node]
+                        edge = self.Edge(head_index=0, rel=self.ROOT.lower(), remote=False)
+                        edge.head = graph.root
+                        edge.dependent = dep_node
 
     def to_format(self, passage, test=False, enhanced=True, **kwargs):
         """ Convert from a Passage object to a string in dependency format.
@@ -553,9 +573,9 @@ class DependencyConverter(FormatConverter):
                                        parent_multi_word=self.parent_multi_word(terminal),
                                        enhanced=terminal.extra.get("enhanced") if enhanced else None,
                                        misc=terminal.extra.get("misc")))
-        self.link_heads(dep_nodes)
-        self.preprocess(dep_nodes)
         graph = self.Graph(dep_nodes, passage.ID, original_format=original_format)
+        self.link_heads(graph)
+        self.preprocess(graph)
         lines += ["\t".join(map(str, entry)) for entry in self.generate_lines(graph, test)] + [""]
         return lines
 
@@ -633,7 +653,7 @@ class DependencyConverter(FormatConverter):
                 raise RuntimeError("Could not find head child for unit (%s): %s" % (unit.ID, unit)) from e
 
     def roots(self, dep_nodes):
-        return [n for n in dep_nodes if any(e.rel == self.ROOT.lower() for e in n.incoming)]
+        return [n for n in dep_nodes if n.token and any(e.rel == self.ROOT.lower() for e in n.incoming)]
 
     def find_headed_unit(self, unit):
         while unit.incoming and unit.parents[0].incoming and \
@@ -655,3 +675,6 @@ class DependencyConverter(FormatConverter):
 
     def is_scene(self, edge):
         return False
+
+    def strip_suffixes(self, graph):
+        pass

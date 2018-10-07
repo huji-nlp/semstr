@@ -19,18 +19,18 @@ description = """Parses files in the specified format, and writes as the specifi
 Each passage is written to the file: <outdir>/<prefix><passage_id>.<extension> """
 
 
-def from_conll(lines, passage_id, split=True, return_original=False, **kwargs):
+def from_conll(lines, passage_id, return_original=False, dep=False, **kwargs):
     """Converts from parsed text in CoNLL format to a Passage object.
 
     :param lines: iterable of lines in CoNLL format, describing a single passage.
     :param passage_id: ID to set for passage
-    :param split: split each sentence to its own passage?
     :param return_original: return triple of (UCCA passage, CoNLL string, sentence ID)
+    :param dep: return dependency graph rather than converted UCCA passage
 
     :return generator of Passage objects
     """
     from semstr.conversion.conll import ConllConverter
-    return ConllConverter().from_format(lines, passage_id=passage_id, split=split, return_original=return_original,
+    return ConllConverter().from_format(lines, passage_id=passage_id, return_original=return_original, dep=dep,
                                         format=kwargs.get("format"))
 
 
@@ -47,18 +47,17 @@ def to_conll(passage, test=False, tree=False, **kwargs):
     return ConllConverter(tree=tree).to_format(passage, test, format=kwargs.get("format"))
 
 
-def from_export(lines, passage_id=None, split=True, return_original=False, **kwargs):
+def from_export(lines, passage_id=None, return_original=False, **kwargs):
     """Converts from parsed text in NeGra export format to a Passage object.
 
     :param lines: iterable of lines in NeGra export format, describing a single passage.
     :param passage_id: ID to set for passage, overriding the ID from the file
-    :param split: split each sentence to its own passage?
     :param return_original: return triple of (UCCA passage, Export string, sentence ID)
 
     :return generator of Passage objects
     """
     from semstr.conversion.export import ExportConverter
-    return ExportConverter().from_format(lines, passage_id=passage_id, split=split, return_original=return_original,
+    return ExportConverter().from_format(lines, passage_id=passage_id, return_original=return_original,
                                          format=kwargs.get("format"))
 
 
@@ -110,22 +109,23 @@ def to_amr(passage, metadata=True, wikification=True, use_original=True, verbose
                                     default_label=default_label, format=kwargs.get("format"))
 
 
-def from_conllu(lines, passage_id=None, split=True, return_original=False, annotate=False, terminals_only=False,
+def from_conllu(lines, passage_id=None, return_original=False, annotate=False, terminals_only=False, dep=False,
                 **kwargs):
     """Converts from parsed text in Universal Dependencies format to a Passage object.
 
     :param lines: iterable of lines in Universal Dependencies format, describing a single passage.
     :param passage_id: ID to set for passage
-    :param split: split each sentence to its own passage?
     :param return_original: return triple of (UCCA passage, Universal Dependencies string, sentence ID)
     :param annotate: whether to save dependency annotations in "extra" dict of layer 0
     :param terminals_only: create only terminals (with any annotation if specified), no non-terminals
+    :param dep: return dependency graph rather than converted UCCA passage
 
     :return generator of Passage objects
     """
     from semstr.conversion.conllu import ConlluConverter
-    return ConlluConverter().from_format(lines, passage_id=passage_id, split=split, return_original=return_original,
-                                         annotate=annotate, terminals_only=terminals_only, format=kwargs.get("format"))
+    return ConlluConverter().from_format(lines, passage_id=passage_id, return_original=return_original,
+                                         annotate=annotate, terminals_only=terminals_only, dep=dep,
+                                         format=kwargs.get("format"))
 
 
 def to_conllu(passage, test=False, enhanced=True, **kwargs):
@@ -141,20 +141,20 @@ def to_conllu(passage, test=False, enhanced=True, **kwargs):
     return ConlluConverter().to_format(passage, test=test, enhanced=enhanced, format=kwargs.get("format"))
 
 
-def from_sdp(lines, passage_id, split=True, mark_aux=False, return_original=False, **kwargs):
+def from_sdp(lines, passage_id, mark_aux=False, return_original=False, dep=False, **kwargs):
     """Converts from parsed text in SemEval 2015 SDP format to a Passage object.
 
     :param lines: iterable of lines in SDP format, describing a single passage.
     :param passage_id: ID to set for passage
-    :param split: split each sentence to its own passage?
     :param mark_aux: add a preceding # for labels of auxiliary edges added
     :param return_original: return triple of (UCCA passage, SDP string, sentence ID)
+    :param dep: return dependency graph rather than converted UCCA passage
 
     :return generator of Passage objects
     """
     from semstr.conversion.sdp import SdpConverter
-    return SdpConverter(mark_aux=mark_aux).from_format(lines, passage_id=passage_id, split=split,
-                                                       return_original=return_original, format=kwargs.get("format"))
+    return SdpConverter(mark_aux=mark_aux).from_format(lines, passage_id=passage_id, return_original=return_original,
+                                                       dep=dep, format=kwargs.get("format"))
 
 
 def to_sdp(passage, test=False, tree=False, mark_aux=False, **kwargs):
@@ -195,7 +195,7 @@ def iter_files(patterns):
         yield from filenames
 
 
-def iter_passages(patterns, desc=None, input_format=None, prefix="", split=False, mark_aux=False, annotate=False,
+def iter_passages(patterns, desc=None, input_format=None, prefix="", mark_aux=False, annotate=False,
                   wikification=False, label_map_file=None, output_format=None):
     t = tqdm(list(iter_files(patterns)), unit="file", desc=desc)
     for filename in t:
@@ -213,7 +213,7 @@ def iter_passages(patterns, desc=None, input_format=None, prefix="", split=False
                 passage_id = basename
             converter = FROM_FORMAT.get(input_format or ext.lstrip("."), (from_text,))
             with open(filename, encoding="utf-8") as f:
-                yield from converter(f, prefix + passage_id, split=split, mark_aux=mark_aux, annotate=annotate,
+                yield from converter(f, prefix + passage_id, mark_aux=mark_aux, annotate=annotate,
                                      wikification=wikification, format=output_format if label_map_file else None)
 
 
@@ -246,7 +246,7 @@ def write_passage(passage, args):
     else:
         converter = TO_FORMAT[args.output_format]
         with open(outfile, "w", encoding="utf-8") as f:
-            for line in converter(passage, test=args.test, tree=args.tree, mark_aux=args.mark_aux, split=args.split,
+            for line in converter(passage, test=args.test, tree=args.tree, mark_aux=args.mark_aux,
                                   wikification=args.wikification, default_label=args.default_label,
                                   format=args.output_format if args.label_map else None, sentences=args.split):
                 print(line, file=f)
@@ -255,8 +255,7 @@ def write_passage(passage, args):
 def main(args):
     os.makedirs(args.out_dir, exist_ok=True)
     for passage in iter_passages(args.filenames, desc="Converting", input_format=args.input_format, prefix=args.prefix,
-                                 split=args.split, mark_aux=args.mark_aux, annotate=args.annotate,
-                                 wikification=args.wikification,
+                                 mark_aux=args.mark_aux, annotate=args.annotate, wikification=args.wikification,
                                  label_map_file=args.label_map, output_format=args.output_format):
         map_labels(passage, args.label_map)
         if args.normalize and args.output_format != "txt":

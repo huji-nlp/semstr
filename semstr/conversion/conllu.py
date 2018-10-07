@@ -57,22 +57,23 @@ class ConlluConverter(ConllConverter):
                 del dep_node.incoming[1:]
         yield from super().generate_lines(graph, test)
 
-    def from_format(self, lines, passage_id, split=False, return_original=False, annotate=False, terminals_only=False,
-                    **kwargs):
-        for graph in self.generate_graphs(lines, split):
+    def from_format(self, lines, passage_id, return_original=False, annotate=False, terminals_only=False,
+                    dep=False, **kwargs):
+        for graph in self.generate_graphs(lines):
             if not graph.id:
                 graph.id = passage_id
             graph.format = kwargs.get("format") or graph.format
             annotations = {}
             if annotate:  # get all node attributes before they are possibly modified by build_passage
                 for dep_node in graph.nodes:
-                    annotations.setdefault(dep_node.token.paragraph, []).append(
-                        [ATTR_GETTERS.get(a, {}.get)(dep_node) for a in textutil.Attr])
+                    if dep_node.token:
+                        annotations.setdefault(dep_node.token.paragraph, []).append(
+                            [ATTR_GETTERS.get(a, {}.get)(dep_node) for a in textutil.Attr])
             try:
-                passage = self.build_passage(graph, terminals_only=terminals_only)
+                passage = graph if dep else self.build_passage(graph, terminals_only=terminals_only)
             except (AttributeError, IndexError) as e:
                 raise RuntimeError("Failed converting '%s'" % graph.id) from e
-            if annotate:  # copy attributes into layer 0 extra member "doc", encoded to numeric IDs
+            if annotate and not dep:  # copy attributes into layer 0 extra member "doc", encoded to numeric IDs
                 docs = passage.layer(layer0.LAYER_ID).extra.setdefault("doc", [[]])
                 for paragraph, paragraph_annotations in annotations.items():
                     while len(docs) < paragraph:
@@ -95,13 +96,17 @@ class ConlluConverter(ConllConverter):
         else:
             super().add_fnode(edge, l1)
 
-    def preprocess(self, dep_nodes, to_dep=True):
-        max_pos = (max(d.position for d in dep_nodes) if dep_nodes else 0) + 1
-        for dep_node in reversed(dep_nodes):
+    def strip_suffixes(self, graph):
+        for dep_node in graph.nodes:
+            for edge in dep_node.incoming:
+                edge.rel = edge.rel.partition(":")[0]  # Strip suffix
+
+    def preprocess(self, graph, to_dep=True):
+        max_pos = (max(d.position for d in graph.nodes) if graph.nodes else 0) + 1
+        for dep_node in graph.nodes[::-1]:
             def _attach_forward_sort_key(e):
                 return e.dependent.position + (max_pos if e.dependent.position < dep_node.position else 0)
             for edge in dep_node.incoming:
-                edge.rel = edge.rel.partition(":")[0]  # Strip suffix
                 if not to_dep or not self.is_ucca:
                     for source, target in REL_REPLACEMENTS:
                         if edge.rel == (source, target)[to_dep]:
@@ -122,19 +127,19 @@ class ConlluConverter(ConllConverter):
                     if len(remotes) == 1:
                         edge.head = remotes[0]
         if to_dep:
-            for dep_node in dep_nodes:
+            for dep_node in graph.nodes:
                 for edge in dep_node.incoming:
                     if edge.rel in PUNCT_RELS:
-                            heads = [d for d in dep_nodes if self.between(dep_node, d.incoming, CONJ)
+                            heads = [d for d in graph.nodes if self.between(dep_node, d.incoming, CONJ)
                                      and not any(e.rel in (PUNCT_RELS + (CC,)) and
                                                  dep_node.position < e.dependent.position < d.position
                                                  for e in d.outgoing)] or \
-                                    [d for d in dep_nodes if self.between(dep_node, d.outgoing, APPOS)]
+                                    [d for d in graph.nodes if self.between(dep_node, d.outgoing, APPOS)]
                             if heads:
                                 edge.head = heads[0]
-        super().preprocess(dep_nodes, to_dep=to_dep)
+        super().preprocess(graph, to_dep=to_dep)
         if to_dep:
-            for dep_node in dep_nodes:
+            for dep_node in graph.nodes:
                 if dep_node.incoming:
                     dep_node.enhanced = "|".join("%d:%s" % (e.head_index, e.rel) for e in dep_node.incoming)
 

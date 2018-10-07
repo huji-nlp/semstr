@@ -1,5 +1,5 @@
 class FormatConverter:
-    def from_format(self, lines, passage_id, split=False):
+    def from_format(self, lines, passage_id):
         pass
 
     def to_format(self, passage, test=False, tree=True):

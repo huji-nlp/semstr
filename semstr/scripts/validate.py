@@ -9,7 +9,7 @@ from semstr.validation import validate, print_errors
 def main(args):
     errors = ((p.ID, list(validate(p, normalization=args.normalize, extra_normalization=args.extra_normalization,
                                    ucca_validation=args.ucca_validation, output_format=args.format)))
-              for p in iter_passages(args.filenames, desc="Validating", split=args.split))
+              for p in iter_passages(args.filenames, desc="Validating"))
     errors = dict(islice(((k, v) for k, v in errors if v), 1 if args.strict else None))
     if errors:
         id_len = max(map(len, errors))

@@ -31,7 +31,7 @@ def main(args):
             in_converter, out_converter = CONVERTERS.get(passage_format, CONVERTERS[args.format])
             evaluate = EVALUATORS.get(passage_format, EVALUATORS[args.format])
             with open(filename, encoding="utf-8") as f:
-                t = tqdm(in_converter(f, passage_id=basename, return_original=True, split=True), unit=" passages",
+                t = tqdm(in_converter(f, passage_id=basename, return_original=True), unit=" passages",
                          desc=("Converting '%s'" % filename) +
                               ((", writing to '%s'" % args.out_dir) if args.out_dir else ""))
                 for passage, ref, passage_id in t:

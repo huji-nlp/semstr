@@ -17,7 +17,7 @@ class ConllConverter(DependencyConverter):
         position, text, lemma, pos, tag, features, head_position, rel, *enhanced_misc = fields[:10]
         edges = []
         if head_position and head_position != "_":
-            edges.append(DependencyConverter.Edge.create(head_position, rel))
+            edges.append(self.Edge.create(head_position, rel))
         if len(enhanced_misc) < 1 or enhanced_misc[0] == "_":
             enhanced = "_"
         else:
@@ -25,7 +25,7 @@ class ConllConverter(DependencyConverter):
             for enhanced_spec in enhanced.split("|"):
                 enhanced_head_position, _, enhanced_rel = enhanced_spec.partition(":")
                 if enhanced_head_position not in (position, head_position):
-                    edges.append(DependencyConverter.Edge(enhanced_head_position, enhanced_rel, remote=True))
+                    edges.append(self.Edge(enhanced_head_position, enhanced_rel, remote=True))
         if len(enhanced_misc) < 2 or enhanced_misc[1] == "_":
             misc = "_"
         else:
@@ -37,9 +37,9 @@ class ConllConverter(DependencyConverter):
             return None
         span = list(map(int, position.split("-")))
         if not edges or previous_node is None or previous_node.position != span[0]:
-            return DependencyConverter.Node(None if len(span) > 1 else span[0], edges,
-                                            token=DependencyConverter.Token(text, tag, lemma, pos, features),
-                                            is_multi_word=len(span) > 1, enhanced=enhanced, misc=misc, span=span)
+            return self.Node(None if len(span) > 1 else span[0], edges,
+                             token=self.Token(text, tag, lemma, pos, features),
+                             is_multi_word=len(span) > 1, enhanced=enhanced, misc=misc, span=span)
         previous_node.add_edges(edges)
 
     def generate_lines(self, graph, test):
