@@ -108,7 +108,7 @@ def read_files(files, default_format=None, verbose=0, force_basename=False):
         kwargs = dict(converted_format=converted_format, in_converter=in_converter, out_converter=out_converter)
         if in_converter:
             with open(filename, encoding="utf-8") as f:
-                for converted, passage, passage_id in in_converter(f, passage_id=basename, return_original=True):
+                for converted, passage, passage_id in in_converter(f, passage_id=basename, return_original=True, dep=True):
                     if verbose:
                         with ioutil.external_write_mode():
                             print("Converting %s from %s" % (filename, converted_format))
@@ -139,7 +139,7 @@ def evaluate_all(evaluate, files, name=None, verbose=0, quiet=False, basename=Fa
             # noinspection PyCallingNonCallable
             g.passage = g.converted if r.out_converter is None else r.out_converter(g.converted)
         if ryt is not None and ryt.in_converter is not None:
-            ryt.passage = ryt.converted  # Passage for fine-grained yield reference must be in UCCA format
+            ryt.passage = ryt.converted  # Passage for fine-grained yield reference must be in UCCA format or similar
         result = evaluate(g.passage, r.passage, verbose=verbose > 1 or units, units=units, errors=errors,
                           eval_type=UNLABELED if unlabeled else None, normalize=normalize,
                           constructions=constructions, ref_yield_tags=ryt.passage if ryt else None)
