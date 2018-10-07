@@ -40,8 +40,10 @@ class TagRule:
                         d.name, trigger, direction.name, allowed, tag, node)
                 disallowed = None if self.disallowed is None else self.disallowed.get(direction)
                 if disallowed is not None and contains(disallowed, tag):
-                    return message and "Units with %s '%s' edges must not get %s '%s' edges, but got '%s' for '%s'" % (
-                        d.name, trigger, direction.name, disallowed, tag, node)
+                    return message and ("Multiple %s '%s' edges for '%s'" % (d.name, tag, node)
+                                        if (d.name, trigger) == (direction.name, disallowed) else
+                                        "Units with %s '%s' edges must not get %s '%s' edges, but got '%s' for '%s'" % (
+                                            d.name, trigger, direction.name, disallowed, tag, node))
         trigger = self.trigger.get(direction)
         if edge is None and contains(trigger, tag):  # Trigger on edges that node is getting now (it does not exist yet)
             for d in Direction:
