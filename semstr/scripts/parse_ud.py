@@ -23,9 +23,9 @@ See https://spacy.io/api/annotation#section-dependency-parsing"""
 def parse_spacy(passages, lang, verbose=False):
     for passage, in annotate_all(zip(passages), as_array=True, as_tuples=True, lang=lang, verbose=verbose):
         terminals = sorted(passage.layer(layer0.LAYER_ID).all, key=operator.attrgetter("position"))
-        dep_nodes = [ConlluConverter.Node()] + [ConlluConverter.Node(
+        dep_nodes = [ConlluConverter.Node(
             t.position, terminal=t, token=ConlluConverter.Token(t.text, t.tag)) for t in terminals]
-        for dep_node in dep_nodes[1:]:
+        for dep_node in dep_nodes:
             dep_node.token.paragraph = dep_node.terminal.paragraph
             head = Attr.HEAD(dep_node.terminal.tok[Attr.HEAD.value])
             if head:
@@ -37,7 +37,9 @@ def parse_spacy(passages, lang, verbose=False):
             dep_node.terminal = None
             edge.link_head(dep_nodes)
             dep_node.add_edges([edge])
-        parsed = ConlluConverter().build_passage(ConlluConverter.Graph(dep_nodes, passage.ID))
+        graph = ConlluConverter.Graph(dep_nodes, passage.ID)
+        graph.insert_root()
+        parsed = ConlluConverter().build_passage(graph)
         yield passage, parsed
 
 
