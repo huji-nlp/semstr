@@ -58,7 +58,6 @@ class ConlluEvaluator(Evaluator):
         for graph in graphs:
             for node in graph.nodes:
                 for edge in node:
-                    edge.rel = edge.rel.partition(":")[0]  # Ignore dep rel subtype
                     candidate = Candidate(edge, reference_yield_tags=self.reference_yield_tags)
                     constructions = list(candidate.constructions(self.constructions))
                     if eval_type == UNLABELED:  # Remove relation after getting constructions

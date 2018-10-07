@@ -96,11 +96,6 @@ class ConlluConverter(ConllConverter):
         else:
             super().add_fnode(edge, l1)
 
-    def strip_suffixes(self, graph):
-        for dep_node in graph.nodes:
-            for edge in dep_node.incoming:
-                edge.rel = edge.rel.partition(":")[0]  # Strip suffix
-
     def preprocess(self, graph, to_dep=True):
         max_pos = (max(d.position for d in graph.nodes) if graph.nodes else 0) + 1
         for dep_node in graph.nodes[::-1]:

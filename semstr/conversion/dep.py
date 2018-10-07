@@ -48,6 +48,24 @@ class DependencyConverter(FormatConverter):
                 if all(map(layer0.is_punct, preterminal.children)):
                     preterminal.tag = layer1.NodeTags.Punctuation
 
+        def link_heads(self, multi_word_nodes=(), copy_of=None):
+            heads = [self.root] + [n for n in self.nodes if n.is_head]
+            for dep_node in self.nodes:
+                for edge in dep_node.incoming:
+                    edge.link_head(heads, copy_of)
+            for dep_node in multi_word_nodes:
+                start, end = dep_node.span
+                for position in range(start - 1, end):
+                    self.nodes[position].parent_multi_word = dep_node
+
+        def strip_suffixes(self):
+            for node in self.nodes:
+                for edge in node:
+                    edge.rel = edge.rel.partition(":")[0]  # Ignore dep rel subtype
+
+        def insert_root(self):
+            self.nodes.insert(0, self.root)
+
     class Node:
         def __init__(self, position=0, incoming=None, token=None, terminal=None, is_head=True, is_top=False,
                      is_multi_word=False, parent_multi_word=None, frame=None, enhanced=None, misc=None, span=None):
@@ -220,16 +238,6 @@ class DependencyConverter(FormatConverter):
         if graph.format:
             yield ["# format = " + graph.format]
 
-    def link_heads(self, graph, multi_word_nodes=(), copy_of=None):
-        heads = [graph.root] + [n for n in graph.nodes if n.is_head]
-        for dep_node in graph.nodes:
-            for edge in dep_node.incoming:
-                edge.link_head(heads, copy_of)
-        for dep_node in multi_word_nodes:
-            start, end = dep_node.span
-            for position in range(start - 1, end):
-                graph.nodes[position].parent_multi_word = dep_node
-
     def omit_edge(self, edge):
         return False
 
@@ -284,8 +292,9 @@ class DependencyConverter(FormatConverter):
 
         def _graph():
             graph = self.Graph(dep_nodes, sentence_id, original_format=original_format)
-            self.link_heads(graph, multi_word_nodes, copy_of)
-            graph.nodes.insert(0, graph.root)
+            graph.link_heads(multi_word_nodes, copy_of)
+            graph.insert_root()
+            graph.strip_suffixes()
             return graph
 
         for line in lines:
@@ -334,7 +343,6 @@ class DependencyConverter(FormatConverter):
         return passage
 
     def create_non_terminals(self, graph, l1):
-        self.strip_suffixes(graph)
         for dep_node in graph.nodes:
             if dep_node.outgoing and dep_node.token:  # not the root
                 if not self.is_ucca and not self.tree and dep_node.position and not dep_node.incoming:  # Top node
@@ -574,7 +582,7 @@ class DependencyConverter(FormatConverter):
                                        enhanced=terminal.extra.get("enhanced") if enhanced else None,
                                        misc=terminal.extra.get("misc")))
         graph = self.Graph(dep_nodes, passage.ID, original_format=original_format)
-        self.link_heads(graph)
+        graph.link_heads()
         self.preprocess(graph)
         lines += ["\t".join(map(str, entry)) for entry in self.generate_lines(graph, test)] + [""]
         return lines
@@ -675,6 +683,3 @@ class DependencyConverter(FormatConverter):
 
     def is_scene(self, edge):
         return False
-
-    def strip_suffixes(self, graph):
-        pass
