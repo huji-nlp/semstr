@@ -22,6 +22,7 @@ env:
     - secure: "d4hewBlIfWiQE+5XGchmRnFhYbqEzmgiXWiLK2OgghXFFF2JlbSaCaTB/rxV2Vioq3hyCxHxrpq3utMWKfa3LjnvKhqpmtjwvunBkYQjZJy5OYNnSdnInCnu2jpm3YyQ4rPgn/cVxYKS2Lws8wMKPKX0Wgptt7tEEQbaq6S3xBgGhad0VNJt6iNIbjiFynJes4VArSdwaBgkePNkecOqEwurrPVtGlaAcvyhfCQ6VZNpaWD+/+uO1mPz7qQKgF99YB7RtiPIqH02qZ7fGD26Ur01AXtHnhHnYg9NAMiBAGe/WR6Yyfi7/W7PhhbhSy2D+2tCN3srHuyzKhlDHKPrGK6MAkwTzZuF61koFtnqVNRR7I8r6We7FHhVTA8FwzVqKqU2mKGtkWKdqXzdKBbjwC7QpCPReLdV3BG8j+eB7Lfie4H5cqPS+zWIX2Kmu+HIaP5e6nd+8xoAlX20IaNsXANib8KJGPwx2VBdCRuqOT/rCW5iyo84y8obtDJWAZYm/AiaS01eBG4jaFeeTpSeJBxhzd/dD6JShlRl3TIPiKYvwbGfrtSu1W9/94exScktatDzJWOjEJrAE/Ba/dCDAzEdsCM4TdeKvBcGqL2mRqPnJGqglHQV6hKULX253k4D3o6tFpg/8qLrWtU12YuYIljCvDinY03rtJlmr4rF6Hw="
   matrix:
   - TEST_SUITE=unit
+  - TEST_SUITE=evaluate
   - TEST_SUITE=convert-amr
   - TEST_SUITE=convert-sdp
   - TEST_SUITE=parse-ucca

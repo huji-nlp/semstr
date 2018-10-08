@@ -43,6 +43,12 @@ unit)  # unit tests
     python -m semstr.scripts.parse_ud test_files/*.xml -We
     python -m semstr.scripts.validate test_files/*.* --strict -s
     ;;
+evaluate)
+    python -m semstr.evaluate test_files/conversion/120.{sdp,xml}
+    python -m semstr.evaluate test_files/conversion/120.{conll,xml}
+    python -m semstr.evaluate test_files/conversion/120.{export,xml}
+    python -m semstr.evaluate test_files/conversion/120.{xml,sdp}
+    ;;
 convert)
     python -m semstr.scripts.convert_and_evaluate "$CONVERT_DATA" -v
     ;;
