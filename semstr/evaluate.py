@@ -95,7 +95,7 @@ def passage_format(filename):
     return basename, None if ext in UCCA_EXT else ext.lstrip(".")
 
 
-def read_files(files, default_format=None, verbose=0, force_basename=False):
+def read_files(files, verbose=0, force_basename=False, **kwargs):
     try:
         files = sorted(files, key=lambda x: tuple(map(int, re.findall("\d+", x))) or (x,))
     except TypeError as e:
@@ -103,26 +103,28 @@ def read_files(files, default_format=None, verbose=0, force_basename=False):
     for filename in files:
         basename, converted_format = passage_format(filename)
         if converted_format == "txt":
-            converted_format = default_format
-        in_converter, out_converter = CONVERTERS.get(converted_format, CONVERTERS[default_format])
-        kwargs = dict(converted_format=converted_format, in_converter=in_converter, out_converter=out_converter)
+            converted_format = kwargs["format"]
+        in_converter, out_converter = CONVERTERS.get(converted_format, CONVERTERS[kwargs["format"]])
+        converter_kwargs = dict(converted_format=converted_format, in_converter=in_converter,
+                                out_converter=out_converter)
         if in_converter:
             with open(filename, encoding="utf-8") as f:
-                for converted, passage, passage_id in in_converter(f, passage_id=basename, return_original=True, dep=True):
+                for converted, passage, passage_id in in_converter(f, passage_id=basename, return_original=True,
+                                                                   **converter_kwargs):
                     if verbose:
                         with ioutil.external_write_mode():
                             print("Converting %s from %s" % (filename, converted_format))
-                    yield ConvertedPassage(converted, passage, basename if force_basename else passage_id, **kwargs)
+                    yield ConvertedPassage(converted, passage, basename if force_basename else passage_id, **converter_kwargs)
         else:
             passage_id = basename if force_basename else None
-            yield ConvertedPassage(ioutil.file2passage(filename), passage_id=passage_id, **kwargs)
+            yield ConvertedPassage(ioutil.file2passage(filename), passage_id=passage_id, **converter_kwargs)
 
 
 def evaluate_all(evaluate, files, name=None, verbose=0, quiet=False, basename=False, matching_ids=False,
                  units=False, errors=False, unlabeled=False, normalize=True, constructions=None, **kwargs):
-    guessed, ref, ref_yield_tags = [repeat(None) if f is None else
-                                    iter(read_files(f, kwargs["format"], verbose=verbose, force_basename=basename))
-                                    for f in files]
+    guessed, ref = [iter(read_files(f, verbose=verbose, force_basename=basename, **kwargs)) for f in files[:2]]
+    ref_yield_tags = repeat(None) if len(files) < 3 or files[2] is None else \
+        iter(read_files(files[2], verbose=verbose, dep=True, **kwargs))
     t = tqdm(zip(guessed, ref, ref_yield_tags), unit=" passages", desc=name, total=len(files[1]))
     for (g, r, ryt) in t:
         if matching_ids:

@@ -15,7 +15,7 @@ it is annotated as punctuation in the other."""
 
 
 def compare_punct(files, name=None, verbose=0, basename=False, matching_ids=False, **kwargs):
-    guessed, ref = [iter(read_files(f, kwargs["format"], verbose=verbose, force_basename=basename)) for f in files]
+    guessed, ref = [iter(read_files(f, verbose=verbose, force_basename=basename, **kwargs)) for f in files]
     for (g, r) in tqdm(zip(guessed, ref), unit=" passages", desc=name, total=len(files[-1])):
         if matching_ids:
             while g.ID < r.ID:
