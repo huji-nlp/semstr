@@ -2,7 +2,6 @@
 
 import argparse
 import operator
-
 from tqdm import tqdm
 from ucca import layer0, constructions as ucca_constructions
 from ucca.normalization import normalize
@@ -57,7 +56,7 @@ def main(args):
             map_labels(parsed, args.label_map)
             normalize(parsed, extra=True)
             if args.write:
-                write_passage(parsed, args)
+                write_passage(parsed, **vars(args))
             if args.evaluate:
                 evaluator = EVALUATORS.get(args.output_format)
                 converter = TO_FORMAT.get(args.output_format)

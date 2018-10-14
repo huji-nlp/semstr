@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 
+import sys
+
+import configargparse
 import csv
 import os
 import re
-import sys
 from glob import glob
-
-import configargparse
 from tqdm import tqdm
 from ucca import ioutil, layer1
 from ucca.convert import from_text, to_text, from_json, to_json
@@ -235,20 +235,22 @@ def map_labels(passage, label_map_file):
             pass
 
 
-def write_passage(passage, args):
-    ext = {None: UCCA_EXT[args.binary], "amr": ".txt"}.get(args.output_format) or "." + args.output_format
-    outfile = os.path.join(args.out_dir, passage.ID + ext)
-    if args.verbose:
+def write_passage(passage, out_dir=".", output_format=None, binary=False, verbose=False, test=False, tree=False,
+                  mark_aux=False, wikification=False, default_label=None, label_map=False, split=False, **kwargs):
+    del kwargs
+    ext = {None: UCCA_EXT[binary], "amr": ".txt"}.get(output_format) or "." + output_format
+    outfile = os.path.join(out_dir, passage.ID + ext)
+    if verbose:
         with ioutil.external_write_mode():
             print("Writing '%s'..." % outfile, file=sys.stderr)
-    if args.output_format is None:  # UCCA output
-        ioutil.passage2file(passage, outfile, binary=args.binary)
+    if output_format is None:  # UCCA output
+        ioutil.passage2file(passage, outfile, binary=binary)
     else:
-        converter = TO_FORMAT[args.output_format]
+        converter = TO_FORMAT[output_format]
         with open(outfile, "w", encoding="utf-8") as f:
-            for line in converter(passage, test=args.test, tree=args.tree, mark_aux=args.mark_aux,
-                                  wikification=args.wikification, default_label=args.default_label,
-                                  format=args.output_format if args.label_map else None, sentences=args.split):
+            for line in converter(passage, test=test, tree=tree, mark_aux=mark_aux,
+                                  wikification=wikification, default_label=default_label,
+                                  format=output_format if label_map else None, sentences=split):
                 print(line, file=f)
 
 
@@ -262,7 +264,7 @@ def main(args):
             normalize(passage, extra=args.extra_normalization)
         if args.lang:
             passage.attrib["lang"] = args.lang
-        write_passage(passage, args)
+        write_passage(passage, **vars(args))
         if args.validate:
             try:
                 errors = list(validate(passage, ucca_validation=args.ucca_validation, output_format=args.output_format))
