@@ -1,7 +1,6 @@
+import configargparse
 import os
 from glob import glob
-
-import configargparse
 from ucca.ioutil import read_files_and_dirs
 
 
@@ -49,7 +48,7 @@ def add_boolean_option(argparser, name, description, default=False, short=None, 
 
 
 class AnnotationSpecification:
-    def __init__(self, passages, out_dir, lang, udpipe=None, conllu=None):
+    def __init__(self, passages, out_dir, lang, udpipe=None, conllu=None, join=None):
         if out_dir:
             os.makedirs(out_dir, exist_ok=True)
         self.passages = passages
@@ -59,10 +58,11 @@ class AnnotationSpecification:
             raise ValueError("Cannot specify both UDPipe model and CoNLL-U files to get annotation from")
         self.udpipe = udpipe
         self.conllu = conllu
+        self.join = join
 
 
 def read_specs(args, converters=None):
-    specs = [(pattern, args.out_dir, args.lang, args.udpipe, args.conllu) for pattern in args.filenames]
+    specs = [(pattern, args.out_dir, args.lang, args.udpipe, args.conllu, args.join) for pattern in args.filenames]
     if args.list_file:
         with open(args.list_file, encoding="utf-8") as f:
             specs += [l.strip().split() for l in f if not l.startswith("#")]
@@ -75,7 +75,8 @@ def read_specs(args, converters=None):
                                       out_dir=spec[1] if len(spec) > 1 else args.out_dir,
                                       lang=spec[2] if len(spec) > 2 else args.lang,
                                       udpipe=spec[3] if len(spec) > 3 else args.udpipe,
-                                      conllu=spec[4] if len(spec) > 4 else args.conllu)
+                                      conllu=spec[4] if len(spec) > 4 else args.conllu,
+                                      join=spec[5] if len(spec) > 5 else args.join)
 
 
 def add_specs_args(p):
@@ -86,4 +87,5 @@ def add_specs_args(p):
     group = p.add_mutually_exclusive_group()
     group.add_argument("-u", "--udpipe", help="use specified UDPipe model, not spaCy, for syntactic annotation")
     group.add_argument("-c", "--conllu", help="copy syntactic annotation from specified CoNLL-U files instead of spaCy")
+    p.add_argument("-j", "--join", help="concatenate all output files to a file with this name")
     p.add_argument("-b", "--binary", action="store_true", help="write in binary format (.pickle)")

@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 
-import argparse
-import os
 from itertools import tee, groupby
-from operator import itemgetter
 from time import time
 
+import argparse
+import os
+from operator import itemgetter
 from tqdm import tqdm
 from ucca import layer0, ioutil, core
 from ucca.convert import split2paragraphs
@@ -106,6 +106,20 @@ def to_conllu_native(p, **kwargs):
     return to_conllu(p, format="conllu", **kwargs)
 
 
+def strip_enhanced(p):
+    return [l if not l.strip() or l.startswith("#") else
+            "\t".join(l.split("\t")[:-2] + ["_", l.rpartition("\t")[-1]]) for l in p]
+
+
+def open_out_file(spec, name=None):
+    if spec.join:
+        filename = spec.join
+        if not filename.endswith(".conllu"):
+            filename += ".conllu"
+        return open(os.path.join(spec.out_dir, filename), "a", encoding="utf-8")
+    return open(os.path.join(spec.out_dir, name + ".conllu"), "w", encoding="utf-8")
+
+
 CONVERTERS = {f: lambda l: (to_conllu_native(p) for p in c(l, passage_id=None)) for f, c in FROM_FORMAT.items()}
 CONVERTERS["conllu"] = split_by_empty_lines  # If getting CoNLL-U as input, don't bother converting just to convert back
 
@@ -114,7 +128,7 @@ def main(args):
     for spec in read_specs(args, converters=CONVERTERS):
         scores = []
         sentences, to_parse = tee((to_conllu_native(p), to_conllu_native(p, test=True, enhanced=False))
-                                  if isinstance(p, core.Passage) else p for p in spec.passages)
+                                  if isinstance(p, core.Passage) else (p, strip_enhanced(p)) for p in spec.passages)
         t = tqdm(zip((x for x, _ in sentences),
                      split_by_empty_lines(udpipe((x for _, x in to_parse), spec.udpipe, args.verbose))),
                  unit=" sentences")
@@ -123,7 +137,7 @@ def main(args):
             if args.write:
                 i = next(find_ids(sentence))
                 t.set_postfix(id=i)
-                with open(os.path.join(spec.out_dir, i + ".conllu"), "w", encoding="utf-8") as f:
+                with open_out_file(spec, i) as f:
                     for line in parsed:
                         print(line, file=f)
             if args.evaluate:
