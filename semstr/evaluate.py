@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 
-import csv
-import os
-import re
 import sys
 from itertools import groupby, repeat
 
 import configargparse
+import csv
+import os
+import re
 from tqdm import tqdm
 from ucca import ioutil, constructions as ucca_constructions
 from ucca.evaluation import LABELED, UNLABELED, evaluate as evaluate_ucca
@@ -95,7 +95,7 @@ def passage_format(filename):
     return basename, None if ext in UCCA_EXT else ext.lstrip(".")
 
 
-def read_files(files, verbose=0, force_basename=False, **kwargs):
+def read_files(files, verbose=0, force_basename=False, **kw):
     try:
         files = sorted(files, key=lambda x: tuple(map(int, re.findall("\d+", x))) or (x,))
     except TypeError as e:
@@ -103,21 +103,19 @@ def read_files(files, verbose=0, force_basename=False, **kwargs):
     for filename in files:
         basename, converted_format = passage_format(filename)
         if converted_format == "txt":
-            converted_format = kwargs["format"]
-        in_converter, out_converter = CONVERTERS.get(converted_format, CONVERTERS[kwargs["format"]])
-        converter_kwargs = dict(converted_format=converted_format, in_converter=in_converter,
-                                out_converter=out_converter)
+            converted_format = kw["format"]
+        in_converter, out_converter = CONVERTERS.get(converted_format, CONVERTERS[kw["format"]])
+        kwargs = dict(converted_format=converted_format, in_converter=in_converter, out_converter=out_converter)
         if in_converter:
             with open(filename, encoding="utf-8") as f:
-                for converted, passage, passage_id in in_converter(f, passage_id=basename, return_original=True,
-                                                                   **converter_kwargs):
+                for converted, passage, passage_id in in_converter(f, passage_id=basename, return_original=True, **kw):
                     if verbose:
                         with ioutil.external_write_mode():
                             print("Converting %s from %s" % (filename, converted_format))
-                    yield ConvertedPassage(converted, passage, basename if force_basename else passage_id, **converter_kwargs)
+                    yield ConvertedPassage(converted, passage, basename if force_basename else passage_id, **kwargs)
         else:
             passage_id = basename if force_basename else None
-            yield ConvertedPassage(ioutil.file2passage(filename), passage_id=passage_id, **converter_kwargs)
+            yield ConvertedPassage(ioutil.file2passage(filename), passage_id=passage_id, **kwargs)
 
 
 def evaluate_all(evaluate, files, name=None, verbose=0, quiet=False, basename=False, matching_ids=False,

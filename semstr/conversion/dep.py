@@ -1,9 +1,9 @@
-import re
 import sys
 from collections import defaultdict
 from itertools import groupby
-from operator import attrgetter
 
+import re
+from operator import attrgetter
 from ucca import core, layer0, layer1
 from ucca.layer1 import EdgeTags
 
@@ -65,6 +65,16 @@ class DependencyConverter(FormatConverter):
 
         def insert_root(self):
             self.nodes.insert(0, self.root)
+
+        def layer(self, *args, **kwargs):
+            return self
+
+        @property
+        def all(self):
+            return self
+
+        def __iter__(self):
+            return iter(self.nodes)
 
     class Node:
         def __init__(self, position=0, incoming=None, token=None, terminal=None, is_head=True, is_top=False,
