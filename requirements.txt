@@ -1,5 +1,5 @@
 numpy>=1.15.0
-tqdm>=4.23.3
-requests>=2.18.4
+tqdm>=4.27.0
+requests>=2.19.1
 configargparse>=0.13.0
-ucca>=1.0.123
+ucca>=1.0.124
