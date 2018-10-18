@@ -165,6 +165,11 @@ def main(args):
         evaluate = EVALUATORS.get(passage_format(files[1][0])[1], EVALUATORS[args.format])  # Evaluate by ref format
     except IndexError as e:
         raise ValueError("No reference passages found: %s" % args.ref) from e
+    if not args.quiet:
+        print("Evaluating '%s'" % args.guessed)
+        print("Reference: '%s'" % args.ref)
+        if args.ref_yield_tags:
+            print("Using categories for fine-grained evaluation from '%s'" % args.ref_yield_tags)
     results = list(evaluate_all(evaluate, files, name="Evaluating", **vars(args)))
     summary = Scores(results)
     eval_type = UNLABELED if args.unlabeled else LABELED
