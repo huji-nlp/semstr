@@ -15,7 +15,7 @@ class UccaConstraints(Constraints):
                          possible_multiple_incoming=LINKAGE_TAGS,
                          childless_incoming_trigger=EdgeTags.Function,
                          childless_outgoing_allowed={EdgeTags.Terminal, EdgeTags.Punctuation},
-                         unique_incoming={EdgeTags.Function, EdgeTags.Ground,
+                         unique_incoming={EdgeTags.Function,
                                           EdgeTags.ParallelScene, EdgeTags.Linker,
                                           EdgeTags.LinkRelation, EdgeTags.Connector,
                                           EdgeTags.Punctuation, EdgeTags.Terminal},
