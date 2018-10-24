@@ -236,10 +236,13 @@ def map_labels(passage, label_map_file):
 
 
 def write_passage(passage, out_dir=".", output_format=None, binary=False, verbose=False, test=False, tree=False,
-                  mark_aux=False, wikification=False, default_label=None, label_map=False, split=False, **kwargs):
+                  mark_aux=False, wikification=False, default_label=None, label_map=False, split=False, join=None,
+                  **kwargs):
     del kwargs
     ext = {None: UCCA_EXT[binary], "amr": ".txt"}.get(output_format) or "." + output_format
-    outfile = os.path.join(out_dir, passage.ID + ext)
+    if join and join.endswith(ext):
+        ext = ""
+    outfile = os.path.join(out_dir, (join or passage.ID) + ext)
     if verbose:
         with ioutil.external_write_mode():
             print("Writing '%s'..." % outfile, file=sys.stderr)
@@ -247,7 +250,7 @@ def write_passage(passage, out_dir=".", output_format=None, binary=False, verbos
         ioutil.passage2file(passage, outfile, binary=binary)
     else:
         converter = TO_FORMAT[output_format]
-        with open(outfile, "w", encoding="utf-8") as f:
+        with open(outfile, "a" if join else "w", encoding="utf-8") as f:
             for line in converter(passage, test=test, tree=tree, mark_aux=mark_aux,
                                   wikification=wikification, default_label=default_label,
                                   format=output_format if label_map else None, sentences=split):
@@ -290,6 +293,7 @@ if __name__ == '__main__':
     argparser.add_argument("-i", "--input-format", choices=CONVERTERS, help="input file format (detected by extension)")
     argparser.add_argument("-f", "--output-format", choices=CONVERTERS, help="output file format (default: UCCA)")
     argparser.add_argument("-o", "--out-dir", default=".", help="output directory")
+    argparser.add_argument("-j", "--join", help="concatenate all output files to a file with this name")
     argparser.add_argument("-p", "--prefix", default="", help="output passage ID prefix")
     argparser.add_argument("-b", "--binary", action="store_true", help="write in binary format (.%s)" % UCCA_EXT[1])
     argparser.add_argument("-a", "--annotate", action="store_true", help="store dependency annotations in 'extra' dict")
