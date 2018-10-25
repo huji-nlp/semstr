@@ -187,6 +187,7 @@ def main(args):
                                                                          result.titles(eval_type),
                                                                          title2index) for result in results])
     write_csv(args.summary_file, [summary.titles(eval_type), summary.fields(eval_type)])
+    write_csv(args.counts_file, [summary.titles(eval_type, counts=True), summary.fields(eval_type, counts=True)])
 
 
 def align_fields(fields, titles, title2index):
@@ -215,7 +216,8 @@ if __name__ == '__main__':
     argparser.add_argument("-f", "--format", default="amr", choices=CONVERTERS,
                            help="default format (if cannot determine by suffix)")
     argparser.add_argument("-o", "--out-file", help="file to write results for each evaluated passage to in CSV format")
-    argparser.add_argument("-s", "--summary-file", help="file to write aggregated results to, in CSV format")
+    argparser.add_argument("-s", "--summary-file", help="file to write aggregated scores to, in CSV format")
+    argparser.add_argument("-c", "--counts-file", help="file to write aggregated counts to, in CSV format")
     argparser.add_argument("-u", "--unlabeled", action="store_true", help="print unlabeled F1 for individual passages")
     argparser.add_argument("-N", "--no-normalize", dest="normalize", action="store_false",
                            help="do not normalize passages before evaluation")
