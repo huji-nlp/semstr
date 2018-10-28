@@ -37,4 +37,5 @@ This package is licensed under the GPLv3 or later license (see [`LICENSE.txt`](L
 
 [![Build Status (Travis CI)](https://travis-ci.org/danielhers/semstr.svg?branch=master)](https://travis-ci.org/danielhers/semstr)
 [![Build Status (AppVeyor)](https://ci.appveyor.com/api/projects/status/github/danielhers/semstr?svg=true)](https://ci.appveyor.com/project/danielh/semstr)
+[![Build Status (Docs)](https://readthedocs.org/projects/semstr/badge/?version=latest)](http://semstr.readthedocs.io/en/latest/)
 [![PyPI version](https://badge.fury.io/py/SEMSTR.svg)](https://badge.fury.io/py/SEMSTR)
