@@ -124,11 +124,12 @@ class DependencyConverter(FormatConverter):
             :return a list of Node objects
             """
             if visited is None:
-                visited = set()
-            return sorted(([self] if punct or not self.is_punct else []) +
-                          [t for e in set(self) - visited if remotes or not e.remote
-                           for t in e.dependent.get_terminals(punct, remotes, visited | set(self))],
-                          key=attrgetter("position"))
+                return sorted(self.get_terminals(punct=punct, remotes=remotes, visited=set()),
+                              key=attrgetter("position"))
+            outgoing = {e for e in set(self) - visited if remotes or not e.remote}
+            return ([self] if punct or not self.is_punct else []) + \
+                [t for e in outgoing for t in e.dependent.get_terminals(
+                    punct=punct, remotes=remotes, visited=visited | outgoing)]
 
         def __repr__(self):
             return self.token.text if self.token else DependencyConverter.ROOT
