@@ -68,7 +68,7 @@ def read_specs(args, converters=None):
             specs += [l.strip().split() for l in f if not l.startswith("#")]
     for spec in specs:
         pattern = spec[0]
-        filenames = glob(pattern)
+        filenames = sorted(glob(pattern))
         if not filenames:
             raise IOError("Not found: " + pattern)
         yield AnnotationSpecification(passages=read_files_and_dirs(filenames, converters=converters),

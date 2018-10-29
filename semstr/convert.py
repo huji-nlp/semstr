@@ -189,7 +189,7 @@ UCCA_EXT = (".xml", ".pickle")
 
 def iter_files(patterns):
     for pattern in patterns:
-        filenames = glob(pattern)
+        filenames = sorted(glob(pattern))
         if not filenames:
             raise IOError("Not found: " + pattern)
         yield from filenames

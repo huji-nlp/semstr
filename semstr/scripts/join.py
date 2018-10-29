@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-import os
-import re
-import shutil
 import sys
-from glob import glob
 from itertools import filterfalse
 
 import configargparse
+import os
+import re
+import shutil
+from glob import glob
 from tqdm import tqdm
 from ucca.ioutil import gen_files
 
@@ -36,7 +36,7 @@ def main(args):
             raise ValueError("Not found: " + basename)
         return index
 
-    files = [f for pattern in args.filenames for f in gen_files(glob(pattern) or [pattern])]
+    files = [f for pattern in args.filenames for f in gen_files(sorted(glob(pattern)) or [pattern])]
     if len(files) > len(order):
         raise ValueError("Files missing in reference: " + ", ".join(filterfalse(_index, files)))
     if len(order) > len(files):

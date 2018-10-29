@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
+import configargparse
 import os
 import re
 from glob import glob
-
-import configargparse
 
 desc = """Split sentences/passages to separate files (important for shuffling before training the parser)"""
 
@@ -17,7 +16,7 @@ def main(args):
     passage_id = 0
     doc_id = None
     for pattern in args.filenames:
-        for filename in glob(pattern) or [pattern]:
+        for filename in sorted(glob(pattern)) or [pattern]:
             _, ext = os.path.splitext(filename)
             with open(filename, encoding="utf-8") as f:
                 for line in f:

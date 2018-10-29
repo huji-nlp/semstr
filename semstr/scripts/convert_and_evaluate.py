@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 
-import os
 import sys
-from glob import glob
 
 import configargparse
+import os
+from glob import glob
 from tqdm import tqdm
 from ucca import ioutil
 from ucca.normalization import normalize
@@ -22,7 +22,7 @@ def main(args):
         os.makedirs(args.out_dir, exist_ok=True)
     scores = []
     for pattern in args.filenames:
-        for filename in glob(pattern) or [pattern]:
+        for filename in sorted(glob(pattern)) or [pattern]:
             file_scores = []
             basename, ext = os.path.splitext(os.path.basename(filename))
             passage_format = ext.lstrip(".")
