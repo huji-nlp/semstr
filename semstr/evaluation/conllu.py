@@ -1,6 +1,6 @@
-import os
 from collections import OrderedDict
 
+import os
 from ucca.constructions import PRIMARY, DEFAULT, Candidate, create_passage_yields
 from ucca.evaluation import LABELED, UNLABELED, Scores, Evaluator, EvaluatorResults, SummaryStatistics, ALL_EDGES
 
@@ -22,8 +22,6 @@ class ConlluEvaluator(Evaluator):
         1. UNLABELED: disregard dependency relation labels.
         2. LABELED: also requires relation match
         :param r: reference passage for fine-grained evaluation
-        :param verbose: print extra information
-        :param units: print all matches and mismatches
         :returns EvaluatorResults
         """
         self.reference_yield_tags = None if r is None else create_passage_yields(r, punct=True)[ALL_EDGES.name]
