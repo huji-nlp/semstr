@@ -1,6 +1,7 @@
+from ucca import layer0
 from ucca.layer1 import EdgeTags
 
-from ..constraints import Constraints
+from ..constraints import Constraints, Valid
 
 LINKAGE_TAGS = {EdgeTags.LinkArgument, EdgeTags.LinkRelation}
 
@@ -24,3 +25,7 @@ class UccaConstraints(Constraints):
                          exclusive_outgoing=LINKAGE_TAGS, **kwargs)
     # LinkerIncoming = {EdgeTags.Linker, EdgeTags.LinkRelation}
     # TagRule(trigger=(LinkerIncoming, None), allowed=(LinkerIncoming, None)),  # disabled due to passage 106 unit 1.300
+
+    def allow_child(self, node, tag):
+        valid = Valid(message="%s incompatible as %s child" % (node, tag))
+        return valid(tag == EdgeTags.Punctuation) if any(e.child.tag == layer0.NodeTags.Punct for e in node) else True
