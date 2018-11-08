@@ -228,9 +228,11 @@ class DependencyConverter(FormatConverter):
             self.features = "_" if features is None else features
             self.paragraph = paragraph
 
-    def __init__(self, mark_aux=False, tree=False, punct_tag=None, punct_rel=None, tag_priority=(), **kwargs):
+    def __init__(self, mark_aux=False, tree=False, strip_suffixes=True, punct_tag=None, punct_rel=None, tag_priority=(),
+                 **kwargs):
         self.mark_aux = mark_aux
         self.tree = tree
+        self.strip_suffixes = strip_suffixes
         self.punct_tag = punct_tag
         self.punct_rel = punct_rel
         self.lines_read = []
@@ -305,7 +307,8 @@ class DependencyConverter(FormatConverter):
             graph = self.Graph(dep_nodes, sentence_id, original_format=original_format)
             graph.link_heads(multi_word_nodes, copy_of)
             graph.insert_root()
-            graph.strip_suffixes()
+            if self.strip_suffixes:
+                graph.strip_suffixes()
             return graph
 
         for line in lines:
