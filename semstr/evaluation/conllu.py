@@ -24,7 +24,7 @@ class ConlluEvaluator(Evaluator):
         :param r: reference passage for fine-grained evaluation
         :returns EvaluatorResults
         """
-        self.reference_yield_tags = None if r is None else create_passage_yields(r, punct=True)[ALL_EDGES.name]
+        self.reference_yield_tags = None if r is None else create_passage_yields(r)[ALL_EDGES.name]
         converter = ConlluConverter()
         g1, g2 = list(map(list, list(map(converter.generate_graphs, (s1, s2)))))
         t1, t2 = list(map(join_tokens, (g1, g2)))
