@@ -57,17 +57,19 @@ class ConlluConverter(ConllConverter):
         yield from super().generate_lines(graph, test)
 
     def from_format(self, lines, passage_id, return_original=False, annotate=False, terminals_only=False,
-                    dep=False, **kwargs):
+                    dep=False, preprocess=True, **kwargs):
         for graph in self.generate_graphs(lines):
             if not graph.id:
                 graph.id = passage_id
             graph.format = kwargs.get("format") or graph.format
             annotations = {}
-            if annotate:  # get all node attributes before they are possibly modified by build_passage
+            if annotate:  # get all node attributes before they are possibly modified by preprocess
                 for dep_node in graph.nodes:
                     if dep_node.token:
                         annotations.setdefault(dep_node.token.paragraph, []).append(
                             [ATTR_GETTERS.get(a, {}.get)(dep_node) for a in textutil.Attr])
+            if preprocess:
+                self.preprocess(graph, to_dep=False)
             try:
                 passage = graph if dep else self.build_passage(graph, terminals_only=terminals_only)
             except (AttributeError, IndexError) as e:
