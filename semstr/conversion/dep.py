@@ -58,11 +58,6 @@ class DependencyConverter(FormatConverter):
                 for position in range(start - 1, end):
                     self.nodes[position].parent_multi_word = dep_node
 
-        def strip_suffixes(self):
-            for node in self.nodes:
-                for edge in node:
-                    edge.rel = edge.rel.partition(":")[0]  # Ignore dep rel subtype
-
         def insert_root(self):
             self.nodes.insert(0, self.root)
 
@@ -146,15 +141,24 @@ class DependencyConverter(FormatConverter):
     class Edge:
         def __init__(self, head_index=None, rel=None, remote=False, head=None, dependent=None):
             self.head_index = head_index
+            self._rel = self.stripped_rel = self.subtype = self._head = self._dependent = None
             self.rel = rel
             self.remote = remote
-            self._head = self._dependent = None
             self.head = head  # use setter
             self.dependent = dependent
 
         @property
+        def rel(self):
+            return self._rel
+
+        @rel.setter
+        def rel(self, value):
+            self._rel = value
+            self.stripped_rel, _, self.subtype = (None, None, None) if self._rel is None else self._rel.partition(":")
+
+        @property
         def tag(self):
-            return self.rel
+            return self.stripped_rel
 
         @property
         def parent(self):
@@ -213,11 +217,11 @@ class DependencyConverter(FormatConverter):
             return head + label + "->" + repr(self.dependent)
 
         def __eq__(self, other):
-            return self.head_index == other.head_index and self.dependent == other.dependent and self.rel == other.rel \
-                   and self.remote == other.remote
+            return self.head_index == other.head_index and self.dependent == other.dependent and \
+                   self.stripped_rel == other.stripped_rel and self.remote == other.remote
 
         def __hash__(self):
-            return hash((self.head_index, self.dependent, self.rel, self.remote))
+            return hash((self.head_index, self.dependent, self.stripped_rel, self.remote))
 
     class Token:
         def __init__(self, text, tag, lemma=None, pos=None, features=None, paragraph=None):
@@ -282,7 +286,7 @@ class DependencyConverter(FormatConverter):
 
     @staticmethod
     def _label(dep_edge, top=False):
-        dependent_rels = {e.rel for e in dep_edge.dependent}
+        dependent_rels = {e.stripped_rel for e in dep_edge.dependent}
         if dep_edge.dependent.terminal and layer0.is_punct(dep_edge.dependent.terminal):
             return EdgeTags.Punctuation
         elif top or EdgeTags.ParallelScene in dependent_rels:
@@ -307,8 +311,6 @@ class DependencyConverter(FormatConverter):
             graph = self.Graph(dep_nodes, sentence_id, original_format=original_format)
             graph.link_heads(multi_word_nodes, copy_of)
             graph.insert_root()
-            if self.strip_suffixes:
-                graph.strip_suffixes()
             return graph
 
         for line in lines:
@@ -387,7 +389,7 @@ class DependencyConverter(FormatConverter):
             parent = edge.head.node or l1.heads[0]
             child = edge.dependent.node or l1.heads[0]
             if child not in parent.children and parent not in child.iter():  # Avoid cycles and multi-edges
-                l1.add_remote(parent, edge.rel, child)
+                l1.add_remote(parent, edge.stripped_rel if self.strip_suffixes else edge.rel, child)
         self.break_cycles(l1.heads)
 
     def top_edge(self, graph, dep_node, rel=TOP):
@@ -536,7 +538,7 @@ class DependencyConverter(FormatConverter):
         roots = self.roots(graph.nodes)
         if to_dep and self.tree and len(roots) > 1:
             for root in roots[1:]:
-                root.incoming = [e for e in root.incoming if e.rel != self.ROOT.lower() and e.head_index != 0]
+                root.incoming = [e for e in root.incoming if e.stripped_rel != self.ROOT.lower() and e.head_index != 0]
             roots = [roots[0]]
         for dep_node in graph.nodes:
             if dep_node.token:
@@ -548,7 +550,7 @@ class DependencyConverter(FormatConverter):
                             edge.remove()
                         elif not self.is_ucca:
                             edge.remote = False  # Avoid * marking
-                        if edge.rel == self.ROOT.lower():
+                        if edge.stripped_rel == self.ROOT.lower():
                             edge.head_index = 0
                             dep_node.incoming = [edge] + [e for e in dep_node.incoming if e != edge]  # Make root edge first
                         else:
@@ -656,8 +658,9 @@ class DependencyConverter(FormatConverter):
         else:  # Add top-level edge (like UCCA H) if top-level, otherwise add child to head's node
             edge.dependent.preterminal = edge.dependent.node = \
                 l1.add_fnode(edge.dependent.preterminal, self.label_edge(edge, top=True)) \
-                if edge.rel == self.ROOT.lower() else (
-                    l1.add_fnode(None if self.is_scene(edge) else edge.head.node, edge.rel))
+                if edge.stripped_rel == self.ROOT.lower() else (
+                    l1.add_fnode(None if self.is_scene(edge) else edge.head.node,
+                                 edge.stripped_rel if self.strip_suffixes else edge.rel))
 
     @staticmethod
     def primary_edges(unit, tag=None):
@@ -675,7 +678,7 @@ class DependencyConverter(FormatConverter):
                 raise RuntimeError("Could not find head child for unit (%s): %s" % (unit.ID, unit)) from e
 
     def roots(self, dep_nodes):
-        return [n for n in dep_nodes if n.token and any(e.rel == self.ROOT.lower() for e in n.incoming)]
+        return [n for n in dep_nodes if n.token and any(e.stripped_rel == self.ROOT.lower() for e in n.incoming)]
 
     def find_headed_unit(self, unit):
         while unit.incoming and unit.parents[0].incoming and \
@@ -693,7 +696,7 @@ class DependencyConverter(FormatConverter):
         return dep_node.token and {dep_node.token.tag, dep_node.token.pos} & {layer0.NodeTags.Punct, self.punct_tag}
 
     def is_flat(self, edge):
-        return edge.rel == EdgeTags.Terminal
+        return edge.stripped_rel == EdgeTags.Terminal
 
     def is_scene(self, edge):
         return False

@@ -1,5 +1,4 @@
 from operator import attrgetter
-
 from ucca import layer0, layer1, textutil
 
 from .conll import ConllConverter
@@ -89,9 +88,10 @@ class ConlluConverter(ConllConverter):
             yield ["# doc_id = " + graph.id.rpartition(".")[0]]
 
     def add_fnode(self, edge, l1):
-        if edge.rel == AUX and edge.head.preterminal:  # Attached aux as sibling of main predicate
+        if edge.stripped_rel == AUX and edge.head.preterminal:  # Attached aux as sibling of main predicate
             # TODO update to UCCA guidelines v1.0.6
-            edge.dependent.preterminal = edge.dependent.node = l1.add_fnode(edge.head.preterminal, edge.rel)
+            edge.dependent.preterminal = edge.dependent.node = l1.add_fnode(
+                edge.head.preterminal, edge.stripped_rel if self.strip_suffixes else edge.rel)
             edge.head.preterminal = l1.add_fnode(edge.head.preterminal, self.label_edge(edge))
         else:
             super().add_fnode(edge, l1)
@@ -104,29 +104,29 @@ class ConlluConverter(ConllConverter):
             for edge in dep_node.incoming:
                 if not to_dep or not self.is_ucca:
                     for source, target in REL_REPLACEMENTS:
-                        if edge.rel == (source, target)[to_dep]:
+                        if edge.stripped_rel == (source, target)[to_dep]:
                             edge.rel = (target, source)[to_dep]
                 if edge.rel == self.HEAD:
                     edge.rel = XCOMP
-                rels = HIGH_ATTACHING.get(edge.rel)
+                rels = HIGH_ATTACHING.get(edge.stripped_rel)
                 if rels:
                     candidates = [e for e in (edge.head.incoming, edge.head.outgoing)[to_dep]
-                                  if e.rel in rels and not e.remote]
+                                  if e.stripped_rel in rels and not e.remote]
                     if candidates:
                         head_edge = min(candidates, key=_attach_forward_sort_key)
                         head = (head_edge.head, head_edge.dependent)[to_dep]
-                        if not any(e.rel == edge.rel for e in head.outgoing):
+                        if not any(e.stripped_rel == edge.stripped_rel for e in head.outgoing):
                             edge.head = head
-                if edge.rel == ACL:
+                if edge.stripped_rel == ACL:
                     remotes = [e.child for e in edge.child if e.remote]
                     if len(remotes) == 1:
                         edge.head = remotes[0]
         if to_dep:
             for dep_node in graph.nodes:
                 for edge in dep_node.incoming:
-                    if edge.rel in PUNCT_RELS:
+                    if edge.stripped_rel in PUNCT_RELS:
                             heads = [d for d in graph.nodes if self.between(dep_node, d.incoming, CONJ)
-                                     and not any(e.rel in (PUNCT_RELS + (CC,)) and
+                                     and not any(e.stripped_rel in (PUNCT_RELS + (CC,)) and
                                                  dep_node.position < e.dependent.position < d.position
                                                  for e in d.outgoing)] or \
                                     [d for d in graph.nodes if self.between(dep_node, d.outgoing, APPOS)]
@@ -140,10 +140,10 @@ class ConlluConverter(ConllConverter):
 
     @staticmethod
     def between(dep_node, edges, *rels):
-        return any(e.rel in rels and e.head.position < dep_node.position < e.dependent.position for e in edges)
+        return any(e.stripped_rel in rels and e.head.position < dep_node.position < e.dependent.position for e in edges)
 
     def is_flat(self, edge):
-        return edge.rel in FLAT_RELS
+        return edge.stripped_rel in FLAT_RELS
 
     def is_scene(self, edge):
-        return edge.rel in TOP_RELS
+        return edge.stripped_rel in TOP_RELS
