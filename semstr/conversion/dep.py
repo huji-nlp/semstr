@@ -62,6 +62,7 @@ class DependencyConverter(FormatConverter):
             self.nodes.insert(0, self.root)
 
         def layer(self, *args, **kwargs):
+            del args, kwargs
             return self
 
         @property
@@ -236,10 +237,11 @@ class DependencyConverter(FormatConverter):
             self.features = "_" if features is None else features
             self.paragraph = paragraph
 
-    def __init__(self, mark_aux=False, tree=False, strip_suffixes=True, punct_tag=None, punct_rel=None, tag_priority=(),
-                 **kwargs):
+    def __init__(self, mark_aux=False, tree=False, enhanced=True, strip_suffixes=True, punct_tag=None, punct_rel=None,
+                 tag_priority=(), **kwargs):
         self.mark_aux = mark_aux
         self.tree = tree
+        self.enhanced = enhanced
         self.strip_suffixes = strip_suffixes
         self.punct_tag = punct_tag
         self.punct_rel = punct_rel
@@ -559,7 +561,7 @@ class DependencyConverter(FormatConverter):
                             edge.remote = False  # Avoid * marking
                         if edge.stripped_rel == self.ROOT.lower():
                             edge.head_index = 0
-                            dep_node.incoming = [edge] + [e for e in dep_node.incoming if e != edge]  # Make root edge first
+                            dep_node.incoming = [edge] + [e for e in dep_node.incoming if e != edge]  # Make root first
                         else:
                             continue
                     is_parentless = False  # Found primary parent
@@ -575,12 +577,11 @@ class DependencyConverter(FormatConverter):
                         edge.head = graph.root
                         edge.dependent = dep_node
 
-    def to_format(self, passage, test=False, enhanced=True, preprocess=True, **kwargs):
+    def to_format(self, passage, test=False, preprocess=True, **kwargs):
         """ Convert from a Passage object to a string in dependency format.
 
         :param passage: the Passage object to convert
         :param test: whether to omit the head and deprel columns. Defaults to False
-        :param enhanced: whether to include enhanced edges
         :param preprocess: preprocess the converted dependency graph before returning it?
 
         :return a list of strings representing the dependencies in the passage
@@ -603,7 +604,7 @@ class DependencyConverter(FormatConverter):
                                                         features=terminal.extra.get("features"),
                                                         paragraph=terminal.paragraph),
                                        parent_multi_word=self.parent_multi_word(terminal),
-                                       enhanced=terminal.extra.get("enhanced") if enhanced else None,
+                                       enhanced=terminal.extra.get("enhanced") if self.enhanced else None,
                                        misc=terminal.extra.get("misc")))
         graph = self.Graph(dep_nodes, passage.ID, original_format=original_format)
         graph.link_heads()

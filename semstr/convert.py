@@ -112,7 +112,7 @@ def to_amr(passage, metadata=True, wikification=True, use_original=True, verbose
 
 
 def from_conllu(lines, passage_id=None, return_original=False, annotate=False, terminals_only=False, dep=False,
-                preprocess=True, **kwargs):
+                enhanced=True, preprocess=True, **kwargs):
     """Converts from parsed text in Universal Dependencies format to a Passage object.
 
     :param lines: iterable of lines in Universal Dependencies format, describing a single passage.
@@ -121,14 +121,15 @@ def from_conllu(lines, passage_id=None, return_original=False, annotate=False, t
     :param annotate: whether to save dependency annotations in "extra" dict of layer 0
     :param terminals_only: create only terminals (with any annotation if specified), no non-terminals
     :param dep: return dependency graph rather than converted UCCA passage
+    :param enhanced: whether to include enhanced edges
     :param preprocess: preprocess the dependency graph before converting to UCCA (or returning it)?
 
     :return generator of Passage objects
     """
     from semstr.conversion.conllu import ConlluConverter
-    return ConlluConverter().from_format(lines, passage_id=passage_id, return_original=return_original,
-                                         annotate=annotate, terminals_only=terminals_only, dep=dep,
-                                         preprocess=preprocess, format=kwargs.get("format"))
+    return ConlluConverter(enhanced=enhanced).from_format(lines, passage_id=passage_id, return_original=return_original,
+                                                          annotate=annotate, terminals_only=terminals_only, dep=dep,
+                                                          preprocess=preprocess, format=kwargs.get("format"))
 
 
 def to_conllu(passage, test=False, enhanced=True, preprocess=True, **kwargs):
@@ -142,8 +143,8 @@ def to_conllu(passage, test=False, enhanced=True, preprocess=True, **kwargs):
     :return list of lines representing the semantic dependencies in the passage
     """
     from semstr.conversion.conllu import ConlluConverter
-    return ConlluConverter().to_format(passage, test=test, enhanced=enhanced, preprocess=preprocess,
-                                       format=kwargs.get("format"))
+    return ConlluConverter(enhanced=enhanced).to_format(passage, test=test, preprocess=preprocess,
+                                                        format=kwargs.get("format"))
 
 
 def from_sdp(lines, passage_id, mark_aux=False, return_original=False, dep=False, preprocess=True, **kwargs):

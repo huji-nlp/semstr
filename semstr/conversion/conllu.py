@@ -57,7 +57,7 @@ class ConlluConverter(ConllConverter):
         yield from super().generate_lines(graph, test)
 
     def from_format(self, lines, passage_id, return_original=False, annotate=False, terminals_only=False,
-                    dep=False, preprocess=True, **kwargs):
+                    dep=False, enhanced=True, preprocess=True, **kwargs):
         for graph in self.generate_graphs(lines):
             if not graph.id:
                 graph.id = passage_id

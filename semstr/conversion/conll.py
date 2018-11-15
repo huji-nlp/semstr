@@ -1,5 +1,4 @@
 import re
-
 from ucca.layer1 import EdgeTags
 
 from .dep import DependencyConverter
@@ -20,12 +19,14 @@ class ConllConverter(DependencyConverter):
             edges.append(self.Edge.create(head_position, rel))
         if len(enhanced_misc) < 1 or enhanced_misc[0] == "_":
             enhanced = "_"
-        else:
+        elif self.enhanced:
             enhanced = enhanced_misc[0]
             for enhanced_spec in enhanced.split("|"):
                 enhanced_head_position, _, enhanced_rel = enhanced_spec.partition(":")
                 if enhanced_head_position not in (position, head_position):
                     edges.append(self.Edge(enhanced_head_position, enhanced_rel, remote=True))
+        else:
+            enhanced = None
         if len(enhanced_misc) < 2 or enhanced_misc[1] == "_":
             misc = "_"
         else:
