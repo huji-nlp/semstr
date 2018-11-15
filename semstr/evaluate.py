@@ -122,7 +122,7 @@ def evaluate_all(evaluate, files, name=None, verbose=0, quiet=False, basename=Fa
                  units=False, errors=False, unlabeled=False, normalize=True, constructions=None, **kwargs):
     guessed, ref = [iter(read_files(f, verbose=verbose, force_basename=basename, **kwargs)) for f in files[:2]]
     ref_yield_tags = repeat(None) if len(files) < 3 or files[2] is None else \
-        iter(read_files(files[2], verbose=verbose, dep=True, **kwargs))
+        iter(read_files(files[2], verbose=verbose, dep=True, enhanced=False, **kwargs))
     t = tqdm(zip(guessed, ref, ref_yield_tags), unit=" passages", desc=name, total=len(files[1]))
     for (g, r, ryt) in t:
         if matching_ids:
