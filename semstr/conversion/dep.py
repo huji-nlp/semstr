@@ -98,6 +98,10 @@ class DependencyConverter(FormatConverter):
             return ""
 
         @property
+        def text(self):
+            return self.token.text
+
+        @property
         def attrib(self):
             return {}
 
