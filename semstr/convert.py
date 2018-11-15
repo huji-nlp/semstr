@@ -19,32 +19,34 @@ description = """Parses files in the specified format, and writes as the specifi
 Each passage is written to the file: <outdir>/<prefix><passage_id>.<extension> """
 
 
-def from_conll(lines, passage_id, return_original=False, dep=False, **kwargs):
+def from_conll(lines, passage_id, return_original=False, dep=False, preprocess=True, **kwargs):
     """Converts from parsed text in CoNLL format to a Passage object.
 
     :param lines: iterable of lines in CoNLL format, describing a single passage.
     :param passage_id: ID to set for passage
     :param return_original: return triple of (UCCA passage, CoNLL string, sentence ID)
     :param dep: return dependency graph rather than converted UCCA passage
+    :param preprocess: preprocess the dependency graph before converting to UCCA (or returning it)?
 
     :return generator of Passage objects
     """
     from semstr.conversion.conll import ConllConverter
     return ConllConverter().from_format(lines, passage_id=passage_id, return_original=return_original, dep=dep,
-                                        format=kwargs.get("format"))
+                                        preprocess=preprocess, format=kwargs.get("format"))
 
 
-def to_conll(passage, test=False, tree=False, **kwargs):
+def to_conll(passage, test=False, tree=False, preprocess=True, **kwargs):
     """ Convert from a Passage object to a string in CoNLL-X format (conll)
 
     :param passage: the Passage object to convert
     :param test: whether to omit the head and deprel columns. Defaults to False
     :param tree: whether to omit rows for non-primary parents. Defaults to False
+    :param preprocess: preprocess the converted dependency graph before returning it?
 
     :return list of lines representing the dependencies in the passage
     """
     from semstr.conversion.conll import ConllConverter
-    return ConllConverter(tree=tree).to_format(passage, test, format=kwargs.get("format"))
+    return ConllConverter(tree=tree).to_format(passage, test, preprocess=preprocess, format=kwargs.get("format"))
 
 
 def from_export(lines, passage_id=None, return_original=False, **kwargs):
@@ -110,7 +112,7 @@ def to_amr(passage, metadata=True, wikification=True, use_original=True, verbose
 
 
 def from_conllu(lines, passage_id=None, return_original=False, annotate=False, terminals_only=False, dep=False,
-                **kwargs):
+                preprocess=True, **kwargs):
     """Converts from parsed text in Universal Dependencies format to a Passage object.
 
     :param lines: iterable of lines in Universal Dependencies format, describing a single passage.
@@ -119,29 +121,32 @@ def from_conllu(lines, passage_id=None, return_original=False, annotate=False, t
     :param annotate: whether to save dependency annotations in "extra" dict of layer 0
     :param terminals_only: create only terminals (with any annotation if specified), no non-terminals
     :param dep: return dependency graph rather than converted UCCA passage
+    :param preprocess: preprocess the dependency graph before converting to UCCA (or returning it)?
 
     :return generator of Passage objects
     """
     from semstr.conversion.conllu import ConlluConverter
     return ConlluConverter().from_format(lines, passage_id=passage_id, return_original=return_original,
                                          annotate=annotate, terminals_only=terminals_only, dep=dep,
-                                         format=kwargs.get("format"))
+                                         preprocess=preprocess, format=kwargs.get("format"))
 
 
-def to_conllu(passage, test=False, enhanced=True, **kwargs):
+def to_conllu(passage, test=False, enhanced=True, preprocess=True, **kwargs):
     """ Convert from a Passage object to a string in Universal Dependencies format (conllu)
 
     :param passage: the Passage object to convert
     :param test: whether to omit the head and deprel columns. Defaults to False
     :param enhanced: whether to include enhanced edges
+    :param preprocess: preprocess the converted dependency graph before returning it?
 
     :return list of lines representing the semantic dependencies in the passage
     """
     from semstr.conversion.conllu import ConlluConverter
-    return ConlluConverter().to_format(passage, test=test, enhanced=enhanced, format=kwargs.get("format"))
+    return ConlluConverter().to_format(passage, test=test, enhanced=enhanced, preprocess=preprocess,
+                                       format=kwargs.get("format"))
 
 
-def from_sdp(lines, passage_id, mark_aux=False, return_original=False, dep=False, **kwargs):
+def from_sdp(lines, passage_id, mark_aux=False, return_original=False, dep=False, preprocess=True, **kwargs):
     """Converts from parsed text in SemEval 2015 SDP format to a Passage object.
 
     :param lines: iterable of lines in SDP format, describing a single passage.
@@ -149,26 +154,29 @@ def from_sdp(lines, passage_id, mark_aux=False, return_original=False, dep=False
     :param mark_aux: add a preceding # for labels of auxiliary edges added
     :param return_original: return triple of (UCCA passage, SDP string, sentence ID)
     :param dep: return dependency graph rather than converted UCCA passage
+    :param preprocess: preprocess the dependency graph before converting to UCCA (or returning it)?
 
     :return generator of Passage objects
     """
     from semstr.conversion.sdp import SdpConverter
     return SdpConverter(mark_aux=mark_aux).from_format(lines, passage_id=passage_id, return_original=return_original,
-                                                       dep=dep, format=kwargs.get("format"))
+                                                       dep=dep, preprocess=preprocess, format=kwargs.get("format"))
 
 
-def to_sdp(passage, test=False, tree=False, mark_aux=False, **kwargs):
+def to_sdp(passage, test=False, tree=False, mark_aux=False, preprocess=True, **kwargs):
     """ Convert from a Passage object to a string in SemEval 2015 SDP format (sdp)
 
     :param passage: the Passage object to convert
     :param test: whether to omit the top, head, frame, etc. columns. Defaults to False
     :param tree: whether to omit columns for non-primary parents. Defaults to False
     :param mark_aux: omit edges with labels with a preceding #
+    :param preprocess: preprocess the converted dependency graph before returning it?
 
     :return list of lines representing the semantic dependencies in the passage
     """
     from semstr.conversion.sdp import SdpConverter
-    return SdpConverter(mark_aux=mark_aux, tree=tree).to_format(passage, test=test, format=kwargs.get("format"))
+    return SdpConverter(mark_aux=mark_aux, tree=tree).to_format(passage, test=test, preprocess=preprocess,
+                                                                format=kwargs.get("format"))
 
 
 CONVERTERS = {

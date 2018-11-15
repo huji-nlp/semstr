@@ -54,7 +54,8 @@ def udpipe(sentences, model_name, verbose=False):
 def parse_udpipe(passages, model_name, verbose=False, annotate=False, terminals_only=False):
     passages1, passages2 = tee(passages)
     processed = udpipe((to_conllu_native(p, test=True, enhanced=False) for p in passages1), model_name, verbose)
-    return zip(passages2, from_conllu(processed, passage_id=None, annotate=annotate, terminals_only=terminals_only))
+    return zip(passages2, from_conllu(processed, passage_id=None, annotate=annotate, terminals_only=terminals_only,
+                                      preprocess=not terminals_only))
 
 
 def split(passage):

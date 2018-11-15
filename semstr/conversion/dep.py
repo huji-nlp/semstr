@@ -370,7 +370,6 @@ class DependencyConverter(FormatConverter):
                         edge.head = head
                     for edge in dep_node.incoming:
                         edge.head = outgoing[0].head
-        self.preprocess(graph, to_dep=False)
         remote_edges = []
         sorted_nodes = self._topological_sort(graph)
         for dep_node in sorted_nodes:  # Other nodes
@@ -413,7 +412,8 @@ class DependencyConverter(FormatConverter):
                     extra[self.MULTI_WORD_TEXT_ATTRIB] = multi_word.token.text
                     (extra[self.MULTI_WORD_START_ATTRIB], extra[self.MULTI_WORD_END_ATTRIB]) = multi_word.span
 
-    def from_format(self, lines, passage_id, return_original=False, terminals_only=False, dep=False, **kwargs):
+    def from_format(self, lines, passage_id, return_original=False, terminals_only=False, dep=False,
+                    preprocess=True, **kwargs):
         """Converts from parsed text in dependency format to a Passage object.
 
         :param lines: an iterable of lines in dependency format, describing a single passage.
@@ -421,6 +421,7 @@ class DependencyConverter(FormatConverter):
         :param return_original: return original passage in addition to converted one
         :param terminals_only: create only terminals (with any annotation if specified), no non-terminals
         :param dep: return dependency graph rather than converted UCCA passage
+        :param preprocess: preprocess the dependency graph before converting to UCCA (or returning it)?
 
         :return generator of Passage objects.
         """
@@ -428,6 +429,8 @@ class DependencyConverter(FormatConverter):
             if not graph.id:
                 graph.id = passage_id
             graph.format = kwargs.get("format") or graph.format
+            if preprocess:
+                self.preprocess(graph, to_dep=False)
             passage = graph if dep else self.build_passage(graph, terminals_only=terminals_only)
             yield (passage, self.lines_read, passage.ID) if return_original else passage
             self.lines_read = []
@@ -568,12 +571,13 @@ class DependencyConverter(FormatConverter):
                         edge.head = graph.root
                         edge.dependent = dep_node
 
-    def to_format(self, passage, test=False, enhanced=True, **kwargs):
+    def to_format(self, passage, test=False, enhanced=True, preprocess=True, **kwargs):
         """ Convert from a Passage object to a string in dependency format.
 
         :param passage: the Passage object to convert
         :param test: whether to omit the head and deprel columns. Defaults to False
         :param enhanced: whether to include enhanced edges
+        :param preprocess: preprocess the converted dependency graph before returning it?
 
         :return a list of strings representing the dependencies in the passage
         """
@@ -599,7 +603,8 @@ class DependencyConverter(FormatConverter):
                                        misc=terminal.extra.get("misc")))
         graph = self.Graph(dep_nodes, passage.ID, original_format=original_format)
         graph.link_heads()
-        self.preprocess(graph)
+        if preprocess:
+            self.preprocess(graph)
         lines += ["\t".join(map(str, entry)) for entry in self.generate_lines(graph, test)] + [""]
         return lines
 
