@@ -36,7 +36,7 @@ class DependencyConverter(FormatConverter):
             return self.id
 
         def by_id(self, i):
-            return self.nodes[int(i.split(".")[-1]) - 1]
+            return self.nodes[int(i.split(".")[-1])]
 
         def link_pre_terminals(self):
             preterminals = []
