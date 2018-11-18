@@ -1,10 +1,10 @@
-import re
 from collections import defaultdict
 from collections import namedtuple, OrderedDict
-# noinspection PyPackageRequirements
-from operator import attrgetter
 
 import penman
+import re
+# noinspection PyPackageRequirements
+from operator import attrgetter
 from ucca import layer0, layer1, convert, textutil
 
 from .format import FormatConverter
@@ -31,21 +31,32 @@ class AmrConverter(FormatConverter):
 
     def __init__(self):
         self.passage_id = self.nodes = self.return_original = self.save_original = self.remove_cycles = \
-            self.extensions = self.excluded = self.alignments = self.wikification = None
+            self.extensions = self.excluded = self.alignments = self.wikification = self.placeholders = None
         self.format = "amr"
 
     def from_format(self, lines, passage_id, return_original=False, save_original=True, remove_cycles=True,
-                    wikification=True, **kwargs):
+                    wikification=True, placeholders=True, **kwargs):
         self.passage_id = passage_id
         self.return_original = return_original
         self.save_original = save_original
         self.remove_cycles = remove_cycles
         self.wikification = wikification
-        self.extensions = [l for l in EXTENSIONS if kwargs.get(l)]
-        self.excluded = {i for l, r in EXTENSIONS.items() if l not in self.extensions for i in r}
+        self.placeholders = placeholders
+        self.set_extensions(**kwargs)
         for passage, graph in textutil.annotate_all(self._init_passages(self._amr_generator(lines), **kwargs),
                                                     as_array=True, as_tuples=True):
             yield self._build_passage(passage, graph)
+
+    def set_extensions(self, **kwargs):
+        self.extensions = [l for l in EXTENSIONS if kwargs.get(l)]
+        self.excluded = {i for l, r in EXTENSIONS.items() if l not in self.extensions for i in r}
+
+    @staticmethod
+    def introduce_placeholders(passage, wikification=True, **kwargs):
+        converter = AmrConverter()
+        converter.wikification = wikification
+        converter.set_extensions(**kwargs)
+        converter._update_labels(passage.layer(layer1.LAYER_ID))
 
     def _amr_generator(self, lines):
         amr_lines = []
@@ -94,7 +105,8 @@ class AmrConverter(FormatConverter):
         self._build_layer1(graph.amr, l1)
         self._build_layer0(self.align_nodes(graph.amr), l1, l0)
         self._update_implicit(l1)
-        self._update_labels(l1)
+        if self.placeholders:
+            self._update_labels(l1)
         original = self.header(passage) + graph.amr(alignments=False).split("\n") if \
             self.save_original or self.return_original else None
         if self.save_original:

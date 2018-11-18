@@ -76,7 +76,8 @@ def to_export(passage, test=False, tree=False, **kwargs):
     return ExportConverter().to_format(passage, test=test, tree=tree, format=kwargs.get("format"))
 
 
-def from_amr(lines, passage_id=None, return_original=False, save_original=True, wikification=False, **kwargs):
+def from_amr(lines, passage_id=None, return_original=False, save_original=True, wikification=False, placeholders=True,
+             **kwargs):
     """Converts from parsed text in AMR PENMAN format to a Passage object.
 
     :param lines: iterable of lines in AMR PENMAN format, describing a single passage.
@@ -84,12 +85,13 @@ def from_amr(lines, passage_id=None, return_original=False, save_original=True, 
     :param save_original: whether to save original AMR text in passage.extra
     :param return_original: return triple of (UCCA passage, AMR string, AMR ID)
     :param wikification: whether to use wikification for replacing node labels with placeholders based on tokens
+    :param placeholders: introduce placeholders into node labels when they include the terminal's text?
 
     :return generator of Passage objects
     """
     from semstr.conversion.amr import AmrConverter
     return AmrConverter().from_format(lines, passage_id=passage_id, return_original=return_original,
-                                      save_original=save_original, wikification=wikification,
+                                      save_original=save_original, wikification=wikification, placeholders=placeholders,
                                       format=kwargs.get("format"))
 
 
