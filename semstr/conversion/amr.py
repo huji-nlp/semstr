@@ -43,8 +43,10 @@ class AmrConverter(FormatConverter):
         self.wikification = wikification
         self.placeholders = placeholders
         self.set_extensions(**kwargs)
-        for passage, graph in textutil.annotate_all(self._init_passages(self._amr_generator(lines), **kwargs),
-                                                    as_array=True, as_tuples=True):
+        passages = self._init_passages(self._amr_generator(lines), **kwargs)
+        if placeholders:
+            passages = textutil.annotate_all(passages, as_array=True, as_tuples=True)
+        for passage, graph in passages:
             yield self._build_passage(passage, graph)
 
     def set_extensions(self, **kwargs):
