@@ -113,6 +113,10 @@ class DependencyConverter(FormatConverter):
         def ID(self):
             return "0.%d" % self.position
 
+        @property
+        def punct(self):
+            return self.is_punct
+
         def add_edges(self, edges):
             for remote in (False, True):
                 for edge in edges:
