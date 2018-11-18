@@ -703,7 +703,8 @@ class DependencyConverter(FormatConverter):
         return any(e.tag == self.TOP for e in self.find_headed_unit(unit).incoming)
 
     def is_punct(self, dep_node):
-        return dep_node.token and {dep_node.token.tag, dep_node.token.pos} & {layer0.NodeTags.Punct, self.punct_tag}
+        return bool(dep_node.token and
+                    {dep_node.token.tag, dep_node.token.pos} & {layer0.NodeTags.Punct, self.punct_tag})
 
     def is_flat(self, edge):
         return edge.stripped_rel == EdgeTags.Terminal
