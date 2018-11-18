@@ -75,6 +75,9 @@ class DependencyConverter(FormatConverter):
         def __iter__(self):
             return iter(self.nodes)
 
+        def __str__(self):
+            return " ".join(self.root.get_terminals()) if self.root else None
+
     class Node:
         def __init__(self, position=0, incoming=None, token=None, terminal=None, is_head=True, is_top=False,
                      is_multi_word=False, parent_multi_word=None, frame=None, enhanced=None, misc=None, span=None):
