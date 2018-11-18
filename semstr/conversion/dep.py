@@ -65,6 +65,9 @@ class DependencyConverter(FormatConverter):
             del args, kwargs
             return self
 
+        def is_punct(self, node):
+            return node.is_punct
+
         @property
         def all(self):
             return self
