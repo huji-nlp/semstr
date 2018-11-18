@@ -117,7 +117,7 @@ class ConlluConverter(ConllConverter):
                     if candidates:
                         head_edge = min(candidates, key=_attach_forward_sort_key)
                         head = (head_edge.head, head_edge.dependent)[to_dep]
-                        if not any(e.stripped_rel == edge.stripped_rel for e in head.outgoing):
+                        if not any(e.stripped_rel == edge.stripped_rel and e.head == edge.head for e in head.outgoing):
                             edge.head = head
                 if edge.stripped_rel == ACL:
                     remotes = [e.child for e in edge.child if e.remote]
