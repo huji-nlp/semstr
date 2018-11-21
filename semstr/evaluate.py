@@ -119,10 +119,12 @@ def read_files(files, verbose=0, force_basename=False, **kw):
 
 
 def evaluate_all(evaluate, files, name=None, verbose=0, quiet=False, basename=False, matching_ids=False,
-                 units=False, errors=False, unlabeled=False, normalize=True, constructions=None, **kwargs):
+                 units=False, unlabeled=False, **kwargs):
     guessed, ref = [iter(read_files(f, verbose=verbose, force_basename=basename, **kwargs)) for f in files[:2]]
+    ref_yield_kwargs = dict(kwargs)
+    ref_yield_kwargs.update(dep=True, enhanced=False)
     ref_yield_tags = repeat(None) if len(files) < 3 or files[2] is None else \
-        iter(read_files(files[2], verbose=verbose, dep=True, enhanced=False, **kwargs))
+        iter(read_files(files[2], verbose=verbose, **ref_yield_kwargs))
     t = tqdm(zip(guessed, ref, ref_yield_tags), unit=" passages", desc=name, total=len(files[1]))
     for (g, r, ryt) in t:
         if matching_ids:
@@ -140,9 +142,10 @@ def evaluate_all(evaluate, files, name=None, verbose=0, quiet=False, basename=Fa
             g.passage = g.converted if r.out_converter is None else r.out_converter(g.converted)
         if ryt is not None and ryt.in_converter is not None:
             ryt.passage = ryt.converted  # Passage for fine-grained yield reference must be in UCCA format or similar
-        result = evaluate(g.passage, r.passage, verbose=verbose > 1 or units, units=units, errors=errors,
-                          eval_type=UNLABELED if unlabeled else None, normalize=normalize,
-                          constructions=constructions, ref_yield_tags=ryt.passage if ryt else None)
+        evaluate_kwargs = dict(kwargs)
+        evaluate_kwargs.update(guessed=g.passage, ref=r.passage, eval_type=UNLABELED if unlabeled else None,
+                               ref_yield_tags=ryt.passage if ryt else None, units=units)
+        result = evaluate(verbose=verbose > 1 or units, **evaluate_kwargs)
         if not quiet:
             with ioutil.external_write_mode():
                 print("F1: %.3f" % result.average_f1(UNLABELED if unlabeled else LABELED))
@@ -219,6 +222,7 @@ if __name__ == '__main__':
     argparser.add_argument("-s", "--summary-file", help="file to write aggregated scores to, in CSV format")
     argparser.add_argument("-c", "--counts-file", help="file to write aggregated counts to, in CSV format")
     add_boolean_option(argparser, "unlabeled", "print unlabeled F1 for individual passages", short="u")
+    add_boolean_option(argparser, "enhanced", "read enhanced dependencies", default=True)
     add_boolean_option(argparser, "normalize", "normalize passages before evaluation", short="N", default=True)
     add_boolean_option(argparser, "matching-ids", "skip passages without a match (by ID)", short="i")
     add_boolean_option(argparser, "basename", "force passage ID to be file basename", short="b")

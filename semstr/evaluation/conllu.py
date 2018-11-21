@@ -14,7 +14,7 @@ class ConlluEvaluator(Evaluator):
         super().__init__(*args, fscore=True, errors=False, **kwargs)
         self.reference_yield_tags = None
 
-    def get_scores(self, s1, s2, eval_type, r=None):
+    def get_scores(self, s1, s2, eval_type, r=None, **kwargs):
         """
         :param s1: sentence to compare
         :param s2: reference sentence
@@ -25,7 +25,7 @@ class ConlluEvaluator(Evaluator):
         :returns EvaluatorResults
         """
         self.reference_yield_tags = None if r is None else create_passage_yields(r)[ALL_EDGES.name]
-        converter = ConlluConverter()
+        converter = ConlluConverter(**kwargs)
         g1, g2 = list(map(list, list(map(converter.generate_graphs, (s1, s2)))))
         t1, t2 = list(map(join_tokens, (g1, g2)))
         assert t1 == t2, "Tokens do not match: '%s' != '%s'" % diff(t1, t2)
@@ -75,14 +75,14 @@ def diff(s1, s2):
     return tuple(s[start - 1:-end] for s in (s1, s2))
 
 
-def evaluate(guessed, ref, ref_yield_tags=None, converter=None, verbose=False, eval_types=EVAL_TYPES, units=False,
-             constructions=DEFAULT, **kwargs):
+def evaluate(guessed, ref, ref_yield_tags=None, converter=None, verbose=False, eval_types=EVAL_TYPES,
+             units=False, constructions=DEFAULT, enhanced=True, **kwargs):
     del kwargs
     if converter is not None:
         guessed = converter(guessed)
         ref = converter(ref)
     evaluator = ConlluEvaluator(verbose, constructions, units)
-    return ConlluScores((eval_type, evaluator.get_scores(guessed, ref, eval_type, r=ref_yield_tags))
+    return ConlluScores((eval_type, evaluator.get_scores(guessed, ref, eval_type, r=ref_yield_tags, enhanced=enhanced))
                         for eval_type in eval_types)
 
 
