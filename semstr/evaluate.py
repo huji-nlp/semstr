@@ -11,7 +11,7 @@ from tqdm import tqdm
 from ucca import ioutil, constructions as ucca_constructions
 from ucca.evaluation import LABELED, UNLABELED, evaluate as evaluate_ucca
 
-from semstr.cfgutil import add_verbose_arg
+from semstr.cfgutil import add_verbose_arg, add_boolean_option
 from semstr.convert import CONVERTERS, UCCA_EXT
 
 desc = """Parses files in any format, and evaluates using the proper evaluator."""
@@ -218,15 +218,14 @@ if __name__ == '__main__':
     argparser.add_argument("-o", "--out-file", help="file to write results for each evaluated passage to in CSV format")
     argparser.add_argument("-s", "--summary-file", help="file to write aggregated scores to, in CSV format")
     argparser.add_argument("-c", "--counts-file", help="file to write aggregated counts to, in CSV format")
-    argparser.add_argument("-u", "--unlabeled", action="store_true", help="print unlabeled F1 for individual passages")
-    argparser.add_argument("-N", "--no-normalize", dest="normalize", action="store_false",
-                           help="do not normalize passages before evaluation")
-    argparser.add_argument("-i", "--matching-ids", action="store_true", help="skip passages without a match (by ID)")
-    argparser.add_argument("-b", "--basename", action="store_true", help="force passage ID to be file basename")
-    argparser.add_argument("--units", action="store_true", help="print mutual and unique units")
-    argparser.add_argument("--errors", action="store_true", help="print confusion matrix with error distribution")
+    add_boolean_option(argparser, "unlabeled", "print unlabeled F1 for individual passages", short="u")
+    add_boolean_option(argparser, "normalize", "normalize passages before evaluation", short="N", default=True)
+    add_boolean_option(argparser, "matching-ids", "skip passages without a match (by ID)", short="i")
+    add_boolean_option(argparser, "basename", "force passage ID to be file basename", short="b")
+    add_boolean_option(argparser, "units", "print mutual and unique units")
+    add_boolean_option(argparser, "errors", "print confusion matrix with error distribution")
     group = argparser.add_mutually_exclusive_group()
     add_verbose_arg(group, help="detailed evaluation output")
-    group.add_argument("-q", "--quiet", action="store_true", help="do not print anything")
+    add_boolean_option(group, "quiet", "do not print anything", short="q")
     ucca_constructions.add_argument(argparser)
     main(argparser.parse_args())
