@@ -206,8 +206,7 @@ def iter_files(patterns):
         yield from filenames
 
 
-def iter_passages(patterns, desc=None, input_format=None, prefix="", mark_aux=False, annotate=False,
-                  wikification=False, label_map_file=None, output_format=None):
+def iter_passages(patterns, desc=None, input_format=None, prefix="", label_map=None, output_format=None, **kwargs):
     t = tqdm(list(iter_files(patterns)), unit="file", desc=desc)
     for filename in t:
         t.set_postfix(file=filename)
@@ -224,8 +223,7 @@ def iter_passages(patterns, desc=None, input_format=None, prefix="", mark_aux=Fa
                 passage_id = basename
             converter = FROM_FORMAT.get(input_format or ext.lstrip("."), (from_text,))
             with open(filename, encoding="utf-8") as f:
-                yield from converter(f, prefix + passage_id, mark_aux=mark_aux, annotate=annotate,
-                                     wikification=wikification, format=output_format if label_map_file else None)
+                yield from converter(f, prefix + passage_id, format=output_format if label_map else None, **kwargs)
 
 
 def map_labels(passage, label_map_file):
@@ -246,9 +244,8 @@ def map_labels(passage, label_map_file):
             pass
 
 
-def write_passage(passage, out_dir=".", output_format=None, binary=False, verbose=False, test=False, tree=False,
-                  mark_aux=False, wikification=False, default_label=None, label_map=False, split=False, join=None,
-                  **kwargs):
+def write_passage(passage, out_dir=".", output_format=None, binary=False, verbose=False, label_map=False, split=False,
+                  join=None, **kwargs):
     del kwargs
     ext = {None: UCCA_EXT[binary], "amr": ".txt"}.get(output_format) or "." + output_format
     if join and join.endswith(ext):
@@ -262,26 +259,23 @@ def write_passage(passage, out_dir=".", output_format=None, binary=False, verbos
     else:
         converter = TO_FORMAT[output_format]
         with open(outfile, "a" if join else "w", encoding="utf-8") as f:
-            for line in converter(passage, test=test, tree=tree, mark_aux=mark_aux,
-                                  wikification=wikification, default_label=default_label,
-                                  format=output_format if label_map else None, sentences=split):
+            for line in converter(passage, format=output_format if label_map else None, sentences=split, **kwargs):
                 print(line, file=f)
 
 
 def main(args):
     os.makedirs(args.out_dir, exist_ok=True)
-    for passage in iter_passages(args.filenames, desc="Converting", input_format=args.input_format, prefix=args.prefix,
-                                 mark_aux=args.mark_aux, annotate=args.annotate, wikification=args.wikification,
-                                 label_map_file=args.label_map, output_format=args.output_format):
+    kwargs = vars(args)
+    for passage in iter_passages(args.filenames, desc="Converting", **kwargs):
         map_labels(passage, args.label_map)
         if args.normalize and args.output_format != "txt":
             normalize(passage, extra=args.extra_normalization)
         if args.lang:
             passage.attrib["lang"] = args.lang
-        write_passage(passage, **vars(args))
+        write_passage(passage, **kwargs)
         if args.validate:
             try:
-                errors = list(validate(passage, ucca_validation=args.ucca_validation, output_format=args.output_format))
+                errors = list(validate(passage, **kwargs))
             except ValueError:
                 continue
             if errors:

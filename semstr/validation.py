@@ -134,7 +134,9 @@ def check_tag_rules(constraints, node):
                 "Illegal edge: %s (%s)" % (join([edge]), valid)
 
 
-def validate(passage, normalization=False, extra_normalization=False, ucca_validation=False, output_format=None):
+def validate(passage, normalization=False, extra_normalization=False, ucca_validation=False, output_format=None,
+             **kwargs):
+    del kwargs
     if normalization:
         normalize(passage, extra=extra_normalization)
     if ucca_validation:
