@@ -1,9 +1,9 @@
+import re
 import sys
 from collections import defaultdict
 from itertools import groupby
-
-import re
 from operator import attrgetter
+
 from ucca import core, layer0, layer1
 from ucca.layer1 import EdgeTags
 
@@ -396,7 +396,7 @@ class DependencyConverter(FormatConverter):
                 edge, *remotes = incoming
                 self.add_fnode(edge, l1)
                 remote_edges += remotes
-            if dep_node.outgoing and not any(map(self.is_flat, dep_node.incoming)):
+            if self.requires_head(dep_node):
                 dep_node.preterminal = l1.add_fnode(  # Intermediate head for hierarchy
                     dep_node.preterminal, self.label_edge(
                         dep_node.incoming[0] if dep_node.incoming else self.top_edge(graph, dep_node)))
@@ -672,15 +672,17 @@ class DependencyConverter(FormatConverter):
         return line.split("\t")
 
     def add_fnode(self, edge, l1):
-        if self.is_flat(edge):  # Unanalyzable unit
+        rel = edge.stripped_rel if self.strip_suffixes else edge.rel
+        if edge.stripped_rel == self.ROOT.lower():  # Add top edge (like UCCA H) if top-level
+            edge.dependent.preterminal = edge.dependent.node = \
+                l1.add_fnode(edge.dependent.preterminal, self.label_edge(edge, top=True))
+        elif self.is_scene(edge):
+            edge.dependent.preterminal = edge.dependent.node = l1.add_fnode(None, rel)
+        elif self.is_primary(edge) or self.is_punct(edge.child):  # otherwise add child to head's node
+            edge.dependent.preterminal = edge.dependent.node = l1.add_fnode(edge.head.node, rel)
+        else:  # Unanalyzable unit, punctuation or remote (enhanced)
             edge.dependent.preterminal = edge.head.preterminal
             edge.dependent.node = edge.head.node
-        else:  # Add top-level edge (like UCCA H) if top-level, otherwise add child to head's node
-            edge.dependent.preterminal = edge.dependent.node = \
-                l1.add_fnode(edge.dependent.preterminal, self.label_edge(edge, top=True)) \
-                if edge.stripped_rel == self.ROOT.lower() else (
-                    l1.add_fnode(None if self.is_scene(edge) else edge.head.node,
-                                 edge.stripped_rel if self.strip_suffixes else edge.rel))
 
     @staticmethod
     def primary_edges(unit, tag=None):
@@ -721,3 +723,9 @@ class DependencyConverter(FormatConverter):
 
     def is_scene(self, edge):
         return False
+
+    def is_primary(self, edge):
+        return not self.is_punct(edge.child) and not self.is_flat(edge) and not edge.remote and not self.is_scene(edge)
+
+    def requires_head(self, dep_node):
+        return any(map(self.is_primary, dep_node.outgoing)) and not any(map(self.is_flat, dep_node.incoming))

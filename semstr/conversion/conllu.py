@@ -1,4 +1,5 @@
 from operator import attrgetter
+
 from ucca import layer0, layer1, textutil
 
 from .conll import ConllConverter
@@ -89,14 +90,14 @@ class ConlluConverter(ConllConverter):
         if "." in graph.id:
             yield ["# doc_id = " + graph.id.rpartition(".")[0]]
 
-    def add_fnode(self, edge, l1):
-        if edge.stripped_rel == AUX and edge.head.preterminal:  # Attached aux as sibling of main predicate
-            # TODO update to UCCA guidelines v1.0.6
-            edge.dependent.preterminal = edge.dependent.node = l1.add_fnode(
-                edge.head.preterminal, edge.stripped_rel if self.strip_suffixes else edge.rel)
-            edge.head.preterminal = l1.add_fnode(edge.head.preterminal, self.label_edge(edge))
-        else:
-            super().add_fnode(edge, l1)
+    # def add_fnode(self, edge, l1):
+    #     if edge.stripped_rel == AUX and edge.head.preterminal:  # Attached aux as sibling of main predicate
+    #         # TODO update to UCCA guidelines v1.0.6
+    #         edge.dependent.preterminal = edge.dependent.node = l1.add_fnode(
+    #             edge.head.preterminal, edge.stripped_rel if self.strip_suffixes else edge.rel)
+    #         edge.head.preterminal = l1.add_fnode(edge.head.preterminal, self.label_edge(edge))
+    #     else:
+    #         super().add_fnode(edge, l1)
 
     def preprocess(self, graph, to_dep=True):
         max_pos = (max(d.position for d in graph.nodes) if graph.nodes else 0) + 1
