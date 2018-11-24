@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
 
-import sys
-
-import configargparse
 import csv
 import os
 import re
+import sys
 from glob import glob
+
+import configargparse
 from tqdm import tqdm
 from ucca import ioutil, layer1
 from ucca.convert import from_text, to_text, from_json, to_json
 from ucca.normalization import normalize
 
-from semstr.cfgutil import add_verbose_arg
+from semstr.cfgutil import add_verbose_arg, add_boolean_option
 from semstr.validation import validate, print_errors
 
 description = """Parses files in the specified format, and writes as the specified format.
@@ -290,11 +290,11 @@ def main(args):
 
 
 def add_convert_args(p):
-    p.add_argument("-t", "--test", action="store_true",
-                   help="omit prediction columns (head and deprel for conll; top, pred, frame, etc. for sdp)")
-    p.add_argument("-T", "--tree", action="store_true", help="remove multiple parents to get a tree")
-    p.add_argument("-s", "--split", action="store_true", help="split each sentence to its own passage")
-    p.add_argument("-m", "--mark-aux", action="store_true", help="mark auxiliary edges introduced/omit edges")
+    add_boolean_option(p, "test", "omit prediction columns (head and deprel for conll; top, pred, frame, etc. for sdp)",
+                       short="t")
+    add_boolean_option(p, "tree", "remove multiple parents to get a tree", short="T")
+    add_boolean_option(p, "split", "split each sentence to its own passage", short="s")
+    add_boolean_option(p, "mark-aux", "mark auxiliary edges introduced/omit edges", short="m")
     p.add_argument("--label-map", help="CSV file specifying mapping of input edge labels to output edge labels")
 
 
@@ -306,15 +306,15 @@ if __name__ == '__main__':
     argparser.add_argument("-o", "--out-dir", default=".", help="output directory")
     argparser.add_argument("-j", "--join", help="concatenate all output files to a file with this name")
     argparser.add_argument("-p", "--prefix", default="", help="output passage ID prefix")
-    argparser.add_argument("-b", "--binary", action="store_true", help="write in binary format (.%s)" % UCCA_EXT[1])
-    argparser.add_argument("-a", "--annotate", action="store_true", help="store dependency annotations in 'extra' dict")
-    argparser.add_argument("-V", "--validate", action="store_true", help="validate every passage after conversion")
-    argparser.add_argument("-u", "--ucca-validation", action="store_true", help="apply UCCA-specific validations")
-    argparser.add_argument("--no-wikification", action="store_false", dest="wikification", help="no AMR wikification")
+    add_boolean_option(argparser, "binary", "write in binary format (.%s)" % UCCA_EXT[1], short="b")
+    add_boolean_option(argparser, "annotate", "store dependency annotations in 'extra' dict", short="a")
+    add_boolean_option(argparser, "validate", "validate every passage after conversion", short="V")
+    add_boolean_option(argparser, "ucca-validation", "apply UCCA-specific validations", short="u")
+    add_boolean_option(argparser, "enhanced", "read enhanced dependencies", default=True)
+    add_boolean_option(argparser, "wikification", "AMR wikification", default=True)
     argparser.add_argument("--default-label", help="use this for missing AMR labels, otherwise raise exception")
-    group = argparser.add_mutually_exclusive_group()
-    group.add_argument("--no-normalize", action="store_false", dest="normalize", help="do not normalize passage")
-    group.add_argument("-e", "--extra-normalization", action="store_true", help="more normalization rules")
+    add_boolean_option(argparser, "normalize", "normalize passage", default=True)
+    add_boolean_option(argparser, "extra-normalization", "more normalization rules")
     argparser.add_argument("-l", "--lang", help="small two-letter language code to set in output passage metadata")
     add_convert_args(argparser)
     add_verbose_arg(argparser, help="detailed output")
