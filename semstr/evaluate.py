@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 
+import csv
+import os
+import re
 import sys
 from itertools import groupby, repeat
 
 import configargparse
-import csv
-import os
-import re
 from tqdm import tqdm
 from ucca import ioutil, constructions as ucca_constructions
 from ucca.evaluation import LABELED, UNLABELED, evaluate as evaluate_ucca
@@ -152,6 +152,7 @@ def evaluate_all(evaluate, files, name=None, verbose=0, quiet=False, basename=Fa
         if verbose:
             with ioutil.external_write_mode():
                 result.print()
+        result.ID = r.ID
         yield result
 
 
@@ -185,10 +186,10 @@ def main(args):
     elif not args.verbose:
         summarize(summary, errors=args.errors)
     # noinspection PyTypeChecker
-    title2index = dict(map(reversed, enumerate(summary.titles(eval_type, prefix=False))))
-    write_csv(args.out_file, [summary.titles(eval_type)] + [align_fields(result.fields(eval_type),
-                                                                         result.titles(eval_type),
-                                                                         title2index) for result in results])
+    title2index = dict(map(reversed, enumerate(summary.titles(eval_type, prefix=False, counts=True))))
+    write_csv(args.out_file, [["ID"] + summary.titles(eval_type, counts=True)] +
+              [[result.ID] + align_fields(result.fields(eval_type, counts=True),
+                                          result.titles(eval_type, counts=True), title2index) for result in results])
     write_csv(args.summary_file, [summary.titles(eval_type), summary.fields(eval_type)])
     write_csv(args.counts_file, [summary.titles(eval_type, counts=True), summary.fields(eval_type, counts=True)])
 
