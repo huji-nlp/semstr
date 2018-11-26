@@ -1,5 +1,4 @@
 from operator import attrgetter
-
 from ucca import layer0, layer1, textutil
 
 from .conll import ConllConverter
@@ -35,7 +34,7 @@ APPOS = "appos"
 ACL = "acl"
 
 
-HIGH_ATTACHING = {layer1.EdgeTags.Connector: (CONJ,), CC: (CONJ,), MARK: (ADVCL, XCOMP)}  # trigger: attach to rel
+HIGH_ATTACHING = {layer1.EdgeTags.Connector: (CONJ,), CC: (CONJ,), MARK: (ADVCL,)}  # trigger: attach to rel
 TOP_RELS = (layer1.EdgeTags.ParallelScene, PARATAXIS)
 PUNCT_RELS = (ConllConverter.PUNCT, layer1.EdgeTags.Punctuation)
 FLAT_RELS = (FLAT, layer1.EdgeTags.Terminal)
