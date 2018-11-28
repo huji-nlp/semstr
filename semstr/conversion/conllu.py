@@ -23,6 +23,8 @@ ATTR_GETTERS = {
 
 PUNCT_TAG = "PUNCT"
 FLAT = "flat"
+FIXED = "fixed"
+GOESWITH = "goeswith"
 PARATAXIS = "parataxis"
 CC = "cc"
 CONJ = "conj"
@@ -37,8 +39,11 @@ ACL = "acl"
 HIGH_ATTACHING = {layer1.EdgeTags.Connector: (CONJ,), CC: (CONJ,), MARK: (ADVCL,)}  # trigger: attach to rel
 TOP_RELS = (layer1.EdgeTags.ParallelScene, PARATAXIS)
 PUNCT_RELS = (ConllConverter.PUNCT, layer1.EdgeTags.Punctuation)
-FLAT_RELS = (FLAT, layer1.EdgeTags.Terminal)
-REL_REPLACEMENTS = (FLAT_RELS, PUNCT_RELS)
+FLAT_RELS = (FLAT, FIXED, GOESWITH, layer1.EdgeTags.Terminal)
+REL_REPLACEMENTS = (
+    ([ConllConverter.PUNCT], [layer1.EdgeTags.Punctuation]),
+    ([FLAT, FIXED, GOESWITH], [layer1.EdgeTags.Terminal])
+)
 
 
 class ConlluConverter(ConllConverter):
@@ -106,8 +111,8 @@ class ConlluConverter(ConllConverter):
             for edge in dep_node.incoming:
                 if not to_dep or not self.is_ucca:
                     for source, target in REL_REPLACEMENTS:
-                        if edge.stripped_rel == (source, target)[to_dep]:
-                            edge.rel = (target, source)[to_dep]
+                        if edge.stripped_rel in (source, target)[to_dep]:
+                            edge.rel = (target, source)[to_dep][0]
                 if edge.rel == self.HEAD:
                     edge.rel = XCOMP
                 rels = HIGH_ATTACHING.get(edge.stripped_rel)
