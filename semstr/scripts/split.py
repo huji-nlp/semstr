@@ -23,7 +23,7 @@ def main(args):
                     clean = line.lstrip()
                     m_id = ID_PATTERN.match(clean) or \
                         re.match("#\s*(\d+).*", line) or re.match("#\s*sent_id\s*=\s*(\S+)", line)
-                    m_docid = re.match("#\s*(?:new)doc[ _]id\s*=\s*(\S+)", line)
+                    m_docid = re.match("#\s*(?:new)?doc[ _]id\s*=\s*(\S+)", line)
                     if m_id or m_docid or not clean or clean[0] != COMMENT_PREFIX or re.match("#\s*::", clean):
                         lines.append(line)
                         if m_docid:
