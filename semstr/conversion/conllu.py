@@ -1,3 +1,5 @@
+from itertools import repeat
+
 from operator import attrgetter
 from ucca import layer0, layer1, textutil
 
@@ -30,13 +32,21 @@ CC = "cc"
 CONJ = "conj"
 AUX = "aux"
 MARK = "mark"
+ADVMOD = "advmod"
 ADVCL = "advcl"
 XCOMP = "xcomp"
 APPOS = "appos"
 ACL = "acl"
+ROOT = "root"
 
-
-HIGH_ATTACHING = {layer1.EdgeTags.Connector: (CONJ,), CC: (CONJ,), MARK: (ADVCL,)}  # trigger: attach to rel
+# trigger: relations, recursive, forward
+HIGH_ATTACHING = {layer1.EdgeTags.Connector: ((CONJ,), False, True),
+                  CC: ((CONJ, PARATAXIS), False, True),
+                  ADVMOD: ((CONJ, PARATAXIS), True, True),
+                  MARK: ((ADVCL, CONJ, PARATAXIS, ROOT), True, True),
+                  CONJ: ((PARATAXIS, ROOT), True, False),
+                  PARATAXIS: ((ROOT,), True, False),
+                  layer1.EdgeTags.Linker: ((layer1.EdgeTags.ParallelScene,), True, False)}
 TOP_RELS = (layer1.EdgeTags.ParallelScene, PARATAXIS)
 PUNCT_RELS = (ConllConverter.PUNCT, layer1.EdgeTags.Punctuation)
 FLAT_RELS = (FLAT, FIXED, GOESWITH, layer1.EdgeTags.Terminal)
@@ -106,40 +116,63 @@ class ConlluConverter(ConllConverter):
     def preprocess(self, graph, to_dep=True):
         for dep_node in graph.nodes[::-1]:
             for edge in dep_node.incoming:
-                if not to_dep or not self.is_ucca:
-                    for source, target in REL_REPLACEMENTS:
-                        if edge.stripped_rel in (source, target)[to_dep]:
-                            edge.rel = (target, source)[to_dep][0]
-                if edge.rel == self.HEAD:  # Not supposed to happen unless the conversion to dependencies messed up
-                    edge.rel = XCOMP  # Most likely replacement
-                if to_dep or edge.head.position > dep_node.position:  # Workaround for left-going edges in UD
-                    relations = HIGH_ATTACHING.get(edge.stripped_rel)
-                    if relations:  # Look for conj if current edge is cc; look for advcl if current edge is mark
-                        candidates = [e for e in (edge.head.outgoing if to_dep else edge.head.incoming)
-                                      if e.stripped_rel in relations and not e.remote
-                                      and (not to_dep or e.dependent.position > dep_node.position)]  # Result left-going
-                        if candidates:  # There should only be one unless to_dep
-                            head_edge = min(candidates, key=attrgetter("dependent.position"))  # Relevant only if to_dep
-                            head = head_edge.dependent if to_dep else head_edge.head
-                            if not to_dep or not any(  # Avoid attaching multiple dependents to the same head
-                                    e.stripped_rel == edge.stripped_rel and e.head == edge.head for e in head.outgoing):
-                                edge.head = head
-                if edge.stripped_rel == ACL:  # Fix ref head in relative clauses
-                    remotes = [e.child for e in edge.child if e.remote]
-                    if len(remotes) == 1:
-                        edge.head = remotes[0]
+                self.replace_relation(edge, to_dep)
+                self.reattach(dep_node, edge, to_dep)
+                self.fix_remote(edge)
+        self.fix_punctuation(graph, to_dep)
+        super().preprocess(graph, to_dep=to_dep)
+        self.set_enhanced(graph, to_dep)
+
+    def replace_relation(self, edge, to_dep):
+        if not to_dep or not self.is_ucca:
+            for source, target in REL_REPLACEMENTS:
+                if edge.stripped_rel in (source, target)[to_dep]:
+                    edge.rel = (target, source)[to_dep][0]
+        if edge.rel == self.HEAD:  # Not supposed to happen unless the conversion to dependencies messed up
+            edge.rel = XCOMP  # Most likely replacement
+
+    @staticmethod
+    def fix_remote(edge):
+        if edge.stripped_rel == ACL:  # Fix ref head in relative clauses
+            remotes = [e.child for e in edge.child if e.remote]
+            if len(remotes) == 1:
+                edge.head = remotes[0]
+
+    @staticmethod
+    def reattach(dep_node, edge, to_dep):
+        # Workaround for left-going edges in UD:
+        relations, recursive, forward = HIGH_ATTACHING.get(edge.stripped_rel, repeat(None, 3))
+        if relations and (to_dep or not forward or edge.head.position > dep_node.position):
+            while True:  # Look for conj if current edge is cc; look for advcl if current edge is mark
+                candidates = [e for e in (edge.head.outgoing if to_dep else edge.head.incoming)
+                              if e.stripped_rel in relations and not e.remote
+                              and (not to_dep or e.dependent.position > dep_node.position)]  # Result left-going
+                if candidates:  # There should only be one unless to_dep
+                    head_edge = min(candidates, key=attrgetter("dependent.position"))  # Relevant only if to_dep
+                    head = head_edge.dependent if to_dep else head_edge.head
+                    if not to_dep or not any(  # Avoid attaching multiple dependents to the same head
+                            e.stripped_rel == edge.stripped_rel and e.head == edge.head for e in head.outgoing):
+                        edge.head = head
+                else:
+                    break
+                if not recursive:
+                    break
+
+    def fix_punctuation(self, graph, to_dep):
         if to_dep:
             for dep_node in graph.nodes:
                 for edge in dep_node.incoming:
                     if edge.stripped_rel in PUNCT_RELS:
-                            heads = [d for d in graph.nodes if self.between(dep_node, d.incoming, CONJ)
-                                     and not any(e.stripped_rel in (PUNCT_RELS + (CC,)) and
-                                                 dep_node.position < e.dependent.position < d.position
-                                                 for e in d.outgoing)] or \
-                                    [d for d in graph.nodes if self.between(dep_node, d.outgoing, APPOS)]
-                            if heads:
-                                edge.head = heads[0]
-        super().preprocess(graph, to_dep=to_dep)
+                        heads = [d for d in graph.nodes if self.between(dep_node, d.incoming, CONJ)
+                                 and not any(e.stripped_rel in (PUNCT_RELS + (CC,)) and
+                                             dep_node.position < e.dependent.position < d.position
+                                             for e in d.outgoing)] or \
+                                [d for d in graph.nodes if self.between(dep_node, d.outgoing, APPOS)]
+                        if heads:
+                            edge.head = heads[0]
+
+    @staticmethod
+    def set_enhanced(graph, to_dep):
         if to_dep:
             for dep_node in graph.nodes:
                 if dep_node.incoming:

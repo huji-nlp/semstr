@@ -1,9 +1,9 @@
-import re
 import sys
 from collections import defaultdict
 from itertools import groupby
-from operator import attrgetter
 
+import re
+from operator import attrgetter
 from ucca import core, layer0, layer1
 from ucca.layer1 import EdgeTags
 
@@ -575,7 +575,7 @@ class DependencyConverter(FormatConverter):
                         else:
                             continue
                     is_parentless = False  # Found primary parent
-                if is_parentless and self.tree:  # Must have exactly one root
+                if to_dep and is_parentless and self.tree:  # Must have exactly one root
                     dep_node.incoming = []
                     if roots:  # Root already exist, so attach as its child
                         edge = self.Edge(head_index=roots[0].position, rel=self.orphan_label(dep_node), remote=False)
