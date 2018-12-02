@@ -32,21 +32,19 @@ CC = "cc"
 CONJ = "conj"
 AUX = "aux"
 MARK = "mark"
-ADVMOD = "advmod"
 ADVCL = "advcl"
 XCOMP = "xcomp"
 APPOS = "appos"
 ACL = "acl"
 ROOT = "root"
 
-# trigger: relations, recursive, forward
-HIGH_ATTACHING = {layer1.EdgeTags.Connector: ((CONJ,), False, True),
-                  CC: ((CONJ, PARATAXIS), False, True),
-                  ADVMOD: ((CONJ, PARATAXIS), True, True),
-                  MARK: ((ADVCL, CONJ, PARATAXIS, ROOT), True, True),
-                  CONJ: ((PARATAXIS, ROOT), True, False),
-                  PARATAXIS: ((ROOT,), True, False),
-                  layer1.EdgeTags.Linker: ((layer1.EdgeTags.ParallelScene,), True, False)}
+# trigger: immediate parent relation, recursive relations, forward?
+HIGH_ATTACHING = {CC: (CONJ, False, True),
+                  MARK: (ADVCL, False, True),
+                  CONJ: (PARATAXIS, (PARATAXIS, ROOT), False),
+                  PARATAXIS: (ROOT, False, False),
+                  layer1.EdgeTags.Connector: (CONJ, False, True),
+                  layer1.EdgeTags.Linker: (layer1.EdgeTags.ParallelScene, False, False)}
 TOP_RELS = (layer1.EdgeTags.ParallelScene, PARATAXIS)
 PUNCT_RELS = (ConllConverter.PUNCT, layer1.EdgeTags.Punctuation)
 FLAT_RELS = (FLAT, FIXED, GOESWITH, layer1.EdgeTags.Terminal)
@@ -141,9 +139,10 @@ class ConlluConverter(ConllConverter):
     @staticmethod
     def reattach(dep_node, edge, to_dep):
         # Workaround for left-going edges in UD:
-        relations, recursive, forward = HIGH_ATTACHING.get(edge.stripped_rel, repeat(None, 3))
-        if relations and (to_dep or not forward or edge.head.position > dep_node.position):
-            while True:  # Look for conj if current edge is cc; look for advcl if current edge is mark
+        relation, recursive, forward = HIGH_ATTACHING.get(edge.stripped_rel, repeat(None, 3))
+        if relation and (to_dep or not forward or edge.head.position > dep_node.position):
+            relations = (relation,)
+            while relations:  # Look for conj if current edge is cc; look for advcl if current edge is mark
                 candidates = [e for e in (edge.head.outgoing if to_dep else edge.head.incoming)
                               if e.stripped_rel in relations and not e.remote
                               and (not to_dep or e.dependent.position > dep_node.position)]  # Result left-going
@@ -155,8 +154,7 @@ class ConlluConverter(ConllConverter):
                         edge.head = head
                 else:
                     break
-                if not recursive:
-                    break
+                relations = recursive
 
     def fix_punctuation(self, graph, to_dep):
         if to_dep:
