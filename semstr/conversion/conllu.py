@@ -104,27 +104,27 @@ class ConlluConverter(ConllConverter):
     #         super().add_fnode(edge, l1)
 
     def preprocess(self, graph, to_dep=True):
-        max_pos = (max(d.position for d in graph.nodes) if graph.nodes else 0) + 1
         for dep_node in graph.nodes[::-1]:
-            def _attach_forward_sort_key(e):
-                return e.dependent.position + (max_pos if e.dependent.position < dep_node.position else 0)
             for edge in dep_node.incoming:
                 if not to_dep or not self.is_ucca:
                     for source, target in REL_REPLACEMENTS:
                         if edge.stripped_rel in (source, target)[to_dep]:
                             edge.rel = (target, source)[to_dep][0]
-                if edge.rel == self.HEAD:
-                    edge.rel = XCOMP
-                rels = HIGH_ATTACHING.get(edge.stripped_rel)
-                if rels:
-                    candidates = [e for e in (edge.head.incoming, edge.head.outgoing)[to_dep]
-                                  if e.stripped_rel in rels and not e.remote]
-                    if candidates:
-                        head_edge = min(candidates, key=_attach_forward_sort_key)
-                        head = (head_edge.head, head_edge.dependent)[to_dep]
-                        if not any(e.stripped_rel == edge.stripped_rel and e.head == edge.head for e in head.outgoing):
-                            edge.head = head
-                if edge.stripped_rel == ACL:
+                if edge.rel == self.HEAD:  # Not supposed to happen unless the conversion to dependencies messed up
+                    edge.rel = XCOMP  # Most likely replacement
+                if to_dep or edge.head.position > dep_node.position:  # Workaround for left-going edges in UD
+                    relations = HIGH_ATTACHING.get(edge.stripped_rel)
+                    if relations:  # Look for conj if current edge is cc; look for advcl if current edge is mark
+                        candidates = [e for e in (edge.head.outgoing if to_dep else edge.head.incoming)
+                                      if e.stripped_rel in relations and not e.remote
+                                      and (not to_dep or e.dependent.position > dep_node.position)]  # Result left-going
+                        if candidates:  # There should only be one unless to_dep
+                            head_edge = min(candidates, key=attrgetter("dependent.position"))  # Relevant only if to_dep
+                            head = head_edge.dependent if to_dep else head_edge.head
+                            if not to_dep or not any(  # Avoid attaching multiple dependents to the same head
+                                    e.stripped_rel == edge.stripped_rel and e.head == edge.head for e in head.outgoing):
+                                edge.head = head
+                if edge.stripped_rel == ACL:  # Fix ref head in relative clauses
                     remotes = [e.child for e in edge.child if e.remote]
                     if len(remotes) == 1:
                         edge.head = remotes[0]
