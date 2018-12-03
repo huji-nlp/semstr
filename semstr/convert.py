@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 
+import sys
+
+import configargparse
 import csv
 import os
 import re
-import sys
 from glob import glob
-
-import configargparse
 from tqdm import tqdm
 from ucca import ioutil, layer1
 from ucca.convert import from_text, to_text, from_json, to_json
@@ -246,7 +246,6 @@ def map_labels(passage, label_map_file):
 
 def write_passage(passage, out_dir=".", output_format=None, binary=False, verbose=False, label_map=False, split=False,
                   join=None, **kwargs):
-    del kwargs
     ext = {None: UCCA_EXT[binary], "amr": ".txt"}.get(output_format) or "." + output_format
     if join and join.endswith(ext):
         ext = ""
