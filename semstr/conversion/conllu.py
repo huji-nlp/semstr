@@ -39,12 +39,12 @@ ACL = "acl"
 ROOT = "root"
 
 # trigger: immediate parent relation, recursive relations, forward?
-HIGH_ATTACHING = {CC: (CONJ, False, True),
-                  MARK: (ADVCL, False, True),
-                  CONJ: (PARATAXIS, (PARATAXIS, ROOT), False),
-                  PARATAXIS: (ROOT, False, False),
-                  layer1.EdgeTags.Connector: (CONJ, False, True),
-                  layer1.EdgeTags.Linker: (layer1.EdgeTags.ParallelScene, False, False)}
+HIGH_ATTACHING = {CC: ((CONJ, ROOT), False, True),
+                  MARK: ((ADVCL,), False, True),
+                  CONJ: ((PARATAXIS,), (PARATAXIS, ROOT), False),
+                  PARATAXIS: ((ROOT,), False, False),
+                  layer1.EdgeTags.Connector: ((CONJ,), False, True),
+                  layer1.EdgeTags.Linker: ((layer1.EdgeTags.ParallelScene,), False, False)}
 TOP_RELS = (layer1.EdgeTags.ParallelScene, PARATAXIS)
 PUNCT_RELS = (ConllConverter.PUNCT, layer1.EdgeTags.Punctuation)
 FLAT_RELS = (FLAT, FIXED, GOESWITH, layer1.EdgeTags.Terminal)
@@ -139,9 +139,8 @@ class ConlluConverter(ConllConverter):
     @staticmethod
     def reattach(dep_node, edge, to_dep):
         # Workaround for left-going edges in UD:
-        relation, recursive, forward = HIGH_ATTACHING.get(edge.stripped_rel, repeat(None, 3))
-        if relation and (to_dep or not forward or edge.head.position > dep_node.position):
-            relations = (relation,)
+        relations, recursive, forward = HIGH_ATTACHING.get(edge.stripped_rel, repeat(None, 3))
+        if relations and (to_dep or not forward or edge.head.position > dep_node.position):
             while relations:  # Look for conj if current edge is cc; look for advcl if current edge is mark
                 candidates = [e for e in (edge.head.outgoing if to_dep else edge.head.incoming)
                               if e.stripped_rel in relations and not e.remote
