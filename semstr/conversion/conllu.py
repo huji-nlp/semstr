@@ -41,7 +41,8 @@ ROOT = "root"
 # trigger: immediate parent relation, recursive relations, forward?
 HIGH_ATTACHING = {CC: ((CONJ, ROOT), False, True),
                   MARK: ((ADVCL,), False, True),
-                  ADVCL: ((ROOT,), False, False),
+                  ADVCL: ((APPOS, ROOT), (APPOS, ROOT), False),
+                  APPOS: ((ROOT,), False, False),
                   CONJ: ((PARATAXIS, ROOT), (PARATAXIS, ROOT), False),
                   PARATAXIS: ((ROOT,), False, False),
                   layer1.EdgeTags.Connector: ((CONJ,), False, True),
