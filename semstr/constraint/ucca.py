@@ -27,5 +27,7 @@ class UccaConstraints(Constraints):
     # TagRule(trigger=(LinkerIncoming, None), allowed=(LinkerIncoming, None)),  # disabled due to passage 106 unit 1.300
 
     def allow_child(self, node, tag):
-        valid = Valid(message="%s incompatible as %s child" % (node, tag))
-        return valid(tag == EdgeTags.Punctuation) if any(e.child.tag == layer0.NodeTags.Punct for e in node) else True
+        if node.children and all(e.child.tag == layer0.NodeTags.Punct for e in node):
+            return Valid(tag == EdgeTags.Punctuation, message="%s must only be %s child, but got %s edge" % (
+                node, EdgeTags.Punctuation, tag))
+        return True
