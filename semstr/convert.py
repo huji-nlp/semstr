@@ -209,7 +209,7 @@ def iter_files(patterns):
 def iter_passages(patterns, desc=None, input_format=None, prefix="", label_map=None, output_format=None, **kwargs):
     t = tqdm(list(iter_files(patterns)), unit="file", desc=desc)
     for filename in t:
-        t.set_postfix(file=filename)
+        t.set_postfix(file=os.path.basename(filename))
         if not os.path.isfile(filename):
             raise IOError("Not a file: %s" % filename)
         no_ext, ext = os.path.splitext(filename)
