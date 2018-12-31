@@ -28,7 +28,7 @@ class ExportConverter(FormatConverter):
         self.passage_id = self.sentence_id = self.node_by_id = self.lines_read = None
 
     def _init_nodes(self, line):
-        m = re.match("#BOS\s+(\d+).*", line)
+        m = re.match(r"#BOS\s+(\d+).*", line)
         assert m, "Invalid first line: " + line
         self.sentence_id = m.group(1)
         self.node_by_id = {}
@@ -52,7 +52,7 @@ class ExportConverter(FormatConverter):
         self.lines_read.append(line)
         fields = self.split_line(line)
         text, tag = fields[:2]
-        m = re.match("#(\d+)", text)
+        m = re.match(r"#(\d+)", text)
         if m and int(m.group(1)) == ExportConverter.MIN_TERMINAL_ID:
             self.in_terminals_section = False
         if self.in_terminals_section:

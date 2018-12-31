@@ -21,7 +21,7 @@ os.chdir(os.path.dirname(os.path.abspath(this_file)))
 extras_require = {}
 install_requires = []
 for requirements_file in glob("requirements.*txt"):
-    suffix = re.match("[^.]*\.(.*)\.?txt", requirements_file).group(1).rstrip(".")
+    suffix = re.match(r"[^.]*\.(.*)\.?txt", requirements_file).group(1).rstrip(".")
     with open(requirements_file) as f:
         (extras_require.setdefault(suffix, []) if suffix else install_requires).extend(f.read().splitlines())
 

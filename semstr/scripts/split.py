@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-import configargparse
 import os
 import re
 from glob import glob
+
+import configargparse
 
 desc = """Split sentences/passages to separate files (important for shuffling before training the parser)"""
 
@@ -22,9 +23,9 @@ def main(args):
                 for line in f:
                     clean = line.lstrip()
                     m_id = ID_PATTERN.match(clean) or \
-                        re.match("#\s*(\d+).*", line) or re.match("#\s*sent_id\s*=\s*(\S+)", line)
-                    m_docid = re.match("#\s*(?:new)?doc[ _]id\s*=\s*(\S+)", line)
-                    if m_id or m_docid or not clean or clean[0] != COMMENT_PREFIX or re.match("#\s*::", clean):
+                        re.match(r"#\s*(\d+).*", line) or re.match(r"#\s*sent_id\s*=\s*(\S+)", line)
+                    m_docid = re.match(r"#\s*(?:new)?doc[ _]id\s*=\s*(\S+)", line)
+                    if m_id or m_docid or not clean or clean[0] != COMMENT_PREFIX or re.match(r"#\s*::", clean):
                         lines.append(line)
                         if m_docid:
                             doc_id = m_docid.group(1)

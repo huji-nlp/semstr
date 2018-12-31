@@ -1,4 +1,5 @@
 import re
+
 from ucca.layer1 import EdgeTags
 
 from .dep import DependencyConverter
@@ -31,7 +32,7 @@ class ConllConverter(DependencyConverter):
             misc = "_"
         else:
             misc = enhanced_misc[1]
-            m = re.match("CopyOf=(\d+)", misc)
+            m = re.match(r"CopyOf=(\d+)", misc)
             if m:
                 copy_of[position] = m.group(1)
         if "." in position:

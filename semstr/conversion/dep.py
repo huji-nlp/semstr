@@ -1,9 +1,9 @@
+import re
 import sys
 from collections import defaultdict
 from itertools import groupby
-
-import re
 from operator import attrgetter
+
 from ucca import core, layer0, layer1
 from ucca.layer1 import EdgeTags
 
@@ -336,11 +336,11 @@ class DependencyConverter(FormatConverter):
             line = line.strip()
             if line.startswith("#"):  # comment
                 self.lines_read.append(line)
-                m = re.match("#\s*(\d+).*", line) or re.match("#\s*sent_id\s*=\s*(\S+)", line)
+                m = re.match(r"#\s*(\d+).*", line) or re.match(r"#\s*sent_id\s*=\s*(\S+)", line)
                 if m:  # comment may optionally contain the sentence ID
                     sentence_id = m.group(1)
                 else:
-                    m = re.match("#\s*format\s*=\s*(\S+)", line)
+                    m = re.match(r"#\s*format\s*=\s*(\S+)", line)
                     if m:  # comment may alternatively contain the original format
                         original_format = m.group(1)
             elif line:
