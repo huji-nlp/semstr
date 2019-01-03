@@ -34,22 +34,22 @@ def main(args):
                             passage_id = m_id.group(1)
                     if not clean and any(map(str.strip, lines)):
                         if not args.doc_ids or doc_id in args.doc_ids:
-                            write_file(args.out_dir, doc_id, passage_id, ext, lines, quiet=args.quiet)
+                            write_file(args.out_dir, passage_id, ext, lines, quiet=args.quiet)
                         lines.clear()
                         if isinstance(passage_id, str):
                             passage_id = None
                         else:
                             passage_id += 1
                 if lines and (not args.doc_ids or doc_id in args.doc_ids):
-                    write_file(args.out_dir, doc_id, passage_id, ext, lines, quiet=args.quiet)
+                    write_file(args.out_dir, passage_id, ext, lines, quiet=args.quiet)
     if not args.quiet:
         print()
 
 
-def write_file(out_dir, doc_id, passage_id, ext, lines, quiet=False):
+def write_file(out_dir, passage_id, ext, lines, quiet=False):
     if passage_id is None:
         raise ValueError("Could not determine passage ID")
-    filename = os.path.join(out_dir, ("" if doc_id is None else (doc_id + ".")) + str(passage_id) + ext)
+    filename = os.path.join(out_dir, str(passage_id) + ext)
     with open(filename, "w", encoding="utf-8") as f:
         f.writelines(lines)
     if not quiet:
