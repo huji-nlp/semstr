@@ -179,6 +179,10 @@ class DependencyConverter(FormatConverter):
             return self.stripped_rel
 
         @property
+        def tags(self):
+            return [self.tag]
+
+        @property
         def parent(self):
             return self.head
 
