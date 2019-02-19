@@ -2,6 +2,7 @@
 
 import argparse
 from functools import partial
+
 from tqdm import tqdm
 from ucca import layer0
 from ucca.ioutil import write_passage, read_files_and_dirs, external_write_mode
@@ -39,13 +40,13 @@ def main(args):
     for spec in read_specs(args, converters=FROM_FORMAT_NO_PLACEHOLDERS):
         kwargs = dict(as_array=args.as_array, verbose=args.verbose, lang=spec.lang)
         passages = spec.passages
-        if spec.udpipe:
-            passages = annotate_udpipe(passages, spec.udpipe, **kwargs)
-        elif spec.conllu:
+        if spec.conllu:
             passages = copy_annotation(passages, spec.conllu, **kwargs)
+        elif spec.udpipe:
+            passages = annotate_udpipe(passages, spec.udpipe, **kwargs)
         for passage in annotate_all(passages if args.verbose else
                                     tqdm(passages, unit=" passages", desc="Annotating " + spec.out_dir),
-                                    replace=not spec.udpipe, **kwargs):
+                                    replace=spec.conllu or not spec.udpipe, **kwargs):
             if passage.extra.get("format") == "amr" and args.as_array:
                 AmrConverter.introduce_placeholders(passage)
             write_passage(passage, outdir=spec.out_dir, verbose=args.verbose, binary=args.binary)
