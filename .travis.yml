@@ -15,6 +15,7 @@ addons:
     - pandoc
 install:
   - python setup.py install
+  - python -m spacy download en
   - pip install pytest
 env:
   global:
