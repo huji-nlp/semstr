@@ -9,7 +9,6 @@ from ucca.ioutil import write_passage, read_files_and_dirs, external_write_mode
 from ucca.textutil import annotate_all
 
 from semstr.cfgutil import read_specs, add_specs_args
-from semstr.conversion.amr import AmrConverter
 from semstr.convert import FROM_FORMAT, from_conllu, from_amr
 from semstr.scripts.udpipe import annotate_udpipe, copy_tok_to_extra
 
@@ -48,6 +47,7 @@ def main(args):
                                     tqdm(passages, unit=" passages", desc="Annotating " + spec.out_dir),
                                     replace=spec.conllu or not spec.udpipe, **kwargs):
             if passage.extra.get("format") == "amr" and args.as_array:
+                from semstr.conversion.amr import AmrConverter
                 AmrConverter.introduce_placeholders(passage)
             write_passage(passage, outdir=spec.out_dir, verbose=args.verbose, binary=args.binary)
 
