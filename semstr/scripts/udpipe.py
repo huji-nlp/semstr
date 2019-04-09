@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 
-from itertools import tee, groupby
-from time import time
-
 import argparse
 import os
+from itertools import tee, groupby
 from operator import itemgetter
+from time import time
+
 from tqdm import tqdm
 from ucca import layer0, ioutil, core
 from ucca.convert import split2paragraphs
@@ -51,9 +51,11 @@ def udpipe(sentences, model_name, verbose=False):
     return processed.splitlines()
 
 
-def parse_udpipe(passages, model_name, verbose=False, annotate=False, terminals_only=False):
+def parse_udpipe(passages, model_name, verbose=False, annotate=False, terminals_only=False, parser=None):
+    if parser is None:
+        parser = udpipe
     passages1, passages2 = tee(passages)
-    processed = udpipe((to_conllu_native(p, test=True, enhanced=False) for p in passages1), model_name, verbose)
+    processed = parser((to_conllu_native(p, test=True, enhanced=False) for p in passages1), model_name, verbose)
     return zip(passages2, from_conllu(processed, passage_id=None, annotate=annotate, terminals_only=terminals_only,
                                       preprocess=not terminals_only))
 
@@ -65,12 +67,12 @@ def split(passage):
         raise RuntimeError("Failed splitting passage " + passage.ID) from e
 
 
-def annotate_udpipe(passages, model_name, as_array=True, verbose=False, lang=None):
+def annotate_udpipe(passages, model_name, as_array=True, verbose=False, lang=None, parser=None):
     if model_name:
         t1, t2 = tee((paragraph, passage) for passage in passages for paragraph in split(passage))
         paragraphs = map(itemgetter(0), t1)
         passages = map(itemgetter(1), t2)
-        for key, group in groupby(zip(passages, parse_udpipe(paragraphs, model_name, verbose,
+        for key, group in groupby(zip(passages, parse_udpipe(paragraphs, model_name, verbose, parser=parser,
                                                              annotate=True, terminals_only=True)), key=itemgetter(0)):
             passage = key
             for passage, (paragraph, annotated) in group:

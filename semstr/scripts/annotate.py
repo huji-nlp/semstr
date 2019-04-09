@@ -35,6 +35,18 @@ def copy_annotation(passages, conllu, as_array=True, verbose=False, lang=None):
         yield passage
 
 
+def annotate_stanfordnlp(passages, model_name, as_array=True, verbose=False, lang=None):
+    def _parser(conllu, *args, **kwargs):
+        del args, kwargs
+        import stanfordnlp
+        text = "\n".join(" ".join(line.split()[1] if line.strip() else line
+                                  for line in lines if line and not line.startswith("#"))
+                         for lines in conllu if lines)
+        nlp = stanfordnlp.Pipeline(lang=lang, tokenize_pretokenized=True)
+        return nlp(text).conll_file.conll_as_string().splitlines()
+    yield from annotate_udpipe(passages, model_name, as_array=as_array, verbose=verbose, lang=lang, parser=_parser)
+
+
 def main(args):
     for spec in read_specs(args, converters=FROM_FORMAT_NO_PLACEHOLDERS):
         kwargs = dict(as_array=args.as_array, verbose=args.verbose, lang=spec.lang)
@@ -43,6 +55,8 @@ def main(args):
             passages = copy_annotation(passages, spec.conllu, **kwargs)
         elif spec.udpipe:
             passages = annotate_udpipe(passages, spec.udpipe, **kwargs)
+        elif spec.stanfordnlp:
+            passages = annotate_stanfordnlp(passages, spec.stanfordnlp, **kwargs)
         for passage in annotate_all(passages if args.verbose else
                                     tqdm(passages, unit=" passages", desc="Annotating " + spec.out_dir),
                                     replace=spec.conllu or not spec.udpipe, **kwargs):
