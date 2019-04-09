@@ -59,7 +59,7 @@ def main(args):
             passages = annotate_stanfordnlp(passages, spec.stanfordnlp, **kwargs)
         for passage in annotate_all(passages if args.verbose else
                                     tqdm(passages, unit=" passages", desc="Annotating " + spec.out_dir),
-                                    replace=spec.conllu or not spec.udpipe, **kwargs):
+                                    replace=spec.conllu or not (spec.udpipe or spec.stanfordnlp), **kwargs):
             if passage.extra.get("format") == "amr" and args.as_array:
                 from semstr.conversion.amr import AmrConverter
                 AmrConverter.introduce_placeholders(passage)
