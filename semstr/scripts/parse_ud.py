@@ -2,6 +2,7 @@
 
 import argparse
 import operator
+
 from tqdm import tqdm
 from ucca import layer0, constructions as ucca_constructions
 from ucca.normalization import normalize
@@ -9,7 +10,7 @@ from ucca.textutil import annotate_all, Attr
 
 from semstr.cfgutil import add_verbose_arg, read_specs, add_specs_args
 from semstr.conversion.conllu import ConlluConverter
-from semstr.convert import TO_FORMAT, add_convert_args, write_passage, map_labels, FROM_FORMAT
+from semstr.convert import TO_FORMAT, write_passage, map_labels, FROM_FORMAT
 from semstr.evaluate import Scores, EVALUATORS
 from semstr.scripts.udpipe import parse_udpipe
 
@@ -73,7 +74,7 @@ if __name__ == '__main__':
     argparser = argparse.ArgumentParser(description=desc)
     add_specs_args(argparser)
     argparser.add_argument("--output-format", choices=TO_FORMAT, help="output file format (default: UCCA)")
-    add_convert_args(argparser)
+    argparser.add_argument("--label-map", help="CSV file specifying mapping of input edge labels to output edge labels")
     argparser.add_argument("-e", "--evaluate", action="store_true", help="evaluate against original passages")
     ucca_constructions.add_argument(argparser)
     argparser.add_argument("-W", "--no-write", action="store_false", dest="write", help="do not write parsed passages")
