@@ -67,7 +67,7 @@ def split(passage):
         raise RuntimeError("Failed splitting passage " + passage.ID) from e
 
 
-def annotate_udpipe(passages, model_name, as_array=True, verbose=False, lang=None, parser=None):
+def annotate_udpipe(passages, model_name, as_array=True, as_extra=True, verbose=False, lang=None, parser=None):
     if model_name:
         t1, t2 = tee((paragraph, passage) for passage in passages for paragraph in split(passage))
         paragraphs = map(itemgetter(0), t1)
@@ -83,7 +83,7 @@ def annotate_udpipe(passages, model_name, as_array=True, verbose=False, lang=Non
                     out_l0 = passage.layer(layer0.LAYER_ID)
                     if as_array:
                         out_l0.doc(i)[:] = l0.doc(1)
-                    else:
+                    if as_extra:
                         for terminal in out_l0.all:
                             if terminal.paragraph == i:
                                 copy_tok_to_extra(l0.by_position(terminal.para_pos), terminal, lang=lang)
