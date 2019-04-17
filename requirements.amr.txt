@@ -1,6 +1,6 @@
 penman==0.6.2
 smatch==1.0.1
-nltk==3.4
+nltk==3.4.1
 parsimonious==0.8.1
 word2number==1.1
 pyspotlight==0.7.2
