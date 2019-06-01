@@ -45,7 +45,8 @@ class Scores:
     Keeps score objects from multiple formats and/or languages
     """
     def __init__(self, scores):
-        self.elements = [(t.aggregate(s), l) for (t, l), s in groupby(scores,
+        sorted_by_lang_scores = sorted(scores,  key = lambda x: (type(x), getattr(x, "lang", None)))
+        self.elements = [(t.aggregate(s), l) for (t, l), s in groupby(sorted_by_lang_scores,
                                                                       lambda x: (type(x), getattr(x, "lang", None)))]
         element, _ = self.elements[0] if len(self.elements) == 1 else (None, None)
         self.name = element.name if element else "Multiple"
