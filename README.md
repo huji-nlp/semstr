@@ -27,7 +27,7 @@ Alternatively, install the latest code from GitHub (may be unstable):
 
 Author
 ------
-* Daniel Hershcovich: danielh@cs.huji.ac.il
+* Daniel Hershcovich: daniel.hershcovich@gmail.com
 
 
 License
