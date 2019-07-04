@@ -22,7 +22,7 @@ Alternatively, install the latest code from GitHub (may be unstable):
 
     git clone https://github.com/danielhers/semstr
     cd semstr
-    python setup.py install
+    pip install .
 
 
 Author
