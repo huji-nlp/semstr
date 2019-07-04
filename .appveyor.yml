@@ -22,7 +22,7 @@ install:
   - activate test-env
   - cinst pandoc
   - pip install .
-  - pyton setup.py install
+  - python setup.py install
   - python -m spacy download en
 
 build: off
