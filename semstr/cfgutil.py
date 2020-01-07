@@ -2,7 +2,7 @@ import os
 from glob import glob
 
 import configargparse
-from ucca.ioutil import read_files_and_dirs
+from ucca.ioutil import get_passages
 
 
 class Singleton(type):
@@ -74,7 +74,7 @@ def read_specs(args, converters=None):
         filenames = sorted(glob(pattern))
         if not filenames:
             raise IOError("Not found: " + pattern)
-        yield AnnotationSpecification(passages=read_files_and_dirs(filenames, converters=converters),
+        yield AnnotationSpecification(passages=get_passages(filenames, converters=converters),
                                       out_dir=spec[1] if len(spec) > 1 else args.out_dir,
                                       lang=spec[2] if len(spec) > 2 else args.lang,
                                       udpipe=spec[3] if len(spec) > 3 else args.udpipe,

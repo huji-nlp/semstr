@@ -5,7 +5,7 @@ from functools import partial
 
 from tqdm import tqdm
 from ucca import layer0
-from ucca.ioutil import write_passage, read_files_and_dirs, external_write_mode
+from ucca.ioutil import write_passage, get_passages, external_write_mode
 from ucca.textutil import annotate_all
 
 from semstr.cfgutil import read_specs, add_specs_args
@@ -22,7 +22,7 @@ FROM_FORMAT_NO_PLACEHOLDERS.update({"amr": partial(from_amr, placeholders=False)
 
 
 def copy_annotation(passages, conllu, by_id=False, as_array=True, as_extra=True, verbose=False, lang=None):
-    conllu_sentences = read_files_and_dirs(conllu, converters=CONVERTERS)
+    conllu_sentences = get_passages(conllu, converters=CONVERTERS)
     if by_id:
         conllu_sentences = {annotated.ID: annotated for annotated in conllu_sentences}
     for passage in passages:
