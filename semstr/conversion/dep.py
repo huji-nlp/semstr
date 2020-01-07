@@ -340,8 +340,8 @@ class DependencyConverter(FormatConverter):
             line = line.strip()
             if line.startswith("#"):  # comment
                 self.lines_read.append(line)
-                m = re.match(r"#\s*(\d+).*", line) or re.match(r"#\s*sent_id\s*=\s*(\S+)", line) or \
-                    re.match(r"#(\S+)$", line)
+                m = re.match(r"#(\S+)$", line) or re.match(r"#\s*(\d+).*", line) or \
+                    re.match(r"#\s*sent_id\s*=\s*(\S+)", line)
                 if m:  # comment may optionally contain the sentence ID
                     sentence_id = m.group(1)
                 else:
