@@ -21,8 +21,17 @@ FROM_FORMAT_NO_PLACEHOLDERS = dict(FROM_FORMAT)
 FROM_FORMAT_NO_PLACEHOLDERS.update({"amr": partial(from_amr, placeholders=False)})
 
 
-def copy_annotation(passages, conllu, as_array=True, as_extra=True, verbose=False, lang=None):
-    for passage, annotated in zip(passages, read_files_and_dirs(conllu, converters=CONVERTERS)):
+def copy_annotation(passages, conllu, by_id=False, as_array=True, as_extra=True, verbose=False, lang=None):
+    conllu_sentences = read_files_and_dirs(conllu, converters=CONVERTERS)
+    if by_id:
+        conllu_sentences = {annotated.ID: annotated for annotated in conllu_sentences}
+    for passage in passages:
+        if by_id:
+            annotated = conllu_sentences.get(passage.ID)
+            if annotated is None:
+                raise ValueError("Missing annotation for passage ID '%s'" % passage.ID)
+        else:
+            annotated = next(conllu_sentences)
         if verbose:
             with external_write_mode():
                 print("Reading annotation from '%s'" % annotated.ID)
@@ -55,7 +64,7 @@ def main(args):
         kwargs = dict(as_array=args.as_array, as_extra=args.as_extra, verbose=args.verbose, lang=spec.lang)
         passages = spec.passages
         if spec.conllu:
-            passages = copy_annotation(passages, spec.conllu, **kwargs)
+            passages = copy_annotation(passages, spec.conllu, by_id=args.by_id, **kwargs)
         elif spec.udpipe:
             passages = annotate_udpipe(passages, spec.udpipe, **kwargs)
         elif spec.stanfordnlp:
@@ -74,5 +83,7 @@ if __name__ == '__main__':
     add_specs_args(argparser)
     argparser.add_argument("-a", "--as-array", action="store_true", help="save annotations as array in passage level")
     argparser.add_argument("-e", "--as-extra", action="store_true", help="save annotations as extra in terminal level")
+    argparser.add_argument("-i", "--by-id", action="store_true", help="if copying CoNLL-U annotations, match them to"
+                                                                      "passages by id rather than by order")
     argparser.add_argument("-v", "--verbose", action="store_true", help="print tagged text for each passage")
     main(argparser.parse_args())
