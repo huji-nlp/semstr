@@ -11,9 +11,9 @@ addons:
 install:
   - pip install .
   - python setup.py install
-  - python -m spacy download en
-  - python -m spacy download en_core_web_md
-  - python -m spacy download de_core_news_md
+  - python -m spacy download en -q
+  - python -m spacy download en_core_web_md -q
+  - python -m spacy download de_core_news_md -q
   - pip install pytest
 env:
   global:

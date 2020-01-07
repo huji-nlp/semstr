@@ -62,7 +62,7 @@ parse_udpipe)
         --label-map=semstr/util/resources/ud_ucca_label_map.csv
     ;;
 tupa)
-    pip install -qU --upgrade-strategy=only-if-needed tupa
-    python -m spacy download en_core_web_md
+    pip install -U --upgrade-strategy=only-if-needed tupa
+    python -m spacy download en_core_web_md -q
     python -m tupa test_files/504.xml -t test_files/504.xml -I 1 --max-words-external=50 --word-dim=10 --lstm-layer-dim=10 --embedding-layer-dim=10
 esac
