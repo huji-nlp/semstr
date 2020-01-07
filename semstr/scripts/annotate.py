@@ -5,7 +5,7 @@ from functools import partial
 
 from tqdm import tqdm
 from ucca import layer0
-from ucca.ioutil import write_passage, get_passages, external_write_mode
+from ucca.ioutil import write_passage, get_passages, get_passages_with_progress_bar, external_write_mode
 from ucca.textutil import annotate_all
 
 from semstr.cfgutil import read_specs, add_specs_args
@@ -22,16 +22,14 @@ FROM_FORMAT_NO_PLACEHOLDERS.update({"amr": partial(from_amr, placeholders=False)
 
 
 def copy_annotation(passages, conllu, by_id=False, as_array=True, as_extra=True, verbose=False, lang=None):
-    conllu_sentences = get_passages(conllu, converters=CONVERTERS)
-    if by_id:
-        conllu_sentences = {annotated.ID: annotated for annotated in conllu_sentences}
+    conllu_sentences = {annotated.ID: annotated for annotated in
+                        get_passages_with_progress_bar(conllu, converters=CONVERTERS, desc="Reading '%s'" % conllu)} \
+        if by_id else get_passages(conllu, converters=CONVERTERS)
     for passage in passages:
-        if by_id:
-            annotated = conllu_sentences.get(passage.ID)
-            if annotated is None:
-                raise ValueError("Missing annotation for passage ID '%s'" % passage.ID)
-        else:
-            annotated = next(conllu_sentences)
+        try:
+            annotated = conllu_sentences[passage.ID] if by_id else next(conllu_sentences)
+        except (KeyError, StopIteration) as e:
+            raise ValueError("Missing annotation for passage ID '%s', by_id=%s" % (passage.ID, by_id)) from e
         if verbose:
             with external_write_mode():
                 print("Reading annotation from '%s'" % annotated.ID)
