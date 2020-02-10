@@ -1,4 +1,4 @@
-penman==0.6.2
+penman==0.11.1
 smatch==1.0.1
 nltk==3.4.5
 parsimonious==0.8.1
