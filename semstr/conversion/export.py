@@ -21,7 +21,7 @@ class ExportConverter(FormatConverter):
         def __call__(self):
             self._id += 1
             assert self._id <= ExportConverter.MAX_TERMINAL_ID, \
-                "More than %d nodes found" % ExportConverter.MAX_TERMINAL_ID
+                "More than %d nodes found" % (ExportConverter.MAX_TERMINAL_ID - ExportConverter.MIN_TERMINAL_ID + 1)
             return str(self._id)
 
     def __init__(self):
