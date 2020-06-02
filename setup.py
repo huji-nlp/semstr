@@ -55,10 +55,14 @@ class install(_install):
             out_file = os.path.join("semstr", "util", "resources", filename)
             if not os.path.exists(out_file):
                 self.announce("Getting '%s'..." % filename)
-                try:
-                    urllib.request.urlretrieve("https://amr.isi.edu/download/lists/" + filename, out_file)
-                except:
-                    self.warn("Failed downloading https://amr.isi.edu/download/lists/" + filename + " to " + out_file)
+                for attempt in 1, 2:
+                    try:
+                        urllib.request.urlretrieve("https://amr.isi.edu/download/lists/" + filename, out_file)
+                    except Exception as e:
+                        self.warn("Failed downloading https://amr.isi.edu/download/lists/" + filename + " to " + out_file + ": " + str(e))
+                        import ssl
+                        if getattr(ssl, '_create_unverified_context', None):
+                            ssl._create_default_https_context = ssl._create_unverified_context
 
         # Install actual package
         _install.run(self)
