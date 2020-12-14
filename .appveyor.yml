@@ -14,13 +14,12 @@ init:
 
 install:
   - cmd: git submodule update --init --recursive
-  - set PATH=%MINICONDA%;%MINICONDA%\Scripts;C:\Program Files (x86)\Pandoc;%PATH%
+  - set PATH=%MINICONDA%;%MINICONDA%\Scripts;%PATH%
   - conda config --set always_yes yes --set changeps1 no
   - conda update -q conda
   - conda info -a
-  - conda create -q -n test-env python=3.6 cython numpy pypandoc pytest
+  - conda create -q -n test-env python=3.6 cython numpy pytest
   - activate test-env
-  - cinst pandoc
   - pip install .
   - python setup.py install
   - python -m spacy download en

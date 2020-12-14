@@ -25,17 +25,8 @@ for requirements_file in glob("requirements.*txt"):
     with open(requirements_file) as f:
         (extras_require.setdefault(suffix, []) if suffix else install_requires).extend(f.read().splitlines())
 
-try:
-    # noinspection PyPackageRequirements
-    import pypandoc
-    try:
-        pypandoc.convert_file("README.md", "rst", outputfile="README.rst")
-    except (IOError, ImportError, RuntimeError):
-        pass
-    long_description = pypandoc.convert_file("README.md", "rst")
-except (IOError, ImportError, RuntimeError):
-    long_description = ""
-
+with open("README.md") as f:
+    long_description = f.read().splitlines()
 
 class install(_install):
     # noinspection PyBroadException
@@ -84,7 +75,6 @@ setup(name="SEMSTR",
       author="Daniel Hershcovich",
       author_email="danielh@cs.huji.ac.il",
       url="https://github.com/huji-nlp/semstr",
-      setup_requires=["pypandoc"],
       install_requires=install_requires,
       extras_require=extras_require,
       packages=find_packages() + ["src"],
