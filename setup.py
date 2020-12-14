@@ -25,7 +25,7 @@ for requirements_file in glob("requirements.*txt"):
     with open(requirements_file) as f:
         (extras_require.setdefault(suffix, []) if suffix else install_requires).extend(f.read().splitlines())
 
-with open(os.path.join(SCRIPT_DIR, 'README.md'), encoding='utf-8') as f:
+with open('README.md', encoding='utf-8') as f:
     long_description = f.read()
 
 class install(_install):
