@@ -17,6 +17,9 @@ jobs:
       matrix:
         python-version: ['3.6', '3.7', '3.8']
         test: ['unit', 'evaluate', 'convert-amr', 'convert-sdp', 'parse-ucca', 'parse_udpipe-ucca', 'tupa']
+        exclude:
+          - python-version: '3.8'
+          - test: 'tupa'
 
     env:
       TEST_SUITE: ${{ matrix.test }}
