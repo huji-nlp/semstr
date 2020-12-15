@@ -19,7 +19,9 @@ if ! [[ "$ACTION" =~ ^(toy|unit)$ ]]; then
         ;;
     amr)
         curl --insecure --remote-name-all https://amr.isi.edu/download/2016-03-14/alignment-release-{training,dev,test}-bio.txt
-        rename 's/.txt/.amr/' alignment-release-*-bio.txt
+        mv alignment-release-training-bio.amr alignment-release-training-bio.txt
+        mv alignment-release-dev-bio.amr alignment-release-dev-bio.txt
+        mv alignment-release-test-bio.amr alignment-release-test-bio.txt
         python -m semstr.scripts.split -q alignment-release-training-bio.amr -o alignment-release-training-bio
         CONVERT_DATA=alignment-release-dev-bio.amr
         TRAIN_DATA=alignment-release-training-bio
