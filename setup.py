@@ -2,7 +2,7 @@
 import os
 import re
 import sys
-import urllib
+import urllib.request
 from glob import glob
 from itertools import chain
 from subprocess import run
