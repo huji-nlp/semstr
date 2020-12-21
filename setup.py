@@ -63,6 +63,7 @@ setup(name="SEMSTR",
       version=VERSION,
       description="Scheme Evaluation and Mapping for Structural Text Representation",
       long_description=long_description,
+      long_description_content_type='text/markdown',
       classifiers=[
         "Development Status :: 4 - Beta",
         "Environment :: Console",
