@@ -60,7 +60,7 @@ Supported formats are: `json,conll,conllu,sdp,export,amr,txt`.
 
 Author
 ------
-* Daniel Hershcovich: daniel.hershcovich@gmail.com
+* Daniel Hershcovich: dh@di.ku.dk 
 
 
 License
